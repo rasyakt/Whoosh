@@ -2,6 +2,7 @@ package com.example.whoossh.viewmodel
 
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
@@ -41,6 +42,12 @@ class BookingViewModel : ViewModel() {
 
     // Coach State
     var selectedCoachClass by mutableStateOf<CoachClass?>(null)
+        private set
+        
+    // Seat State
+    var selectedCarriage by mutableStateOf<Int?>(null)
+        private set
+    var selectedSeats = mutableStateListOf<String>()
         private set
 
     // Booking Result
@@ -135,9 +142,47 @@ class BookingViewModel : ViewModel() {
         selectedSchedule = schedule
     }
 
-    // Coach Class
+    // Coach Class & Seats
     fun selectCoachClass(coachClass: CoachClass) {
-        selectedCoachClass = coachClass
+        if (selectedCoachClass != coachClass) {
+            selectedCoachClass = coachClass
+            selectedCarriage = getAvailableCarriages(coachClass).firstOrNull()
+            selectedSeats.clear()
+        }
+    }
+
+    fun getAvailableCarriages(coachClass: CoachClass?): List<Int> {
+        return when (coachClass) {
+            CoachClass.VIP -> listOf(1)
+            CoachClass.BISNIS -> listOf(8)
+            CoachClass.EKONOMI -> listOf(2, 3, 4, 5, 6, 7)
+            null -> emptyList()
+        }
+    }
+
+    fun selectCarriage(carriage: Int) {
+        if (selectedCarriage != carriage) {
+            selectedCarriage = carriage
+            selectedSeats.clear()
+        }
+    }
+
+    fun toggleSeatSelection(seatId: String) {
+        if (selectedSeats.contains(seatId)) {
+            selectedSeats.remove(seatId)
+        } else {
+            // Remove the oldest selected seat if the list is already full
+            if (selectedSeats.size >= ticketCount && selectedSeats.isNotEmpty()) {
+                selectedSeats.removeAt(0)
+            }
+            if (selectedSeats.size < ticketCount) {
+                selectedSeats.add(seatId)
+            }
+        }
+    }
+
+    fun isSeatSelectionComplete(): Boolean {
+        return selectedSeats.size == ticketCount
     }
 
     fun getPriceForClass(coachClass: CoachClass): Int {
@@ -163,7 +208,9 @@ class BookingViewModel : ViewModel() {
             coachClass = coach,
             pricePerTicket = pricePerTicket,
             totalPrice = total,
-            bookingCode = TicketUtils.generateBookingCode()
+            bookingCode = TicketUtils.generateBookingCode(),
+            selectedCarriage = selectedCarriage ?: 1,
+            selectedSeats = selectedSeats.toList()
         )
         bookingData = data
         return data
@@ -179,6 +226,8 @@ class BookingViewModel : ViewModel() {
         schedules = emptyList()
         selectedSchedule = null
         selectedCoachClass = null
+        selectedCarriage = null
+        selectedSeats.clear()
         bookingData = null
     }
 

@@ -196,6 +196,8 @@ fun SummaryScreen(
                     Spacer(modifier = Modifier.height(16.dp))
 
                     InfoRow(label = "Jenis Gerbong", value = coach.displayName)
+                    InfoRow(label = "Nomor Gerbong", value = "Gerbong ${viewModel.selectedCarriage ?: 1}")
+                    InfoRow(label = "Nomor Kursi", value = viewModel.selectedSeats.sorted().joinToString(", ").ifEmpty { "-" })
                     InfoRow(label = "Jumlah Tiket", value = "${viewModel.ticketCount} tiket")
                     InfoRow(
                         label = "Harga per tiket",

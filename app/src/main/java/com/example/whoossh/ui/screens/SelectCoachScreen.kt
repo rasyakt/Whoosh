@@ -141,12 +141,12 @@ private fun CoachClassCard(
     isBest: Boolean = false
 ) {
     val borderColor by animateColorAsState(
-        targetValue = if (isSelected) WhooshRed else Color.LightGray.copy(alpha = 0.5f),
+        targetValue = if (isSelected) WhooshRed else Color(0xFFEEEEEE),
         animationSpec = tween(300),
         label = "border_color"
     )
     val bgColor by animateColorAsState(
-        targetValue = if (isSelected) WhooshRed.copy(alpha = 0.04f) else WhooshWhite,
+        targetValue = if (isSelected) WhooshRed.copy(alpha = 0.04f) else Color.White,
         animationSpec = tween(300),
         label = "bg_color"
     )
@@ -154,125 +154,100 @@ private fun CoachClassCard(
     Card(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = bgColor),
         border = BorderStroke(
-            width = if (isSelected) 2.dp else 1.dp,
+            width = if (isSelected) 1.5.dp else 1.dp,
             color = borderColor
         ),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = if (isSelected) 4.dp else 1.dp
-        )
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(
-            modifier = Modifier.padding(18.dp)
+            modifier = Modifier.padding(16.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(42.dp)
+                        .background(
+                            color = if (isSelected) WhooshRed else Color(0xFFF5F5F5),
+                            shape = RoundedCornerShape(10.dp)
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = if (isSelected) Color.White else Color.Gray,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                
+                Text(
+                    text = coachClass.displayName,
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isSelected) WhooshRed else Color.Black
+                )
+                
+                if (isBest) {
+                    Spacer(modifier = Modifier.width(8.dp))
                     Box(
                         modifier = Modifier
-                            .size(46.dp)
-                            .background(
-                                color = if (isSelected) WhooshRed.copy(alpha = 0.12f) else Color.LightGray.copy(alpha = 0.2f),
-                                shape = RoundedCornerShape(14.dp)
-                            ),
-                        contentAlignment = Alignment.Center
+                            .background(WhooshRed.copy(alpha = 0.1f), RoundedCornerShape(4.dp))
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
                     ) {
-                        Icon(
-                            icon,
-                            contentDescription = null,
-                            tint = if (isSelected) WhooshRed else WhooshTextSecondary,
-                            modifier = Modifier.size(26.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(14.dp))
-                    Column {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = coachClass.displayName,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                            if (isBest) {
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Box(
-                                    modifier = Modifier
-                                        .background(
-                                            color = WhooshRed,
-                                            shape = RoundedCornerShape(6.dp)
-                                        )
-                                        .padding(horizontal = 8.dp, vertical = 2.dp)
-                                ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(
-                                            Icons.Filled.Star,
-                                            contentDescription = null,
-                                            tint = WhooshWhite,
-                                            modifier = Modifier.size(10.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(3.dp))
-                                        Text(
-                                            text = "BEST",
-                                            fontSize = 9.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = WhooshWhite
-                                        )
-                                    }
-                                }
-                            }
-                        }
                         Text(
-                            text = coachClass.description,
-                            fontSize = 12.sp,
-                            color = WhooshTextSecondary
+                            text = "RECOMMENDED",
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = WhooshRed
                         )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            // Features
-            features.forEach { feature ->
-                Row(
-                    modifier = Modifier.padding(vertical = 2.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(text = "✓", fontSize = 13.sp, color = WhooshRed, fontWeight = FontWeight.Bold)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = feature, fontSize = 13.sp, color = WhooshTextSecondary)
-                }
-            }
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(Color(0xFFF0F0F0))
+            )
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Price
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(
-                        color = if (isSelected) WhooshRed.copy(alpha = 0.08f) else WhooshRed.copy(alpha = 0.04f),
-                        shape = RoundedCornerShape(10.dp)
-                    )
-                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.Bottom
             ) {
                 Text(
-                    text = "Harga / tiket",
-                    fontSize = 13.sp,
-                    color = WhooshTextSecondary
+                    text = features.joinToString(" • "),
+                    fontSize = 12.sp,
+                    color = Color.Gray,
+                    modifier = Modifier.weight(1f).padding(end = 8.dp),
+                    lineHeight = 18.sp
                 )
-                Text(
-                    text = TicketUtils.formatRupiah(price),
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = WhooshRed
-                )
+                
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        text = TicketUtils.formatRupiah(price),
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = WhooshRed
+                    )
+                    Text(
+                        text = "/ tiket",
+                        fontSize = 11.sp,
+                        color = Color.Gray
+                    )
+                }
             }
         }
     }

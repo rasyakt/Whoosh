@@ -229,7 +229,9 @@ fun ETicketScreen(
                         // Details
                         InfoRow(label = "Nama Penumpang", value = booking.userName)
                         InfoRow(label = "Tanggal", value = booking.departureDate)
-                        InfoRow(label = "Gerbong", value = booking.coachClass.displayName)
+                        InfoRow(label = "Kelas", value = booking.coachClass.displayName)
+                        InfoRow(label = "Nomor Gerbong", value = "Gerbong ${booking.selectedCarriage}")
+                        InfoRow(label = "Nomor Kursi", value = booking.selectedSeats.sorted().joinToString(", ").ifEmpty { "-" })
                         InfoRow(label = "Jumlah Tiket", value = "${booking.ticketCount} tiket")
                         InfoRow(
                             label = "Harga per Tiket",

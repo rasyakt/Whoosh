@@ -169,6 +169,42 @@ fun WhooshNavGraph(
             SelectCoachScreen(
                 viewModel = viewModel,
                 onCoachSelected = {
+                    navController.navigate(Screen.SelectSeat.route)
+                },
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(
+            route = Screen.SelectSeat.route,
+            enterTransition = {
+                slideIntoContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Left,
+                    animationSpec = tween(400)
+                )
+            },
+            exitTransition = {
+                slideOutOfContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Left,
+                    animationSpec = tween(400)
+                )
+            },
+            popEnterTransition = {
+                slideIntoContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Right,
+                    animationSpec = tween(400)
+                )
+            },
+            popExitTransition = {
+                slideOutOfContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Right,
+                    animationSpec = tween(400)
+                )
+            }
+        ) {
+            com.example.whoossh.ui.screens.SelectSeatScreen(
+                viewModel = viewModel,
+                onSeatSelected = {
                     navController.navigate(Screen.Summary.route)
                 },
                 onBack = { navController.popBackStack() }

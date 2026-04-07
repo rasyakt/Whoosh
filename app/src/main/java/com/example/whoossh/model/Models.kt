@@ -42,5 +42,7 @@ data class BookingData(
     val coachClass: CoachClass = CoachClass.EKONOMI,
     val pricePerTicket: Int = 0,
     val totalPrice: Int = 0,
-    val bookingCode: String = ""
+    val bookingCode: String = "",
+    val selectedCarriage: Int = 1,
+    val selectedSeats: List<String> = emptyList()
 )
