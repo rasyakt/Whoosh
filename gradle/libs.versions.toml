@@ -10,8 +10,13 @@ kotlin = "2.0.21"
 composeBom = "2024.10.01"
 navigationCompose = "2.8.3"
 lifecycleViewmodelCompose = "2.8.7"
+gson = "2.10.1"
+androidMail = "1.6.7"
 
 [libraries]
+gson = { group = "com.google.code.gson", name = "gson", version.ref = "gson" }
+android-mail = { group = "com.sun.mail", name = "android-mail", version.ref = "androidMail" }
+android-activation = { group = "com.sun.mail", name = "android-activation", version.ref = "androidMail" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }

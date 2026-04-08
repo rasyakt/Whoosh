@@ -81,10 +81,26 @@ fun SummaryScreen(
                 )
             },
             text = {
-                Text(
-                    text = "Tiket Anda telah berhasil dipesan. Silakan cek e-ticket Anda.",
-                    textAlign = TextAlign.Center
-                )
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "Tiket Anda telah berhasil dipesan.",
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "📧 E-ticket dikirim ke:",
+                        fontSize = 13.sp,
+                        textAlign = TextAlign.Center,
+                        color = WhooshTextSecondary
+                    )
+                    Text(
+                        text = viewModel.userEmail,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        textAlign = TextAlign.Center,
+                        color = WhooshRed
+                    )
+                }
             },
             confirmButton = {
                 TextButton(

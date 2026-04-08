@@ -3,6 +3,7 @@ package com.example.whoossh.ui.screens
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -10,10 +11,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Train
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -23,9 +22,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.whoossh.R
 import com.example.whoossh.ui.theme.WhooshGradientDark
 import com.example.whoossh.ui.theme.WhooshGradientEnd
 import com.example.whoossh.ui.theme.WhooshGradientStart
@@ -41,32 +42,38 @@ fun SplashScreen(
     val textAlpha = remember { Animatable(0f) }
 
     LaunchedEffect(Unit) {
-        // Animate icon scale
+        // Animate icon scale with Overshoot effect
         scale.animateTo(
             targetValue = 1f,
-            animationSpec = tween(800, easing = FastOutSlowInEasing)
+            animationSpec = tween(
+                durationMillis = 1000,
+                easing = { fraction ->
+                    val tension = 2f
+                    val s = fraction - 1.0f
+                    s * s * ((tension + 1.0f) * s + tension) + 1.0f
+                }
+            )
         )
     }
 
     LaunchedEffect(Unit) {
-        // Animate icon alpha
+        // Smooth icon alpha
         alpha.animateTo(
             targetValue = 1f,
-            animationSpec = tween(600)
+            animationSpec = tween(800)
         )
     }
 
     LaunchedEffect(Unit) {
-        delay(400)
-        // Animate text
+        delay(600) // Start text animation slightly after logo
         textAlpha.animateTo(
             targetValue = 1f,
-            animationSpec = tween(600)
+            animationSpec = tween(1000)
         )
     }
 
     LaunchedEffect(Unit) {
-        delay(2500)
+        delay(3500) // Slightly longer stay for professional feel
         onSplashFinished()
     }
 
@@ -81,52 +88,36 @@ fun SplashScreen(
                         WhooshGradientEnd
                     )
                 )
-            ),
-        contentAlignment = Alignment.Center
+            )
     ) {
+        // Main Branding Content
         Column(
+            modifier = Modifier.align(Alignment.Center),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // Train Icon
-            Icon(
-                imageVector = Icons.Filled.Train,
-                contentDescription = "Whoosh Logo",
-                tint = WhooshWhite,
+            // Refined Logo Container
+            Box(
                 modifier = Modifier
-                    .size(100.dp)
+                    .size(200.dp)
                     .scale(scale.value)
-                    .alpha(alpha.value)
-            )
+                    .alpha(alpha.value),
+                contentAlignment = Alignment.Center
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.logo_white),
+                    contentDescription = "Whoosh Logo",
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
-            // App Name
-            Text(
-                text = "Whoosh",
-                fontSize = 42.sp,
-                fontWeight = FontWeight.Bold,
-                color = WhooshWhite,
-                modifier = Modifier.alpha(textAlpha.value)
-            )
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Text(
-                text = "Ticket",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Light,
-                color = WhooshWhite.copy(alpha = 0.85f),
-                letterSpacing = 8.sp,
-                modifier = Modifier.alpha(textAlpha.value)
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
+            // Professional Footer/Company Name
             Text(
                 text = "Kereta Cepat Indonesia",
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Normal,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium,
                 color = WhooshWhite.copy(alpha = 0.6f),
                 letterSpacing = 2.sp,
                 modifier = Modifier.alpha(textAlpha.value)

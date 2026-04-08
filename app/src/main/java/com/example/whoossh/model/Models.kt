@@ -44,5 +44,32 @@ data class BookingData(
     val totalPrice: Int = 0,
     val bookingCode: String = "",
     val selectedCarriage: Int = 1,
-    val selectedSeats: List<String> = emptyList()
+    val selectedSeats: List<String> = emptyList(),
+    val bookingTimestamp: Long = System.currentTimeMillis(),
+    val isUsed: Boolean = false
+)
+
+data class User(
+    val name: String,
+    val email: String,
+    val phone: String,
+    val password: String
+)
+
+data class Promo(
+    val id: Int,
+    val title: String,
+    val description: String,
+    val discount: String,
+    val validUntil: String,
+    val code: String,
+    val minPurchase: String = ""
+)
+
+data class NotificationItem(
+    val id: Int,
+    val title: String,
+    val message: String,
+    val date: String,
+    val isRead: Boolean = false
 )

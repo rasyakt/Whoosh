@@ -1,6 +1,10 @@
 package com.example.whoossh.ui.screens
 
 import android.app.DatePickerDialog
+import android.widget.Toast
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -70,11 +74,13 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.whoossh.R
 import com.example.whoossh.data.StationData
 import com.example.whoossh.ui.theme.WhooshBackground
 import com.example.whoossh.ui.theme.WhooshGradientEnd
@@ -96,11 +102,35 @@ fun DashboardScreen(
     viewModel: BookingViewModel,
     onSearchSchedule: () -> Unit,
     onLoginRequired: () -> Unit,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    onNavigateToEditProfile: () -> Unit = {},
+    onNavigateToHistory: () -> Unit = {},
+    onNavigateToPromo: () -> Unit = {},
+    onNavigateToNotifications: () -> Unit = {},
+    onNavigateToLanguage: () -> Unit = {},
+    onNavigateToPrivacy: () -> Unit = {},
+    onNavigateToChangePassword: () -> Unit = {},
+    onNavigateToHelpCenter: () -> Unit = {}
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     var selectedBottomNav by remember { mutableIntStateOf(0) }
+    val context = LocalContext.current
+    var lastBackPressTime by remember { mutableStateOf(0L) }
+
+    BackHandler {
+        if (selectedBottomNav != 0) {
+            selectedBottomNav = 0
+        } else {
+            val currentTime = System.currentTimeMillis()
+            if (currentTime - lastBackPressTime < 2000) {
+                (context as? ComponentActivity)?.finish()
+            } else {
+                lastBackPressTime = currentTime
+                Toast.makeText(context, "Tekan sekali lagi untuk keluar", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 
     Scaffold(
         containerColor = WhooshBackground,
@@ -146,11 +176,24 @@ fun DashboardScreen(
                         } else {
                             selectedBottomNav = index
                         }
-                    }
+                    },
+                    onNavigateToPromo = onNavigateToPromo,
+                    onNavigateToHelpCenter = onNavigateToHelpCenter
                 )
                 1 -> TicketsScreen(viewModel = viewModel)
                 2 -> SchedulesScreen()
-                3 -> AccountScreen(viewModel = viewModel, onLogout = onLogout)
+                3 -> AccountScreen(
+                    viewModel = viewModel,
+                    onNavigateToEditProfile = onNavigateToEditProfile,
+                    onNavigateToHistory = onNavigateToHistory,
+                    onNavigateToPromo = onNavigateToPromo,
+                    onNavigateToNotifications = onNavigateToNotifications,
+                    onNavigateToLanguage = onNavigateToLanguage,
+                    onNavigateToPrivacy = onNavigateToPrivacy,
+                    onNavigateToChangePassword = onNavigateToChangePassword,
+                    onNavigateToHelpCenter = onNavigateToHelpCenter,
+                    onLogout = onLogout
+                )
             }
         }
     }
@@ -166,7 +209,9 @@ private fun HomeContent(
     onLogout: () -> Unit,
     snackbarHostState: SnackbarHostState,
     scope: kotlinx.coroutines.CoroutineScope,
-    onNavigateToTab: (Int) -> Unit
+    onNavigateToTab: (Int) -> Unit,
+    onNavigateToPromo: () -> Unit = {},
+    onNavigateToHelpCenter: () -> Unit = {}
 ) {
     val context = LocalContext.current
     var showMoreInfo by remember { mutableStateOf(false) }
@@ -191,12 +236,8 @@ private fun HomeContent(
     val quickActions = listOf(
         QuickAction(Icons.Filled.ConfirmationNumber, "Tiket Saya") { onNavigateToTab(1) },
         QuickAction(Icons.Filled.History, "Riwayat") { onNavigateToTab(3) },
-        QuickAction(Icons.Filled.LocalOffer, "Promo") {
-            scope.launch { snackbarHostState.showSnackbar("Promo segera hadir!") }
-        },
-        QuickAction(Icons.Filled.Help, "Bantuan") {
-            scope.launch { snackbarHostState.showSnackbar("Hubungi kami di bantuan@whoosh.id") }
-        }
+        QuickAction(Icons.Filled.LocalOffer, "Promo") { onNavigateToPromo() },
+        QuickAction(Icons.Filled.Help, "Bantuan") { onNavigateToHelpCenter() }
     )
 
     LaunchedEffect(viewModel.formError) {
@@ -227,14 +268,10 @@ private fun HomeContent(
                 Column {
                     // Logo row
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Filled.Train, null, tint = WhooshWhite, modifier = Modifier.size(24.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            "Whoosh",
-                            color = WhooshWhite,
-                            fontSize = 17.sp,
-                            fontWeight = FontWeight.Bold,
-                            fontStyle = FontStyle.Italic
+                        Image(
+                            painter = painterResource(id = R.drawable.logo_whoosh),
+                            contentDescription = "Whoosh Logo",
+                            modifier = Modifier.size(28.dp)
                         )
                     }
                     Spacer(modifier = Modifier.height(10.dp))

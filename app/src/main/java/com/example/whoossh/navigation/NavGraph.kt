@@ -8,17 +8,11 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import com.example.whoossh.ui.screens.DashboardScreen
-import com.example.whoossh.ui.screens.ETicketScreen
-import com.example.whoossh.ui.screens.LoginScreen
-import com.example.whoossh.ui.screens.SelectCoachScreen
-import com.example.whoossh.ui.screens.SelectScheduleScreen
-import com.example.whoossh.ui.screens.SplashScreen
-import com.example.whoossh.ui.screens.SummaryScreen
+import com.example.whoossh.ui.screens.*
 import com.example.whoossh.viewmodel.BookingViewModel
 
 @Composable
-fun WhooshNavGraph(
+fun NavGraph(
     navController: NavHostController,
     viewModel: BookingViewModel
 ) {
@@ -26,10 +20,10 @@ fun WhooshNavGraph(
         navController = navController,
         startDestination = Screen.Splash.route
     ) {
+        // ── SPLASH ───────────────────────────────────────────────────────────
         composable(
             route = Screen.Splash.route,
-            enterTransition = { fadeIn(animationSpec = tween(500)) },
-            exitTransition = { fadeOut(animationSpec = tween(500)) }
+            exitTransition = { fadeOut(animationSpec = tween(300)) }
         ) {
             SplashScreen(
                 onSplashFinished = {
@@ -40,10 +34,15 @@ fun WhooshNavGraph(
             )
         }
 
+        // ── LOGIN ────────────────────────────────────────────────────────────
         composable(
             route = Screen.Login.route,
-            enterTransition = { fadeIn(animationSpec = tween(400)) },
-            exitTransition = { fadeOut(animationSpec = tween(400)) }
+            enterTransition = {
+                slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Up, tween(400))
+            },
+            exitTransition = {
+                slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Down, tween(400))
+            }
         ) {
             LoginScreen(
                 viewModel = viewModel,
@@ -52,79 +51,93 @@ fun WhooshNavGraph(
                         popUpTo(Screen.Login.route) { inclusive = true }
                     }
                 },
-                onBack = { navController.popBackStack() }
+                onNavigateToRegister = {
+                    navController.navigate(Screen.Register.route)
+                }
             )
         }
 
+        // ── REGISTER ─────────────────────────────────────────────────────────
         composable(
-            route = Screen.Dashboard.route,
+            route = Screen.Register.route,
             enterTransition = {
-                slideIntoContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Left,
-                    animationSpec = tween(400)
-                )
+                slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left, tween(400))
             },
             exitTransition = {
-                slideOutOfContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Left,
-                    animationSpec = tween(400)
-                )
-            },
-            popEnterTransition = {
-                slideIntoContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Right,
-                    animationSpec = tween(400)
-                )
-            },
-            popExitTransition = {
-                slideOutOfContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Right,
-                    animationSpec = tween(400)
-                )
+                slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right, tween(400))
             }
+        ) {
+            RegisterScreen(
+                viewModel = viewModel,
+                onRegisterSuccess = {
+                    navController.navigate(Screen.Dashboard.route) {
+                        popUpTo(Screen.Register.route) { inclusive = true }
+                        popUpTo(Screen.Login.route) { inclusive = true }
+                    }
+                },
+                onNavigateToLogin = {
+                    navController.popBackStack()
+                },
+                onBack = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        // ── DASHBOARD ────────────────────────────────────────────────────────
+        composable(
+            route = Screen.Dashboard.route,
+            enterTransition = { fadeIn(animationSpec = tween(400)) },
+            exitTransition = { fadeOut(animationSpec = tween(200)) }
         ) {
             DashboardScreen(
                 viewModel = viewModel,
                 onSearchSchedule = {
-                    navController.navigate(Screen.SelectSchedule.route)
+                    if (viewModel.searchSchedules()) {
+                        navController.navigate(Screen.SelectSchedule.route)
+                    }
                 },
                 onLoginRequired = {
                     navController.navigate(Screen.Login.route)
                 },
                 onLogout = {
                     viewModel.logout()
-                    navController.navigate(Screen.Dashboard.route) {
-                        popUpTo(Screen.Dashboard.route) { inclusive = true }
-                    }
+                },
+                onNavigateToEditProfile = {
+                    navController.navigate(Screen.EditProfile.route)
+                },
+                onNavigateToHistory = {
+                    navController.navigate(Screen.TravelHistory.route)
+                },
+                onNavigateToPromo = {
+                    navController.navigate(Screen.Promo.route)
+                },
+                onNavigateToNotifications = {
+                    navController.navigate(Screen.NotificationSettings.route)
+                },
+                onNavigateToLanguage = {
+                    navController.navigate(Screen.Language.route)
+                },
+                onNavigateToPrivacy = {
+                    navController.navigate(Screen.PrivacySecurity.route)
+                },
+                onNavigateToChangePassword = {
+                    navController.navigate(Screen.ChangePassword.route)
+                },
+                onNavigateToHelpCenter = {
+                    navController.navigate(Screen.HelpCenter.route)
                 }
             )
         }
 
+        // ── SELECT SCHEDULE ──────────────────────────────────────────────────
         composable(
             route = Screen.SelectSchedule.route,
             enterTransition = {
-                slideIntoContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Left,
-                    animationSpec = tween(400)
-                )
+                slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left, tween(400))
             },
             exitTransition = {
-                slideOutOfContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Left,
-                    animationSpec = tween(400)
-                )
-            },
-            popEnterTransition = {
-                slideIntoContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Right,
-                    animationSpec = tween(400)
-                )
-            },
-            popExitTransition = {
-                slideOutOfContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Right,
-                    animationSpec = tween(400)
-                )
+                slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right, tween(300))
             }
         ) {
             SelectScheduleScreen(
@@ -139,31 +152,14 @@ fun WhooshNavGraph(
             )
         }
 
+        // ── SELECT COACH ─────────────────────────────────────────────────────
         composable(
             route = Screen.SelectCoach.route,
             enterTransition = {
-                slideIntoContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Left,
-                    animationSpec = tween(400)
-                )
+                slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left, tween(400))
             },
             exitTransition = {
-                slideOutOfContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Left,
-                    animationSpec = tween(400)
-                )
-            },
-            popEnterTransition = {
-                slideIntoContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Right,
-                    animationSpec = tween(400)
-                )
-            },
-            popExitTransition = {
-                slideOutOfContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Right,
-                    animationSpec = tween(400)
-                )
+                slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right, tween(300))
             }
         ) {
             SelectCoachScreen(
@@ -175,34 +171,17 @@ fun WhooshNavGraph(
             )
         }
 
+        // ── SELECT SEAT ──────────────────────────────────────────────────────
         composable(
             route = Screen.SelectSeat.route,
             enterTransition = {
-                slideIntoContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Left,
-                    animationSpec = tween(400)
-                )
+                slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left, tween(400))
             },
             exitTransition = {
-                slideOutOfContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Left,
-                    animationSpec = tween(400)
-                )
-            },
-            popEnterTransition = {
-                slideIntoContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Right,
-                    animationSpec = tween(400)
-                )
-            },
-            popExitTransition = {
-                slideOutOfContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Right,
-                    animationSpec = tween(400)
-                )
+                slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right, tween(300))
             }
         ) {
-            com.example.whoossh.ui.screens.SelectSeatScreen(
+            SelectSeatScreen(
                 viewModel = viewModel,
                 onSeatSelected = {
                     navController.navigate(Screen.Summary.route)
@@ -211,31 +190,14 @@ fun WhooshNavGraph(
             )
         }
 
+        // ── SUMMARY ──────────────────────────────────────────────────────────
         composable(
             route = Screen.Summary.route,
             enterTransition = {
-                slideIntoContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Left,
-                    animationSpec = tween(400)
-                )
+                slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left, tween(400))
             },
             exitTransition = {
-                slideOutOfContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Left,
-                    animationSpec = tween(400)
-                )
-            },
-            popEnterTransition = {
-                slideIntoContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Right,
-                    animationSpec = tween(400)
-                )
-            },
-            popExitTransition = {
-                slideOutOfContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Right,
-                    animationSpec = tween(400)
-                )
+                slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right, tween(300))
             }
         ) {
             SummaryScreen(
@@ -249,15 +211,15 @@ fun WhooshNavGraph(
             )
         }
 
+        // ── E-TICKET ─────────────────────────────────────────────────────────
         composable(
             route = Screen.ETicket.route,
             enterTransition = {
-                slideIntoContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Up,
-                    animationSpec = tween(500)
-                )
+                slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Up, tween(500))
             },
-            exitTransition = { fadeOut(animationSpec = tween(400)) }
+            exitTransition = {
+                slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Down, tween(400))
+            }
         ) {
             ETicketScreen(
                 viewModel = viewModel,
@@ -267,6 +229,132 @@ fun WhooshNavGraph(
                         popUpTo(Screen.Dashboard.route) { inclusive = true }
                     }
                 }
+            )
+        }
+
+        // ── EDIT PROFILE ─────────────────────────────────────────────────────
+        composable(
+            route = Screen.EditProfile.route,
+            enterTransition = {
+                slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left, tween(400))
+            },
+            exitTransition = {
+                slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right, tween(300))
+            }
+        ) {
+            EditProfileScreen(
+                viewModel = viewModel,
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        // ── CHANGE PASSWORD ──────────────────────────────────────────────────
+        composable(
+            route = Screen.ChangePassword.route,
+            enterTransition = {
+                slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left, tween(400))
+            },
+            exitTransition = {
+                slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right, tween(300))
+            }
+        ) {
+            ChangePasswordScreen(
+                viewModel = viewModel,
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        // ── TRAVEL HISTORY ───────────────────────────────────────────────────
+        composable(
+            route = Screen.TravelHistory.route,
+            enterTransition = {
+                slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left, tween(400))
+            },
+            exitTransition = {
+                slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right, tween(300))
+            }
+        ) {
+            TravelHistoryScreen(
+                viewModel = viewModel,
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        // ── PROMO ────────────────────────────────────────────────────────────
+        composable(
+            route = Screen.Promo.route,
+            enterTransition = {
+                slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left, tween(400))
+            },
+            exitTransition = {
+                slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right, tween(300))
+            }
+        ) {
+            PromoScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        // ── NOTIFICATION SETTINGS ────────────────────────────────────────────
+        composable(
+            route = Screen.NotificationSettings.route,
+            enterTransition = {
+                slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left, tween(400))
+            },
+            exitTransition = {
+                slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right, tween(300))
+            }
+        ) {
+            NotificationSettingsScreen(
+                viewModel = viewModel,
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        // ── LANGUAGE ─────────────────────────────────────────────────────────
+        composable(
+            route = Screen.Language.route,
+            enterTransition = {
+                slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left, tween(400))
+            },
+            exitTransition = {
+                slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right, tween(300))
+            }
+        ) {
+            LanguageScreen(
+                viewModel = viewModel,
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        // ── PRIVACY & SECURITY ───────────────────────────────────────────────
+        composable(
+            route = Screen.PrivacySecurity.route,
+            enterTransition = {
+                slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left, tween(400))
+            },
+            exitTransition = {
+                slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right, tween(300))
+            }
+        ) {
+            PrivacySecurityScreen(
+                viewModel = viewModel,
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        // ── HELP CENTER ──────────────────────────────────────────────────────
+        composable(
+            route = Screen.HelpCenter.route,
+            enterTransition = {
+                slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left, tween(400))
+            },
+            exitTransition = {
+                slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right, tween(300))
+            }
+        ) {
+            HelpCenterScreen(
+                onBack = { navController.popBackStack() }
             )
         }
     }

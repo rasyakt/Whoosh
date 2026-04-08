@@ -2,6 +2,7 @@ package com.example.whoossh.ui.screens
 
 import android.widget.Toast
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -36,10 +37,12 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.whoossh.R
 import com.example.whoossh.ui.components.InfoRow
 import com.example.whoossh.ui.components.WhooshButton
 import com.example.whoossh.ui.components.WhooshOutlinedButton
@@ -103,15 +106,14 @@ fun ETicketScreen(
                             Row(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Icon(
-                                    Icons.Filled.Train,
+                                Image(
+                                    painter = painterResource(id = R.drawable.logo_whoosh),
                                     contentDescription = null,
-                                    tint = WhooshWhite,
-                                    modifier = Modifier.size(28.dp)
+                                    modifier = Modifier.size(32.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = "Whoosh Ticket",
+                                    text = "Ticket",
                                     fontSize = 22.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = WhooshWhite

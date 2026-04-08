@@ -6,7 +6,6 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -14,15 +13,18 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Train
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -62,7 +64,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.whoossh.ui.components.WhooshButton
-import com.example.whoossh.ui.theme.WhooshGradientDark
 import com.example.whoossh.ui.theme.WhooshGradientEnd
 import com.example.whoossh.ui.theme.WhooshGradientStart
 import com.example.whoossh.ui.theme.WhooshRed
@@ -72,14 +73,19 @@ import com.example.whoossh.viewmodel.BookingViewModel
 import kotlinx.coroutines.launch
 
 @Composable
-fun LoginScreen(
+fun RegisterScreen(
     viewModel: BookingViewModel,
-    onLoginSuccess: () -> Unit,
-    onNavigateToRegister: () -> Unit
+    onRegisterSuccess: () -> Unit,
+    onNavigateToLogin: () -> Unit,
+    onBack: () -> Unit
 ) {
+    var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
+    var phone by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
+    var confirmPasswordVisible by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val focusManager = LocalFocusManager.current
@@ -90,11 +96,11 @@ fun LoginScreen(
         fadeAnim.animateTo(1f, animationSpec = tween(600))
     }
 
-    LaunchedEffect(viewModel.loginError) {
-        viewModel.loginError?.let {
+    LaunchedEffect(viewModel.registerError) {
+        viewModel.registerError?.let {
             scope.launch {
                 snackbarHostState.showSnackbar(it)
-                viewModel.clearLoginError()
+                viewModel.clearRegisterError()
             }
         }
     }
@@ -116,18 +122,14 @@ fun LoginScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // Top gradient background
+            // Top gradient header
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(320.dp)
+                    .height(260.dp)
                     .background(
                         brush = Brush.verticalGradient(
-                            colors = listOf(
-                                WhooshGradientDark,
-                                WhooshGradientStart,
-                                WhooshGradientEnd
-                            )
+                            colors = listOf(WhooshGradientStart, WhooshGradientEnd)
                         )
                     )
             )
@@ -140,27 +142,34 @@ fun LoginScreen(
                     .alpha(fadeAnim.value),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Spacer(modifier = Modifier.height(70.dp))
+                Spacer(modifier = Modifier.height(50.dp))
 
                 // New Whoosh Logo
                 Image(
                     painter = painterResource(id = R.drawable.logo_whoosh),
                     contentDescription = "Whoosh Logo",
-                    modifier = Modifier.size(80.dp)
+                    modifier = Modifier.size(64.dp)
                 )
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    text = "Kereta Cepat Indonesia",
-                    fontSize = 12.sp,
-                    color = WhooshWhite.copy(alpha = 0.6f),
-                    letterSpacing = 2.sp
+                    text = "Buat Akun Baru",
+                    fontSize = 26.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = WhooshWhite
                 )
 
-                Spacer(modifier = Modifier.height(40.dp))
+                Text(
+                    text = "Daftar untuk mulai memesan tiket",
+                    fontSize = 14.sp,
+                    color = WhooshWhite.copy(alpha = 0.8f),
+                    modifier = Modifier.padding(top = 4.dp)
+                )
 
-                // Login Card
+                Spacer(modifier = Modifier.height(28.dp))
+
+                // Registration Card
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -173,17 +182,38 @@ fun LoginScreen(
                 ) {
                     Column {
                         Text(
-                            text = "Selamat Datang!",
+                            text = "Registrasi",
                             style = MaterialTheme.typography.headlineMedium,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(bottom = 20.dp)
                         )
 
-                        Text(
-                            text = "Masuk untuk melanjutkan",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color.Gray,
-                            modifier = Modifier.padding(top = 4.dp, bottom = 24.dp)
+                        // Name Field
+                        OutlinedTextField(
+                            value = name,
+                            onValueChange = { name = it },
+                            label = { Text("Nama Lengkap") },
+                            leadingIcon = {
+                                Icon(Icons.Filled.Person, contentDescription = null, tint = WhooshRed)
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(14.dp),
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Text,
+                                imeAction = ImeAction.Next
+                            ),
+                            keyboardActions = KeyboardActions(
+                                onNext = { focusManager.moveFocus(FocusDirection.Down) }
+                            ),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = WhooshRed,
+                                unfocusedBorderColor = Color.LightGray,
+                                focusedLabelColor = WhooshRed
+                            )
                         )
+
+                        Spacer(modifier = Modifier.height(12.dp))
 
                         // Email Field
                         OutlinedTextField(
@@ -191,11 +221,7 @@ fun LoginScreen(
                             onValueChange = { email = it },
                             label = { Text("Email") },
                             leadingIcon = {
-                                Icon(
-                                    Icons.Filled.Email,
-                                    contentDescription = null,
-                                    tint = WhooshRed
-                                )
+                                Icon(Icons.Filled.Email, contentDescription = null, tint = WhooshRed)
                             },
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(14.dp),
@@ -214,7 +240,34 @@ fun LoginScreen(
                             )
                         )
 
-                        Spacer(modifier = Modifier.height(14.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // Phone Field
+                        OutlinedTextField(
+                            value = phone,
+                            onValueChange = { phone = it.filter { c -> c.isDigit() } },
+                            label = { Text("Nomor HP") },
+                            leadingIcon = {
+                                Icon(Icons.Filled.Phone, contentDescription = null, tint = WhooshRed)
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(14.dp),
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Phone,
+                                imeAction = ImeAction.Next
+                            ),
+                            keyboardActions = KeyboardActions(
+                                onNext = { focusManager.moveFocus(FocusDirection.Down) }
+                            ),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = WhooshRed,
+                                unfocusedBorderColor = Color.LightGray,
+                                focusedLabelColor = WhooshRed
+                            )
+                        )
+
+                        Spacer(modifier = Modifier.height(12.dp))
 
                         // Password Field
                         OutlinedTextField(
@@ -222,18 +275,14 @@ fun LoginScreen(
                             onValueChange = { password = it },
                             label = { Text("Password") },
                             leadingIcon = {
-                                Icon(
-                                    Icons.Filled.Lock,
-                                    contentDescription = null,
-                                    tint = WhooshRed
-                                )
+                                Icon(Icons.Filled.Lock, contentDescription = null, tint = WhooshRed)
                             },
                             trailingIcon = {
                                 IconButton(onClick = { passwordVisible = !passwordVisible }) {
                                     Icon(
                                         if (passwordVisible) Icons.Filled.Visibility
                                         else Icons.Filled.VisibilityOff,
-                                        contentDescription = "Toggle password visibility",
+                                        contentDescription = "Toggle password",
                                         tint = Color.Gray
                                     )
                                 }
@@ -245,13 +294,52 @@ fun LoginScreen(
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(
                                 keyboardType = KeyboardType.Password,
+                                imeAction = ImeAction.Next
+                            ),
+                            keyboardActions = KeyboardActions(
+                                onNext = { focusManager.moveFocus(FocusDirection.Down) }
+                            ),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = WhooshRed,
+                                unfocusedBorderColor = Color.LightGray,
+                                focusedLabelColor = WhooshRed
+                            )
+                        )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // Confirm Password Field
+                        OutlinedTextField(
+                            value = confirmPassword,
+                            onValueChange = { confirmPassword = it },
+                            label = { Text("Konfirmasi Password") },
+                            leadingIcon = {
+                                Icon(Icons.Filled.Lock, contentDescription = null, tint = WhooshRed)
+                            },
+                            trailingIcon = {
+                                IconButton(onClick = { confirmPasswordVisible = !confirmPasswordVisible }) {
+                                    Icon(
+                                        if (confirmPasswordVisible) Icons.Filled.Visibility
+                                        else Icons.Filled.VisibilityOff,
+                                        contentDescription = "Toggle password",
+                                        tint = Color.Gray
+                                    )
+                                }
+                            },
+                            visualTransformation = if (confirmPasswordVisible) VisualTransformation.None
+                            else PasswordVisualTransformation(),
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(14.dp),
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Password,
                                 imeAction = ImeAction.Done
                             ),
                             keyboardActions = KeyboardActions(
                                 onDone = {
                                     focusManager.clearFocus()
-                                    if (viewModel.login(email, password)) {
-                                        onLoginSuccess()
+                                    if (viewModel.register(name, email, phone, password, confirmPassword)) {
+                                        onRegisterSuccess()
                                     }
                                 }
                             ),
@@ -264,26 +352,24 @@ fun LoginScreen(
 
                         Spacer(modifier = Modifier.height(24.dp))
 
-                        // Login Button
                         WhooshButton(
-                            text = "Masuk",
+                            text = "Daftar",
                             onClick = {
                                 focusManager.clearFocus()
-                                if (viewModel.login(email, password)) {
-                                    onLoginSuccess()
+                                if (viewModel.register(name, email, phone, password, confirmPassword)) {
+                                    onRegisterSuccess()
                                 }
                             }
                         )
 
                         Spacer(modifier = Modifier.height(12.dp))
 
-                        // Register link
                         TextButton(
-                            onClick = onNavigateToRegister,
+                            onClick = onNavigateToLogin,
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Text(
-                                text = "Belum punya akun? Daftar di sini",
+                                text = "Sudah punya akun? Masuk di sini",
                                 color = WhooshRed,
                                 fontSize = 14.sp,
                                 textAlign = TextAlign.Center
@@ -292,7 +378,23 @@ fun LoginScreen(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(60.dp))
+                Spacer(modifier = Modifier.height(40.dp))
+            }
+
+            // Back button
+            IconButton(
+                onClick = onBack,
+                modifier = Modifier
+                    .padding(16.dp)
+                    .size(40.dp)
+                    .align(Alignment.TopStart)
+                    .background(Color.Black.copy(alpha = 0.1f), CircleShape)
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.ArrowBack,
+                    contentDescription = "Back",
+                    tint = WhooshWhite
+                )
             }
         }
     }

@@ -9,7 +9,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.rememberNavController
-import com.example.whoossh.navigation.WhooshNavGraph
+import com.example.whoossh.navigation.NavGraph
 import com.example.whoossh.ui.theme.WhoosshTheme
 import com.example.whoossh.viewmodel.BookingViewModel
 
@@ -22,7 +22,7 @@ class MainActivity : ComponentActivity() {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     val navController = rememberNavController()
                     val bookingViewModel: BookingViewModel = viewModel()
-                    WhooshNavGraph(
+                    NavGraph(
                         navController = navController,
                         viewModel = bookingViewModel
                     )
