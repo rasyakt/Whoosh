@@ -219,11 +219,11 @@ fun AccountScreen(
         if (viewModel.isLoggedIn) {
             SectionLabel("Akun")
             MenuCard {
-                MenuRow(Icons.Outlined.Edit, "Edit Profil", WhooshRed, onClick = onNavigateToEditProfile)
+                MenuRow(Icons.Outlined.Edit, "Edit Profil", onClick = onNavigateToEditProfile)
                 MenuDivider()
-                MenuRow(Icons.Outlined.History, "Riwayat Perjalanan", Color(0xFF1565C0), onClick = onNavigateToHistory)
+                MenuRow(Icons.Outlined.History, "Riwayat Perjalanan", onClick = onNavigateToHistory)
                 MenuDivider()
-                MenuRow(Icons.Outlined.LocalOffer, "Promo & Diskon", Color(0xFFF57C00), onClick = onNavigateToPromo)
+                MenuRow(Icons.Outlined.LocalOffer, "Promo & Diskon", onClick = onNavigateToPromo)
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -232,14 +232,14 @@ fun AccountScreen(
         // Pengaturan Section
         SectionLabel("Pengaturan")
         MenuCard {
-            MenuRow(Icons.Outlined.Notifications, "Notifikasi", Color(0xFFE53935), onClick = onNavigateToNotifications)
+            MenuRow(Icons.Outlined.Notifications, "Notifikasi", onClick = onNavigateToNotifications)
             MenuDivider()
-            MenuRow(Icons.Outlined.Language, "Bahasa", Color(0xFF43A047), onClick = onNavigateToLanguage)
+            MenuRow(Icons.Outlined.Language, "Bahasa", onClick = onNavigateToLanguage)
             MenuDivider()
-            MenuRow(Icons.Outlined.PrivacyTip, "Privasi & Keamanan", Color(0xFF1E88E5), onClick = onNavigateToPrivacy)
+            MenuRow(Icons.Outlined.Security, "Privasi & Keamanan", onClick = onNavigateToPrivacy)
             if (viewModel.isLoggedIn) {
                 MenuDivider()
-                MenuRow(Icons.Outlined.Lock, "Ubah Password", Color(0xFF8E24AA), onClick = onNavigateToChangePassword)
+                MenuRow(Icons.Outlined.Lock, "Ubah Password", onClick = onNavigateToChangePassword)
             }
         }
 
@@ -248,9 +248,9 @@ fun AccountScreen(
         // Lainnya Section
         SectionLabel("Lainnya")
         MenuCard {
-            MenuRow(Icons.AutoMirrored.Outlined.HelpOutline, "Pusat Bantuan", Color(0xFF00897B), onClick = onNavigateToHelpCenter)
+            MenuRow(Icons.AutoMirrored.Outlined.HelpOutline, "Pusat Bantuan", onClick = onNavigateToHelpCenter)
             MenuDivider()
-            MenuRow(Icons.Outlined.StarOutline, "Beri Rating Aplikasi", Color(0xFFFFA000), onClick = {
+            MenuRow(Icons.Outlined.StarOutline, "Beri Rating Aplikasi", onClick = {
                 try {
                     val intent = Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=com.example.whoossh"))
                     context.startActivity(intent)
@@ -345,7 +345,7 @@ private fun MenuCard(content: @Composable () -> Unit) {
 private fun MenuRow(
     icon: ImageVector,
     title: String,
-    iconColor: Color,
+    iconColor: Color = WhooshRed,
     onClick: () -> Unit
 ) {
     Row(
@@ -358,8 +358,8 @@ private fun MenuRow(
         Box(
             modifier = Modifier
                 .size(36.dp)
-                .background(iconColor.copy(alpha = 0.1f), RoundedCornerShape(10.dp))
-                .border(1.dp, iconColor.copy(alpha = 0.15f), RoundedCornerShape(10.dp)),
+                .background(Color(0xFFF9F9F9), RoundedCornerShape(10.dp))
+                .border(1.dp, Color(0xFFF1F1F1), RoundedCornerShape(10.dp)),
             contentAlignment = Alignment.Center
         ) {
             Icon(icon, null, tint = iconColor, modifier = Modifier.size(20.dp))
@@ -369,13 +369,14 @@ private fun MenuRow(
             text = title,
             fontSize = 15.sp,
             fontWeight = FontWeight.Medium,
+            color = Color(0xFF1A1A1A),
             modifier = Modifier.weight(1f)
         )
         Icon(
             Icons.Filled.ChevronRight,
             contentDescription = null,
-            tint = Color.LightGray,
-            modifier = Modifier.size(20.dp)
+            tint = Color(0xFFD1D1D1),
+            modifier = Modifier.size(16.dp)
         )
     }
 }

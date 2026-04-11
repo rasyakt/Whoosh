@@ -99,7 +99,7 @@ fun SplashScreen(
             // Refined Logo Container
             Box(
                 modifier = Modifier
-                    .size(200.dp)
+                    .size(280.dp)
                     .scale(scale.value)
                     .alpha(alpha.value),
                 contentAlignment = Alignment.Center
@@ -111,14 +111,26 @@ fun SplashScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(48.dp))
+
+            // Professional Branding Hierarchy
+            Text(
+                text = "Ticket",
+                fontSize = 26.sp,
+                fontWeight = FontWeight.Light,
+                color = WhooshWhite,
+                letterSpacing = 8.sp,
+                modifier = Modifier.alpha(textAlpha.value)
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
 
             // Professional Footer/Company Name
             Text(
                 text = "Kereta Cepat Indonesia",
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium,
-                color = WhooshWhite.copy(alpha = 0.6f),
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Normal,
+                color = WhooshWhite.copy(alpha = 0.7f),
                 letterSpacing = 2.sp,
                 modifier = Modifier.alpha(textAlpha.value)
             )

@@ -69,6 +69,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -261,24 +262,83 @@ private fun HomeContent(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(210.dp)
-                    .background(brush = Brush.verticalGradient(listOf(WhooshGradientStart, WhooshGradientEnd)))
-                    .padding(start = 24.dp, end = 24.dp, top = 28.dp, bottom = 16.dp)
+                    .height(230.dp) // Sedikit lebih tinggi agar visual background lebih leluasa
             ) {
-                Column {
-                    // Logo row
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Image(
-                            painter = painterResource(id = R.drawable.logo_whoosh),
-                            contentDescription = "Whoosh Logo",
-                            modifier = Modifier.size(28.dp)
+                // Background Image - Ditransformasi agar kereta lebih naik dan menutupi seluruh area
+                Image(
+                    painter = painterResource(id = R.drawable.whoosh_train_bg),
+                    contentDescription = "Whoosh Train Background",
+                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .scale(1.4f) 
+                        .offset(y = (-35).dp)
+                )
+                
+                // Thematic Red Overlay - Dipertajam gradasinya agar menyatu
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            brush = Brush.verticalGradient(
+                                colors = listOf(
+                                    Color.Transparent,
+                                    WhooshRed.copy(alpha = 0.3f),
+                                    WhooshRed.copy(alpha = 0.85f)
+                                )
+                            )
+                        )
+                )
+
+                // Foreground Content
+                Box(
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    // Logo Top-Left: Lebih ke pojok, ukuran diperkecil elegan
+                    Image(
+                        painter = painterResource(id = R.drawable.logo_whoosh), // Menggunakan versi putih murni untuk tema merah-putih
+                        contentDescription = "Whoosh Logo",
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .padding(start = 16.dp, top = 20.dp)
+                            .width(72.dp),
+                        contentScale = androidx.compose.ui.layout.ContentScale.FillWidth
+                    )
+
+                    // Refined Typography Top-Right: Sempurna dan proporsional
+                    Column(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(end = 16.dp, top = 20.dp),
+                        horizontalAlignment = Alignment.End
+                    ) {
+                        Text(
+                            text = "CONNECTING",
+                            color = WhooshWhite,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Black,
+                            fontStyle = FontStyle.Italic,
+                            letterSpacing = 2.sp
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "SHARING",
+                            color = WhooshWhite.copy(alpha = 0.9f),
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            fontStyle = FontStyle.Italic,
+                            letterSpacing = 4.sp
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "GROWTH",
+                            color = WhooshWhite.copy(alpha = 0.75f),
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            fontStyle = FontStyle.Italic,
+                            letterSpacing = 6.sp
                         )
                     }
-                    Spacer(modifier = Modifier.height(10.dp))
-                    // Slogans
-                    Text("CONNECTING", color = WhooshWhite.copy(alpha = 0.95f), fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, fontStyle = FontStyle.Italic, lineHeight = 28.sp)
-                    Text("SHARING", color = WhooshWhite.copy(alpha = 0.95f), fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, fontStyle = FontStyle.Italic, lineHeight = 28.sp)
-                    Text("GROWTH", color = WhooshWhite.copy(alpha = 0.95f), fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, fontStyle = FontStyle.Italic, lineHeight = 28.sp)
                 }
             }
 
