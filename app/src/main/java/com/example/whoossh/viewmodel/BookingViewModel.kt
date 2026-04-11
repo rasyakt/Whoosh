@@ -392,6 +392,27 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
         return data
     }
 
+    fun viewTicket(ticket: BookingData) {
+        bookingData = ticket
+    }
+
+    fun loadTicketByCode(code: String) {
+        Log.d("BookingViewModel", "Mencoba memuat tiket: $code")
+        
+        // Pastikan data terbaru sudah dimuat dari SharedPreferences
+        refreshTickets()
+
+        val ticket = activeTickets.find { it.bookingCode.equals(code, ignoreCase = true) }
+            ?: historyTickets.find { it.bookingCode.equals(code, ignoreCase = true) }
+
+        if (ticket != null) {
+            Log.i("BookingViewModel", "Tiket ditemukan: ${ticket.bookingCode}")
+            bookingData = ticket
+        } else {
+            Log.w("BookingViewModel", "Tiket tidak ditemukan untuk kode: $code")
+        }
+    }
+
     // ── RESET ────────────────────────────────────────────────────────────────
 
     fun resetBooking() {

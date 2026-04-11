@@ -5,9 +5,13 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
+import androidx.navigation.navDeepLink
 import com.example.whoossh.ui.screens.*
 import com.example.whoossh.viewmodel.BookingViewModel
 
@@ -27,8 +31,12 @@ fun NavGraph(
         ) {
             SplashScreen(
                 onSplashFinished = {
-                    navController.navigate(Screen.Dashboard.route) {
-                        popUpTo(Screen.Splash.route) { inclusive = true }
+                    // Hanya pindah ke Dashboard jika posisi terakhir masih di Splash Screen
+                    // (Mencegah Splash menimpa navigasi Deep Link yang sudah terbuka)
+                    if (navController.currentDestination?.route == Screen.Splash.route) {
+                        navController.navigate(Screen.Dashboard.route) {
+                            popUpTo(Screen.Splash.route) { inclusive = true }
+                        }
                     }
                 }
             )
@@ -126,6 +134,9 @@ fun NavGraph(
                 },
                 onNavigateToHelpCenter = {
                     navController.navigate(Screen.HelpCenter.route)
+                },
+                onNavigateToETicket = {
+                    navController.navigate(Screen.ETicket.route)
                 }
             )
         }
@@ -213,14 +224,30 @@ fun NavGraph(
 
         // ── E-TICKET ─────────────────────────────────────────────────────────
         composable(
-            route = Screen.ETicket.route,
+            route = Screen.ETicket.route + "?bookingCode={bookingCode}",
+            arguments = listOf(
+                navArgument("bookingCode") {
+                    type = NavType.StringType
+                    nullable = true
+                }
+            ),
+            deepLinks = listOf(
+                navDeepLink { uriPattern = "whoossh://ticket/{bookingCode}" },
+                navDeepLink { uriPattern = "https://whoosh.id/ticket/{bookingCode}" }
+            ),
             enterTransition = {
                 slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Up, tween(500))
             },
             exitTransition = {
                 slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Down, tween(400))
             }
-        ) {
+        ) { backStackEntry ->
+            val bookingCode = backStackEntry.arguments?.getString("bookingCode")
+            
+            LaunchedEffect(bookingCode) {
+                bookingCode?.let { viewModel.loadTicketByCode(it) }
+            }
+
             ETicketScreen(
                 viewModel = viewModel,
                 onBackToDashboard = {

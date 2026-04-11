@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -62,7 +63,8 @@ import java.util.Locale
 
 @Composable
 fun TicketsScreen(
-    viewModel: BookingViewModel
+    viewModel: BookingViewModel,
+    onTicketClick: (BookingData) -> Unit
 ) {
     val tabs = listOf("Aktif", "Riwayat")
     val pagerState = rememberPagerState(pageCount = { tabs.size })
@@ -168,7 +170,10 @@ fun TicketsScreen(
                             visible = true,
                             enter = fadeIn() + slideInVertically(initialOffsetY = { it / 3 })
                         ) {
-                            TicketCard(ticket = ticket)
+                            TicketCard(
+                                ticket = ticket,
+                                onClick = { onTicketClick(ticket) }
+                            )
                         }
                     }
                 }
@@ -178,12 +183,17 @@ fun TicketsScreen(
 }
 
 @Composable
-private fun TicketCard(ticket: BookingData) {
+private fun TicketCard(
+    ticket: BookingData,
+    onClick: () -> Unit
+) {
     val dateFormat = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale("id", "ID"))
     val bookingDate = dateFormat.format(Date(ticket.bookingTimestamp))
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(2.dp)

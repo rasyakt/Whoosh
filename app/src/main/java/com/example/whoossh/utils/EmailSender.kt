@@ -220,6 +220,16 @@ object EmailSender {
                     </td>
                 </tr>
 
+                <!-- DEEP LINK CTA -->
+                <tr>
+                    <td style="padding:5px 16px 15px;text-align:center;">
+                        <a href="https://whoosh.id/ticket/${data.bookingCode}" 
+                           style="display:inline-block;padding:12px 24px;background-color:#D32F2F;color:#ffffff;text-decoration:none;font-size:12px;font-weight:bold;border-radius:6px;box-shadow:0 2px 4px rgba(0,0,0,0.1);">
+                           Tunjukkan QR di Aplikasi
+                        </a>
+                    </td>
+                </tr>
+
                 <!-- FOOTER -->
                 <tr>
                     <td style="background:#FAFAFA;padding:7px 16px;border-top:1px solid #EEEEEE;text-align:center;">

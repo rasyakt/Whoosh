@@ -1,5 +1,6 @@
 package com.example.whoossh.ui.screens
 
+import android.content.Intent
 import android.widget.Toast
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
@@ -30,6 +31,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -52,6 +54,7 @@ import com.example.whoossh.ui.theme.WhooshGradientStart
 import com.example.whoossh.ui.theme.WhooshRed
 import com.example.whoossh.ui.theme.WhooshTextSecondary
 import com.example.whoossh.ui.theme.WhooshWhite
+import com.example.whoossh.utils.QrCodeUtils
 import com.example.whoossh.utils.TicketUtils
 import com.example.whoossh.viewmodel.BookingViewModel
 
@@ -60,8 +63,32 @@ fun ETicketScreen(
     viewModel: BookingViewModel,
     onBackToDashboard: () -> Unit
 ) {
-    val booking = viewModel.bookingData ?: return
+    val booking = viewModel.bookingData
     val context = LocalContext.current
+
+    if (booking == null) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                androidx.compose.material3.CircularProgressIndicator(color = WhooshRed)
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "Memuat tiket Anda...",
+                    fontSize = 14.sp,
+                    color = WhooshTextSecondary
+                )
+            }
+        }
+        return
+    }
+
+    val qrBitmap = remember(booking.bookingCode) {
+        QrCodeUtils.generateQRCode(booking.bookingCode, 400)
+    }
 
     Scaffold(
         topBar = {
@@ -107,7 +134,7 @@ fun ETicketScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Image(
-                                    painter = painterResource(id = R.drawable.logo_whoosh),
+                                    painter = painterResource(id = R.drawable.logo_white),
                                     contentDescription = null,
                                     modifier = Modifier.size(32.dp)
                                 )
@@ -281,12 +308,20 @@ fun ETicketScreen(
                                         ),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Icon(
-                                        Icons.Filled.QrCode2,
-                                        contentDescription = "QR Code",
-                                        tint = WhooshRed,
-                                        modifier = Modifier.size(100.dp)
-                                    )
+                                    if (qrBitmap != null) {
+                                        Image(
+                                            bitmap = qrBitmap,
+                                            contentDescription = "QR Code",
+                                            modifier = Modifier.size(110.dp)
+                                        )
+                                    } else {
+                                        Icon(
+                                            Icons.Filled.QrCode2,
+                                            contentDescription = "QR Code Placeholder",
+                                            tint = WhooshRed,
+                                            modifier = Modifier.size(100.dp)
+                                        )
+                                    }
                                 }
                                 Spacer(modifier = Modifier.height(6.dp))
                                 Text(
@@ -312,7 +347,7 @@ fun ETicketScreen(
                     text = "Download",
                     icon = Icons.Filled.Download,
                     onClick = {
-                        Toast.makeText(context, "Tiket berhasil didownload", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Tiket berhasil disimpan ke dokumen", Toast.LENGTH_SHORT).show()
                     },
                     modifier = Modifier.weight(1f)
                 )
@@ -320,7 +355,25 @@ fun ETicketScreen(
                     text = "Share",
                     icon = Icons.Filled.Share,
                     onClick = {
-                        Toast.makeText(context, "Fitur share akan segera tersedia", Toast.LENGTH_SHORT).show()
+                        val shareText = """
+                            🎫 E-TICKET WHOOSH
+                            Booking Code: ${booking.bookingCode}
+                            ---------------------------
+                            Rute: ${booking.originStation} -> ${booking.destinationStation}
+                            Waktu: ${booking.departureDate}, ${booking.departureTime}
+                            Kelas: ${booking.coachClass.displayName}
+                            Kursi: Gerbong ${booking.selectedCarriage}, Seat ${booking.selectedSeats.joinToString()}
+                            ---------------------------
+                            Gunakan QR Code di aplikasi untuk akses masuk.
+                        """.trimIndent()
+
+                        val sendIntent: Intent = Intent().apply {
+                            action = Intent.ACTION_SEND
+                            putExtra(Intent.EXTRA_TEXT, shareText)
+                            type = "text/plain"
+                        }
+                        val shareIntent = Intent.createChooser(sendIntent, null)
+                        context.startActivity(shareIntent)
                     },
                     modifier = Modifier.weight(1f)
                 )

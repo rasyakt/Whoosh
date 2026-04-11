@@ -111,7 +111,8 @@ fun DashboardScreen(
     onNavigateToLanguage: () -> Unit = {},
     onNavigateToPrivacy: () -> Unit = {},
     onNavigateToChangePassword: () -> Unit = {},
-    onNavigateToHelpCenter: () -> Unit = {}
+    onNavigateToHelpCenter: () -> Unit = {},
+    onNavigateToETicket: () -> Unit = {}
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -181,7 +182,13 @@ fun DashboardScreen(
                     onNavigateToPromo = onNavigateToPromo,
                     onNavigateToHelpCenter = onNavigateToHelpCenter
                 )
-                1 -> TicketsScreen(viewModel = viewModel)
+                1 -> TicketsScreen(
+                    viewModel = viewModel,
+                    onTicketClick = { ticket ->
+                        viewModel.viewTicket(ticket)
+                        onNavigateToETicket()
+                    }
+                )
                 2 -> SchedulesScreen()
                 3 -> AccountScreen(
                     viewModel = viewModel,
