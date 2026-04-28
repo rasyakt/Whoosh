@@ -21,4 +21,5 @@ sealed class Screen(val route: String) {
     data object Language : Screen("language")
     data object PrivacySecurity : Screen("privacy_security")
     data object HelpCenter : Screen("help_center")
+    data object SelectCountry : Screen("select_country")
 }

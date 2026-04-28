@@ -33,7 +33,9 @@ fun AddEditPassengerScreen(
     viewModel: BookingViewModel,
     passenger: Passenger? = null,
     onSave: () -> Unit,
-    onBack: () -> Unit
+    onSelectCountry: () -> Unit,
+    onBack: () -> Unit,
+    navController: androidx.navigation.NavController? = null
 ) {
     val isLoggedIn = viewModel.isLoggedIn
     val isFirstPassenger = viewModel.selectedPassengers.collectAsState().value.isEmpty()
@@ -45,7 +47,7 @@ fun AddEditPassengerScreen(
     var passengerType by remember { mutableStateOf(passenger?.passengerType ?: "Adult") }
     var discountType by remember { mutableStateOf(passenger?.discountType ?: "none") }
     var country by remember { mutableStateOf(passenger?.country ?: "Indonesia") }
-    var documentType by remember { mutableStateOf(passenger?.documentType ?: "ID Card") }
+    var documentType by remember { mutableStateOf(passenger?.documentType ?: "No. identitas") }
     var expiryDate by remember { mutableStateOf(passenger?.expiryDate ?: "31 Dec 2099") }
     var whatsapp by remember { mutableStateOf(passenger?.whatsapp ?: "") }
     var email by remember { mutableStateOf(passenger?.email ?: "") }
@@ -54,6 +56,21 @@ fun AddEditPassengerScreen(
     // Account registration fields (only for first passenger if not logged in)
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
+    
+    // Dialog states
+    var showDatePicker by remember { mutableStateOf(false) }
+    var showExpiryPicker by remember { mutableStateOf(false) }
+    var showPassengerTypeDialog by remember { mutableStateOf(false) }
+    var showDiscountTypeDialog by remember { mutableStateOf(false) }
+    var showDocumentTypeDialog by remember { mutableStateOf(false) }
+
+    // Listen for country selection result
+    LaunchedEffect(navController?.currentBackStackEntry) {
+        navController?.currentBackStackEntry?.savedStateHandle?.get<String>("selected_country")?.let { 
+            country = it
+            navController.currentBackStackEntry?.savedStateHandle?.remove<String>("selected_country")
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -150,53 +167,53 @@ fun AddEditPassengerScreen(
             }
 
             Spacer(modifier = Modifier.height(12.dp))
-            Divider(color = Color(0xFFF0F0F0), thickness = 1.dp)
+            HorizontalDivider(color = Color(0xFFF0F0F0), thickness = 1.dp)
             Spacer(modifier = Modifier.height(12.dp))
 
             // Date of Birth
             SelectableFieldRow(
                 label = "Date of birth",
                 value = dateOfBirth.ifEmpty { "Please select a date of birth" },
-                onClick = { /* Show date picker */ },
+                onClick = { showDatePicker = true },
                 isRequired = true,
                 isEmpty = dateOfBirth.isEmpty()
             )
 
             Spacer(modifier = Modifier.height(12.dp))
-            Divider(color = Color(0xFFF0F0F0), thickness = 1.dp)
+            HorizontalDivider(color = Color(0xFFF0F0F0), thickness = 1.dp)
             Spacer(modifier = Modifier.height(12.dp))
 
             // Passenger Type
             SelectableFieldRow(
                 label = "Passenger Type",
                 value = passengerType,
-                onClick = { /* Show passenger type picker */ },
+                onClick = { showPassengerTypeDialog = true },
                 isRequired = true,
                 isEmpty = false
             )
 
             Spacer(modifier = Modifier.height(12.dp))
-            Divider(color = Color(0xFFF0F0F0), thickness = 1.dp)
+            HorizontalDivider(color = Color(0xFFF0F0F0), thickness = 1.dp)
             Spacer(modifier = Modifier.height(12.dp))
 
             // Discount Type
             SelectableFieldRow(
                 label = "Discount type",
                 value = discountType,
-                onClick = { /* Show discount type picker */ },
+                onClick = { showDiscountTypeDialog = true },
                 isRequired = true,
                 isEmpty = false
             )
 
             Spacer(modifier = Modifier.height(12.dp))
-            Divider(color = Color(0xFFF0F0F0), thickness = 1.dp)
+            HorizontalDivider(color = Color(0xFFF0F0F0), thickness = 1.dp)
             Spacer(modifier = Modifier.height(12.dp))
 
             // Country/Region
             SelectableFieldRow(
                 label = "Country/Region",
                 value = country,
-                onClick = { /* Show country picker */ },
+                onClick = onSelectCountry,
                 isRequired = true,
                 isEmpty = false
             )
@@ -222,112 +239,90 @@ fun AddEditPassengerScreen(
             SelectableFieldRow(
                 label = "Document Type",
                 value = documentType,
-                onClick = { /* Show document type picker */ },
+                onClick = { showDocumentTypeDialog = true },
                 isRequired = false,
                 isEmpty = false
             )
 
             Spacer(modifier = Modifier.height(12.dp))
-            Divider(color = Color(0xFFF0F0F0), thickness = 1.dp)
+            HorizontalDivider(color = Color(0xFFF0F0F0), thickness = 1.dp)
             Spacer(modifier = Modifier.height(12.dp))
 
-            // ID Card
+            // ID Card / Identity Number
             Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.CreditCard,
-                            contentDescription = null,
-                            tint = WhooshRed,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
+                OutlinedTextField(
+                    value = identityNo,
+                    onValueChange = { identityNo = it },
+                    label = { 
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.CreditCard,
+                                contentDescription = null,
+                                tint = WhooshRed,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(documentType, fontSize = 11.sp)
+                        }
+                    },
+                    placeholder = { 
                         Text(
-                            text = "ID Card",
-                            fontSize = 12.sp,
-                            color = Color(0xFF666666)
-                        )
-                    }
-                    OutlinedTextField(
-                        value = identityNo,
-                        onValueChange = { identityNo = it },
-                        placeholder = { 
-                            Text(
-                                "Please enter your Indonesian ID card",
-                                fontSize = 11.sp,
-                                color = Color(0xFFCCCCCC)
-                            ) 
-                        },
-                        modifier = Modifier.weight(2f),
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = WhooshRed,
-                            unfocusedBorderColor = Color(0xFFE0E0E0),
-                            cursorColor = WhooshRed
-                        ),
-                        shape = RoundedCornerShape(6.dp),
-                        textStyle = LocalTextStyle.current.copy(fontSize = 12.sp)
-                    )
-                }
+                            "Please enter your $documentType number",
+                            fontSize = 11.sp,
+                            color = Color(0xFFCCCCCC)
+                        ) 
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = WhooshRed,
+                        focusedLabelColor = WhooshRed,
+                        unfocusedBorderColor = Color(0xFFE0E0E0),
+                        cursorColor = WhooshRed
+                    ),
+                    shape = RoundedCornerShape(8.dp),
+                    textStyle = LocalTextStyle.current.copy(fontSize = 14.sp)
+                )
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
-            Divider(color = Color(0xFFF0F0F0), thickness = 1.dp)
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             // Name
             Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                Row(
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Full Name", fontSize = 11.sp) },
+                    placeholder = { 
+                        Text(
+                            "Enter your name on your ID Card",
+                            fontSize = 11.sp,
+                            color = Color(0xFFCCCCCC)
+                        ) 
+                    },
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Name",
-                        fontSize = 12.sp,
-                        color = Color(0xFF666666),
-                        modifier = Modifier.weight(1f)
-                    )
-                    OutlinedTextField(
-                        value = name,
-                        onValueChange = { name = it },
-                        placeholder = { 
-                            Text(
-                                "Enter your name on your ID Card",
-                                fontSize = 11.sp,
-                                color = Color(0xFFCCCCCC)
-                            ) 
-                        },
-                        modifier = Modifier.weight(2f),
-                        singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = WhooshRed,
-                            unfocusedBorderColor = Color(0xFFE0E0E0),
-                            cursorColor = WhooshRed
-                        ),
-                        shape = RoundedCornerShape(6.dp),
-                        textStyle = LocalTextStyle.current.copy(fontSize = 12.sp)
-                    )
-                }
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = WhooshRed,
+                        focusedLabelColor = WhooshRed,
+                        unfocusedBorderColor = Color(0xFFE0E0E0),
+                        cursorColor = WhooshRed
+                    ),
+                    shape = RoundedCornerShape(8.dp),
+                    textStyle = LocalTextStyle.current.copy(fontSize = 14.sp)
+                )
             }
 
             Spacer(modifier = Modifier.height(12.dp))
-            Divider(color = Color(0xFFF0F0F0), thickness = 1.dp)
+            HorizontalDivider(color = Color(0xFFF0F0F0), thickness = 1.dp)
             Spacer(modifier = Modifier.height(12.dp))
 
             // Expiry Date
             SelectableFieldRow(
                 label = "Expiry Date",
                 value = expiryDate,
-                onClick = { /* Show expiry date picker */ },
+                onClick = { showExpiryPicker = true },
                 isRequired = false,
                 isEmpty = false
             )
@@ -344,13 +339,14 @@ fun AddEditPassengerScreen(
                 OutlinedTextField(
                     value = whatsapp,
                     onValueChange = { whatsapp = it },
-                    label = { Text("Please enter WhatsApp", fontSize = 11.sp) },
+                    label = { Text("WhatsApp Number", fontSize = 11.sp) },
                     placeholder = { Text("8123456789", fontSize = 11.sp) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     leadingIcon = {
                         Box(
                             modifier = Modifier
+                                .padding(start = 12.dp, end = 8.dp)
                                 .background(WhooshRed, RoundedCornerShape(4.dp))
                                 .padding(horizontal = 8.dp, vertical = 4.dp)
                         ) {
@@ -369,19 +365,19 @@ fun AddEditPassengerScreen(
                         unfocusedBorderColor = Color(0xFFE0E0E0),
                         cursorColor = WhooshRed
                     ),
-                    shape = RoundedCornerShape(6.dp),
-                    textStyle = LocalTextStyle.current.copy(fontSize = 12.sp)
+                    shape = RoundedCornerShape(8.dp),
+                    textStyle = LocalTextStyle.current.copy(fontSize = 14.sp)
                 )
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             // Email
             Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                 OutlinedTextField(
                     value = email,
                     onValueChange = { email = it },
-                    label = { Text("Please enter your email address", fontSize = 11.sp) },
+                    label = { Text("Email Address", fontSize = 11.sp) },
                     placeholder = { Text("example@email.com", fontSize = 11.sp) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
@@ -392,8 +388,8 @@ fun AddEditPassengerScreen(
                         unfocusedBorderColor = Color(0xFFE0E0E0),
                         cursorColor = WhooshRed
                     ),
-                    shape = RoundedCornerShape(6.dp),
-                    textStyle = LocalTextStyle.current.copy(fontSize = 12.sp)
+                    shape = RoundedCornerShape(8.dp),
+                    textStyle = LocalTextStyle.current.copy(fontSize = 14.sp)
                 )
             }
 
@@ -565,6 +561,71 @@ fun AddEditPassengerScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
         }
+        
+        // Date Picker Dialog for Date of Birth
+        if (showDatePicker) {
+            CustomDatePickerDialog(
+                onDateSelected = { selectedDate ->
+                    dateOfBirth = selectedDate
+                    showDatePicker = false
+                },
+                onDismiss = { showDatePicker = false }
+            )
+        }
+        
+        // Date Picker Dialog for Expiry Date
+        if (showExpiryPicker) {
+            CustomDatePickerDialog(
+                onDateSelected = { selectedDate ->
+                    expiryDate = selectedDate
+                    showExpiryPicker = false
+                },
+                onDismiss = { showExpiryPicker = false }
+            )
+        }
+        
+        // Passenger Type Dialog
+        if (showPassengerTypeDialog) {
+            SelectionDialog(
+                title = "Select Passenger Type",
+                options = listOf("Adult", "Bayi"),
+                selectedOption = passengerType,
+                onOptionSelected = { selected ->
+                    passengerType = selected
+                    showPassengerTypeDialog = false
+                },
+                onDismiss = { showPassengerTypeDialog = false }
+            )
+        }
+        
+        // Discount Type Dialog
+        if (showDiscountTypeDialog) {
+            SelectionDialog(
+                title = "Select Discount Type",
+                options = listOf("none", "veteran", "old", "group"),
+                selectedOption = discountType,
+                onOptionSelected = { selected ->
+                    discountType = selected
+                    showDiscountTypeDialog = false
+                },
+                onDismiss = { showDiscountTypeDialog = false }
+            )
+        }
+        
+        
+        // Document Type Dialog
+        if (showDocumentTypeDialog) {
+            SelectionDialog(
+                title = "Select Document Type",
+                options = listOf("No. identitas", "Paspor"),
+                selectedOption = documentType,
+                onOptionSelected = { selected ->
+                    documentType = selected
+                    showDocumentTypeDialog = false
+                },
+                onDismiss = { showDocumentTypeDialog = false }
+            )
+        }
     }
 }
 
@@ -671,4 +732,112 @@ private fun SelectableFieldRow(
             )
         }
     }
+}
+
+
+// Custom Date Picker Dialog
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CustomDatePickerDialog(
+    onDateSelected: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val datePickerState = rememberDatePickerState()
+    
+    DatePickerDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = {
+                datePickerState.selectedDateMillis?.let { millis ->
+                    val calendar = java.util.Calendar.getInstance()
+                    calendar.timeInMillis = millis
+                    val dateFormat = java.text.SimpleDateFormat("dd MMM yyyy", java.util.Locale.ENGLISH)
+                    val formattedDate = dateFormat.format(calendar.time)
+                    onDateSelected(formattedDate)
+                }
+            }) {
+                Text("Select", fontWeight = FontWeight.Bold, color = WhooshRed)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel", color = Color.Gray)
+            }
+        },
+        colors = DatePickerDefaults.colors(
+            containerColor = Color.White
+        ),
+        shape = RoundedCornerShape(24.dp)
+    ) {
+        DatePicker(
+            state = datePickerState,
+            title = null,
+            headline = null,
+            showModeToggle = false,
+            colors = DatePickerDefaults.colors(
+                selectedDayContainerColor = WhooshRed,
+                selectedDayContentColor = Color.White,
+                todayContentColor = WhooshRed,
+                todayDateBorderColor = WhooshRed,
+                containerColor = Color.White,
+                weekdayContentColor = Color.Gray,
+                subheadContentColor = Color.Black
+            )
+        )
+    }
+}
+
+// Selection Dialog for dropdown options
+@Composable
+private fun SelectionDialog(
+    title: String,
+    options: List<String>,
+    selectedOption: String,
+    onOptionSelected: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = title,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color.Black
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                options.forEach { option ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onOptionSelected(option) }
+                            .padding(vertical = 12.dp, horizontal = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = option == selectedOption,
+                            onClick = { onOptionSelected(option) },
+                            colors = RadioButtonDefaults.colors(
+                                selectedColor = WhooshRed,
+                                unselectedColor = Color(0xFFCCCCCC)
+                            )
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = option,
+                            fontSize = 14.sp,
+                            color = if (option == selectedOption) Color.Black else Color(0xFF666666)
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        containerColor = Color.White,
+        shape = RoundedCornerShape(12.dp)
+    )
 }

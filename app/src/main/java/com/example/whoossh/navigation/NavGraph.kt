@@ -222,7 +222,9 @@ fun NavGraph(
                 viewModel = viewModel,
                 passenger = null,
                 onSave = { navController.popBackStack() },
-                onBack = { navController.popBackStack() }
+                onSelectCountry = { navController.navigate(Screen.SelectCountry.route) },
+                onBack = { navController.popBackStack() },
+                navController = navController
             )
         }
 
@@ -250,7 +252,9 @@ fun NavGraph(
                 viewModel = viewModel,
                 passenger = passenger,
                 onSave = { navController.popBackStack() },
-                onBack = { navController.popBackStack() }
+                onSelectCountry = { navController.navigate(Screen.SelectCountry.route) },
+                onBack = { navController.popBackStack() },
+                navController = navController
             )
         }
 
@@ -453,6 +457,25 @@ fun NavGraph(
             }
         ) {
             HelpCenterScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        // ── SELECT COUNTRY ───────────────────────────────────────────────────
+        composable(
+            route = Screen.SelectCountry.route,
+            enterTransition = {
+                slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Up, tween(400))
+            },
+            exitTransition = {
+                slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Down, tween(300))
+            }
+        ) {
+            SelectCountryScreen(
+                onCountrySelected = { country ->
+                    navController.previousBackStackEntry?.savedStateHandle?.set("selected_country", country)
+                    navController.popBackStack()
+                },
                 onBack = { navController.popBackStack() }
             )
         }

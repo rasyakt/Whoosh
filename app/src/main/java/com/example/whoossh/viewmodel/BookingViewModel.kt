@@ -112,6 +112,7 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
             userPhone = savedUser.phone
             Log.i("BookingViewModel", "Restored session: userId=$userId, name=$userName")
             refreshTickets()
+            refreshSavedPassengers()
         } else if (savedUser != null && savedUserId <= 0) {
             // Cache lama dari sebelum migrasi, userId tidak valid
             // Paksa user login ulang agar mendapat userId dari server
@@ -179,6 +180,7 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
                         user.id
                     )
                     refreshTickets()
+                    refreshSavedPassengers()
                     onResult(true)
                 } else {
                     val errorBody = response.body()?.message ?: "Email atau password salah"
@@ -247,6 +249,7 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
                         com.example.whoossh.model.User(user.name, user.email, user.phone, ""),
                         user.id
                     )
+                    refreshSavedPassengers()
                     onResult(true)
                 } else {
                     registerError = response.body()?.message ?: "Registrasi gagal"
@@ -659,7 +662,13 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
                     totalPrice = total,
                     selectedCarriage = selectedCarriage ?: 1,
                     selectedSeats = selectedSeats.sorted().joinToString(","),
-                    bookingTimestamp = timestamp
+                    bookingTimestamp = timestamp,
+                    passengers = _selectedPassengers.value.mapIndexed { index, p ->
+                        p.toRequestModel(
+                            userId = userId,
+                            seatNumber = if (index < selectedSeats.size) selectedSeats[index] else ""
+                        )
+                    }
                 )
 
                 Log.d("BookingViewModel", "Sending booking request to API...")
@@ -784,6 +793,29 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun savePassengerForFuture(passenger: Passenger) {
+        if (userId <= 0) return
+
+        viewModelScope.launch {
+            try {
+                val request = passenger.toRequestModel(userId = userId)
+                val response = if (passenger.id.toIntOrNull() != null) {
+                    // Update existing
+                    api.updatePassenger(request.copy(id = passenger.id.toInt()))
+                } else {
+                    // Add new
+                    api.addPassenger(request)
+                }
+
+                if (response.isSuccessful) {
+                    Log.i("BookingViewModel", "Passenger saved to database: ${passenger.name}")
+                    refreshSavedPassengers()
+                }
+            } catch (e: Exception) {
+                Log.e("BookingViewModel", "Error saving passenger to DB: ${e.message}")
+            }
+        }
+
+        // Local update for immediate UI feedback
         val current = _savedPassengers.value.toMutableList()
         val existingIndex = current.indexOfFirst { it.id == passenger.id }
         
@@ -794,14 +826,46 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
         }
         
         _savedPassengers.value = current
-        Log.i("BookingViewModel", "Passenger saved for future: ${passenger.name}, total saved: ${current.size}")
     }
 
     fun deleteSavedPassenger(passenger: Passenger) {
         val current = _savedPassengers.value.toMutableList()
+        val idInt = passenger.id.toIntOrNull()
+        
+        if (idInt != null && userId > 0) {
+            viewModelScope.launch {
+                try {
+                    api.deletePassenger(mapOf("id" to idInt))
+                } catch (e: Exception) {
+                    Log.e("BookingViewModel", "Error deleting passenger from DB: ${e.message}")
+                }
+            }
+        }
+        
         current.removeAll { it.id == passenger.id }
         _savedPassengers.value = current
         Log.i("BookingViewModel", "Saved passenger deleted: ${passenger.name}")
+    }
+
+    fun refreshSavedPassengers() {
+        if (userId <= 0) return
+        
+        viewModelScope.launch {
+            try {
+                val response = withContext(Dispatchers.IO) {
+                    api.getPassengers(userId)
+                }
+                
+                if (response.isSuccessful && response.body()?.status == "success") {
+                    val apiPassengers = response.body()?.data ?: emptyList()
+                    val domainPassengers = apiPassengers.map { it.toDomainModel() }
+                    _savedPassengers.value = domainPassengers
+                    Log.i("BookingViewModel", "Saved passengers synced: ${domainPassengers.size} items")
+                }
+            } catch (e: Exception) {
+                Log.e("BookingViewModel", "Error refreshing passengers: ${e.message}")
+            }
+        }
     }
 
     fun clearSelectedPassengers() {
@@ -876,5 +940,42 @@ fun BookingResponse.toBookingData(fallbackName: String = ""): BookingData {
         selectedSeats = if (selectedSeats.isBlank()) emptyList() else selectedSeats.split(","),
         bookingTimestamp = bookingTimestamp,
         isUsed = isUsed
+    )
+}
+fun PassengerResponse.toDomainModel(): Passenger {
+    return Passenger(
+        id = id.toString(),
+        name = name,
+        identityNo = identityNo,
+        gender = gender,
+        dateOfBirth = dateOfBirth,
+        passengerType = passengerType,
+        discountType = discountType,
+        country = country,
+        documentType = documentType,
+        expiryDate = expiryDate,
+        whatsapp = whatsapp,
+        email = email,
+        isSaved = isSaved
+    )
+}
+
+fun Passenger.toRequestModel(userId: Int? = null, seatNumber: String? = null): PassengerRequest {
+    return PassengerRequest(
+        id = id.toIntOrNull(),
+        name = name,
+        identityNo = identityNo,
+        gender = gender,
+        dateOfBirth = dateOfBirth,
+        passengerType = passengerType,
+        discountType = discountType,
+        country = country,
+        documentType = documentType,
+        expiryDate = expiryDate,
+        whatsapp = whatsapp,
+        email = email,
+        isSaved = isSaved,
+        userId = userId,
+        seatNumber = seatNumber
     )
 }

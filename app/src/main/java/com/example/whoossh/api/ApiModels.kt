@@ -138,5 +138,56 @@ data class CreateBookingRequest(
     @SerializedName("total_price") val totalPrice: Int,
     @SerializedName("selected_carriage") val selectedCarriage: Int,
     @SerializedName("selected_seats") val selectedSeats: String,
-    @SerializedName("booking_timestamp") val bookingTimestamp: Long
+    @SerializedName("booking_timestamp") val bookingTimestamp: Long,
+    @SerializedName("passengers") val passengers: List<PassengerRequest> = emptyList()
+)
+
+data class PassengerRequest(
+    @SerializedName("id") val id: Int? = null,
+    @SerializedName("name") val name: String,
+    @SerializedName("identity_no") val identityNo: String,
+    @SerializedName("gender") val gender: String,
+    @SerializedName("date_of_birth") val dateOfBirth: String,
+    @SerializedName("passenger_type") val passengerType: String,
+    @SerializedName("discount_type") val discountType: String = "none",
+    @SerializedName("country") val country: String = "Indonesia",
+    @SerializedName("document_type") val documentType: String = "ID Card",
+    @SerializedName("expiry_date") val expiryDate: String = "",
+    @SerializedName("whatsapp") val whatsapp: String,
+    @SerializedName("email") val email: String,
+    @SerializedName("is_saved") val isSaved: Boolean = true,
+    @SerializedName("user_id") val userId: Int? = null,
+    @SerializedName("seat_number") val seatNumber: String? = null
+)
+
+data class PassengerResponse(
+    @SerializedName("id") val id: Int,
+    @SerializedName("user_id") val userId: Int,
+    @SerializedName("name") val name: String,
+    @SerializedName("identity_no") val identityNo: String,
+    @SerializedName("gender") val gender: String,
+    @SerializedName("date_of_birth") val dateOfBirth: String,
+    @SerializedName("passenger_type") val passengerType: String,
+    @SerializedName("discount_type") val discountType: String,
+    @SerializedName("country") val country: String,
+    @SerializedName("document_type") val documentType: String,
+    @SerializedName("expiry_date") val expiryDate: String,
+    @SerializedName("whatsapp") val whatsapp: String,
+    @SerializedName("email") val email: String,
+    @SerializedName("is_saved") val isSaved: Boolean
+)
+
+data class CountryResponse(
+    @SerializedName("id") val id: Int,
+    @SerializedName("name") val name: String,
+    @SerializedName("flag") val flag: String,
+    @SerializedName("code") val code: String,
+    @SerializedName("is_priority") val isPriority: Boolean
+)
+
+data class Country(
+    val name: String,
+    val flag: String,
+    val code: String,
+    val isPriority: Boolean = false
 )

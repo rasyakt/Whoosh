@@ -62,4 +62,23 @@ interface ApiService {
 
     @GET("promo/get_all.php")
     suspend fun getPromos(): Response<ApiResponse<List<PromoResponse>>>
+
+    // ── PASSENGER ────────────────────────────────────────────────────────────
+
+    @GET("passenger/get_all.php")
+    suspend fun getPassengers(@Query("user_id") userId: Int): Response<ApiResponse<List<PassengerResponse>>>
+
+    @POST("passenger/add.php")
+    suspend fun addPassenger(@Body request: PassengerRequest): Response<ApiResponse<Map<String, Any>>>
+
+    @POST("passenger/update.php")
+    suspend fun updatePassenger(@Body request: PassengerRequest): Response<ApiResponse<Nothing>>
+
+    @POST("passenger/delete.php")
+    suspend fun deletePassenger(@Body request: Map<String, Int>): Response<ApiResponse<Nothing>>
+
+    // ── COUNTRY ──────────────────────────────────────────────────────────────
+
+    @GET("country/get_all.php")
+    suspend fun getCountries(): Response<ApiResponse<List<CountryResponse>>>
 }
