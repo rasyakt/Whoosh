@@ -14,7 +14,11 @@ import com.example.whoossh.data.StationData
 import com.example.whoossh.data.UserPreferences
 import com.example.whoossh.model.BookingData
 import com.example.whoossh.model.CoachClass
+import com.example.whoossh.model.Passenger
 import com.example.whoossh.model.Schedule
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import com.example.whoossh.utils.EmailSender
 import com.example.whoossh.utils.TicketUtils
 import kotlinx.coroutines.Dispatchers
@@ -88,6 +92,13 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
     // Email Status
     var emailSentStatus by mutableStateOf<Boolean?>(null)
         private set
+
+    // Passenger Management
+    private val _selectedPassengers = MutableStateFlow<List<Passenger>>(emptyList())
+    val selectedPassengers: StateFlow<List<Passenger>> = _selectedPassengers.asStateFlow()
+
+    private val _savedPassengers = MutableStateFlow<List<Passenger>>(emptyList())
+    val savedPassengers: StateFlow<List<Passenger>> = _savedPassengers.asStateFlow()
 
     init {
         // Check if user was previously logged in (dari cache lokal)
@@ -736,6 +747,75 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    // ── PASSENGER MANAGEMENT ─────────────────────────────────────────────────
+
+    fun addPassenger(passenger: Passenger) {
+        val current = _selectedPassengers.value.toMutableList()
+        if (current.size < 15 && current.none { it.id == passenger.id }) {
+            current.add(passenger)
+            _selectedPassengers.value = current
+            Log.i("BookingViewModel", "Passenger added: ${passenger.name}, total: ${current.size}")
+        }
+    }
+
+    fun removePassenger(passenger: Passenger) {
+        val current = _selectedPassengers.value.toMutableList()
+        current.removeAll { it.id == passenger.id }
+        _selectedPassengers.value = current
+        Log.i("BookingViewModel", "Passenger removed: ${passenger.name}, remaining: ${current.size}")
+    }
+
+    fun updatePassenger(passenger: Passenger) {
+        val current = _selectedPassengers.value.toMutableList()
+        val index = current.indexOfFirst { it.id == passenger.id }
+        if (index != -1) {
+            current[index] = passenger
+            _selectedPassengers.value = current
+            Log.i("BookingViewModel", "Passenger updated: ${passenger.name}")
+        }
+        
+        // Update in saved passengers too if it exists there
+        val saved = _savedPassengers.value.toMutableList()
+        val savedIndex = saved.indexOfFirst { it.id == passenger.id }
+        if (savedIndex != -1) {
+            saved[savedIndex] = passenger
+            _savedPassengers.value = saved
+        }
+    }
+
+    fun savePassengerForFuture(passenger: Passenger) {
+        val current = _savedPassengers.value.toMutableList()
+        val existingIndex = current.indexOfFirst { it.id == passenger.id }
+        
+        if (existingIndex != -1) {
+            current[existingIndex] = passenger.copy(isSaved = true)
+        } else {
+            current.add(passenger.copy(isSaved = true))
+        }
+        
+        _savedPassengers.value = current
+        Log.i("BookingViewModel", "Passenger saved for future: ${passenger.name}, total saved: ${current.size}")
+    }
+
+    fun deleteSavedPassenger(passenger: Passenger) {
+        val current = _savedPassengers.value.toMutableList()
+        current.removeAll { it.id == passenger.id }
+        _savedPassengers.value = current
+        Log.i("BookingViewModel", "Saved passenger deleted: ${passenger.name}")
+    }
+
+    fun clearSelectedPassengers() {
+        _selectedPassengers.value = emptyList()
+    }
+
+    fun getSavedPassengerById(id: String): Passenger? {
+        return _savedPassengers.value.find { it.id == id }
+    }
+
+    fun getSelectedPassengerById(id: String): Passenger? {
+        return _selectedPassengers.value.find { it.id == id }
+    }
+
     // ── RESET ────────────────────────────────────────────────────────────────
 
     fun resetBooking() {
@@ -751,6 +831,7 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
         selectedSeats.clear()
         bookingData = null
         emailSentStatus = null
+        clearSelectedPassengers()
     }
 
     // ── SETTINGS ─────────────────────────────────────────────────────────────

@@ -73,3 +73,42 @@ data class NotificationItem(
     val date: String,
     val isRead: Boolean = false
 )
+
+data class Passenger(
+    val id: String = java.util.UUID.randomUUID().toString(),
+    val name: String,
+    val identityNo: String,
+    val gender: String, // "Male" or "Female"
+    val dateOfBirth: String,
+    val passengerType: String, // "Adult", "Child", "Infant"
+    val discountType: String = "none",
+    val country: String = "Indonesia",
+    val documentType: String = "ID Card", // "ID Card", "Passport", "KTP"
+    val expiryDate: String,
+    val whatsapp: String,
+    val email: String,
+    val isSaved: Boolean = false // untuk saved passengers
+)
+
+data class TicketOrder(
+    val orderNumber: String,
+    val orderTime: String,
+    val schedule: Schedule,
+    val passengers: List<Passenger>,
+    val coachClass: CoachClass,
+    val selectedCarriage: Int,
+    val selectedSeats: List<String>,
+    val totalPrice: Int,
+    val status: OrderStatus,
+    val paymentDeadline: Long? = null,
+    val qrCode: String? = null
+)
+
+enum class OrderStatus {
+    UNPAID,
+    PAID,
+    CHECKED,
+    RESCHEDULED,
+    REFUNDED,
+    CANCELLED
+}

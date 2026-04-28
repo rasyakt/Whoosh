@@ -178,6 +178,78 @@ fun NavGraph(
                 onCoachSelected = {
                     navController.navigate(Screen.SelectSeat.route)
                 },
+                onManagePassengers = {
+                    navController.navigate(Screen.PassengerList.route)
+                },
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        // ── PASSENGER LIST ───────────────────────────────────────────────────
+        composable(
+            route = Screen.PassengerList.route,
+            enterTransition = {
+                slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Up, tween(400))
+            },
+            exitTransition = {
+                slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Down, tween(300))
+            }
+        ) {
+            PassengerListScreen(
+                viewModel = viewModel,
+                onDone = { navController.popBackStack() },
+                onAddPassenger = {
+                    navController.navigate(Screen.AddPassenger.route)
+                },
+                onEditPassenger = { passenger ->
+                    navController.navigate("${Screen.EditPassenger.route}/${passenger.id}")
+                },
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        // ── ADD PASSENGER ────────────────────────────────────────────────────
+        composable(
+            route = Screen.AddPassenger.route,
+            enterTransition = {
+                slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left, tween(400))
+            },
+            exitTransition = {
+                slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right, tween(300))
+            }
+        ) {
+            AddEditPassengerScreen(
+                viewModel = viewModel,
+                passenger = null,
+                onSave = { navController.popBackStack() },
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        // ── EDIT PASSENGER ───────────────────────────────────────────────────
+        composable(
+            route = "${Screen.EditPassenger.route}/{passengerId}",
+            arguments = listOf(
+                navArgument("passengerId") {
+                    type = NavType.StringType
+                }
+            ),
+            enterTransition = {
+                slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left, tween(400))
+            },
+            exitTransition = {
+                slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right, tween(300))
+            }
+        ) { backStackEntry ->
+            val passengerId = backStackEntry.arguments?.getString("passengerId")
+            val passenger = passengerId?.let { 
+                viewModel.getSelectedPassengerById(it) ?: viewModel.getSavedPassengerById(it)
+            }
+            
+            AddEditPassengerScreen(
+                viewModel = viewModel,
+                passenger = passenger,
+                onSave = { navController.popBackStack() },
                 onBack = { navController.popBackStack() }
             )
         }
