@@ -1,5 +1,6 @@
 package com.example.whoossh.ui.screens
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,6 +20,7 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.LocalOffer
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -26,7 +28,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -34,8 +40,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.whoossh.api.ApiClient
 import com.example.whoossh.model.Promo
 import com.example.whoossh.ui.components.WhooshTopBar
 import com.example.whoossh.ui.theme.WhooshGradientEnd
@@ -44,20 +52,44 @@ import com.example.whoossh.ui.theme.WhooshOrange
 import com.example.whoossh.ui.theme.WhooshRed
 import com.example.whoossh.ui.theme.WhooshTextSecondary
 import com.example.whoossh.ui.theme.WhooshWhite
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @Composable
 fun PromoScreen(
     onBack: () -> Unit
 ) {
-    val promos = remember {
-        listOf(
-            Promo(1, "Diskon Pengguna Baru", "Nikmati potongan harga untuk pembelian pertama Anda di Whoosh", "15%", "30 Apr 2026", "NEWUSER15", "Min. pembelian Rp 200.000"),
-            Promo(2, "Weekend Hemat", "Promo spesial untuk perjalanan di hari Sabtu & Minggu", "10%", "31 Mei 2026", "WEEKEND10", "Min. pembelian Rp 150.000"),
-            Promo(3, "Flash Sale VIP", "Upgrade ke kelas VIP dengan harga spesial", "20%", "15 Apr 2026", "FLASHVIP20", "Khusus kelas VIP"),
-            Promo(4, "Promo Ramadan", "Mudik lebih hemat dengan kereta cepat Whoosh", "25%", "10 Apr 2026", "RAMADAN25", "Min. 2 tiket"),
-            Promo(5, "Cashback Bisnis", "Dapatkan cashback untuk perjalanan kelas Bisnis", "Rp 50.000", "30 Jun 2026", "BISNIS50K", "Khusus kelas Bisnis"),
-            Promo(6, "Student Promo", "Diskon spesial untuk pelajar dan mahasiswa", "30%", "31 Des 2026", "STUDENT30", "Wajib tunjukkan KTM"),
-        )
+    var promos by remember { mutableStateOf<List<Promo>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
+
+    // Fetch promos dari API
+    LaunchedEffect(Unit) {
+        try {
+            val response = withContext(Dispatchers.IO) {
+                ApiClient.apiService.getPromos()
+            }
+            if (response.isSuccessful && response.body()?.status == "success") {
+                val data = response.body()!!.data ?: emptyList()
+                promos = data.map { p ->
+                    Promo(
+                        id = p.id,
+                        title = p.title,
+                        description = p.description,
+                        discount = p.discount,
+                        validUntil = p.validUntil,
+                        code = p.code,
+                        minPurchase = p.minPurchase
+                    )
+                }
+                Log.i("PromoScreen", "Loaded ${promos.size} promos from API")
+            } else {
+                Log.e("PromoScreen", "API Error: ${response.message()}")
+            }
+        } catch (e: Exception) {
+            Log.e("PromoScreen", "Network Error: ${e.message}")
+        } finally {
+            isLoading = false
+        }
     }
 
     Scaffold(
@@ -65,17 +97,51 @@ fun PromoScreen(
             WhooshTopBar(title = "Promo & Diskon", onBack = onBack)
         }
     ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .background(MaterialTheme.colorScheme.background)
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 16.dp)
-        ) {
-            items(promos) { promo ->
-                PromoCard(promo)
+        if (isLoading) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(color = WhooshRed)
+            }
+        } else if (promos.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        Icons.Filled.LocalOffer,
+                        contentDescription = null,
+                        modifier = Modifier.size(80.dp),
+                        tint = Color.LightGray
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "Belum ada promo tersedia",
+                        fontSize = 16.sp,
+                        color = WhooshTextSecondary,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .background(MaterialTheme.colorScheme.background)
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 16.dp)
+            ) {
+                items(promos) { promo ->
+                    PromoCard(promo)
+                }
             }
         }
     }

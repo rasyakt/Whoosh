@@ -200,6 +200,7 @@ fun LoginScreen(
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(14.dp),
                             singleLine = true,
+                            enabled = !viewModel.isLoading,
                             keyboardOptions = KeyboardOptions(
                                 keyboardType = KeyboardType.Email,
                                 imeAction = ImeAction.Next
@@ -243,6 +244,7 @@ fun LoginScreen(
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(14.dp),
                             singleLine = true,
+                            enabled = !viewModel.isLoading,
                             keyboardOptions = KeyboardOptions(
                                 keyboardType = KeyboardType.Password,
                                 imeAction = ImeAction.Done
@@ -250,8 +252,8 @@ fun LoginScreen(
                             keyboardActions = KeyboardActions(
                                 onDone = {
                                     focusManager.clearFocus()
-                                    if (viewModel.login(email, password)) {
-                                        onLoginSuccess()
+                                    viewModel.login(email, password) { success ->
+                                        if (success) onLoginSuccess()
                                     }
                                 }
                             ),
@@ -266,13 +268,14 @@ fun LoginScreen(
 
                         // Login Button
                         WhooshButton(
-                            text = "Masuk",
+                            text = if (viewModel.isLoading) "Memuat..." else "Masuk",
                             onClick = {
                                 focusManager.clearFocus()
-                                if (viewModel.login(email, password)) {
-                                    onLoginSuccess()
+                                viewModel.login(email, password) { success ->
+                                    if (success) onLoginSuccess()
                                 }
-                            }
+                            },
+                            enabled = !viewModel.isLoading
                         )
 
                         Spacer(modifier = Modifier.height(12.dp))

@@ -180,16 +180,18 @@ fun EditProfileScreen(
                 Spacer(modifier = Modifier.height(32.dp))
 
                 WhooshButton(
-                    text = "Simpan Perubahan",
+                    text = if (viewModel.isLoading) "Menyimpan..." else "Simpan Perubahan",
                     onClick = {
-                        val success = viewModel.updateProfile(name, email, phone)
-                        if (success) {
-                            Toast.makeText(context, "Profil berhasil diperbarui", Toast.LENGTH_SHORT).show()
-                            onBack()
-                        } else {
-                            Toast.makeText(context, "Gagal memperbarui profil. Periksa data Anda.", Toast.LENGTH_SHORT).show()
+                        viewModel.updateProfile(name, email, phone) { success ->
+                            if (success) {
+                                Toast.makeText(context, "Profil berhasil diperbarui", Toast.LENGTH_SHORT).show()
+                                onBack()
+                            } else {
+                                Toast.makeText(context, "Gagal memperbarui profil. Periksa data Anda.", Toast.LENGTH_SHORT).show()
+                            }
                         }
-                    }
+                    },
+                    enabled = !viewModel.isLoading
                 )
             }
         }

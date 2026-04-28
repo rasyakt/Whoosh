@@ -338,8 +338,8 @@ fun RegisterScreen(
                             keyboardActions = KeyboardActions(
                                 onDone = {
                                     focusManager.clearFocus()
-                                    if (viewModel.register(name, email, phone, password, confirmPassword)) {
-                                        onRegisterSuccess()
+                                    viewModel.register(name, email, phone, password, confirmPassword) { success ->
+                                        if (success) onRegisterSuccess()
                                     }
                                 }
                             ),
@@ -353,13 +353,14 @@ fun RegisterScreen(
                         Spacer(modifier = Modifier.height(24.dp))
 
                         WhooshButton(
-                            text = "Daftar",
+                            text = if (viewModel.isLoading) "Memuat..." else "Daftar",
                             onClick = {
                                 focusManager.clearFocus()
-                                if (viewModel.register(name, email, phone, password, confirmPassword)) {
-                                    onRegisterSuccess()
+                                viewModel.register(name, email, phone, password, confirmPassword) { success ->
+                                    if (success) onRegisterSuccess()
                                 }
-                            }
+                            },
+                            enabled = !viewModel.isLoading
                         )
 
                         Spacer(modifier = Modifier.height(12.dp))

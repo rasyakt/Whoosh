@@ -274,40 +274,69 @@ fun SelectScheduleScreen(
                 .padding(paddingValues)
                 .background(Color(0xFFF5F5F5))
         ) {
-            Text(
-                text = "${viewModel.schedules.size} jadwal tersedia",
-                style = MaterialTheme.typography.bodySmall,
-                color = WhooshTextSecondary,
-                modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)
-            )
-
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                    top = 4.dp,
-                    bottom = 20.dp
-                )
-            ) {
-                itemsIndexed(viewModel.schedules) { index, schedule ->
-                    val isVisible = index < visibleItems.size && visibleItems[index]
-                    AnimatedVisibility(
-                        visible = isVisible,
-                        enter = fadeIn() + slideInVertically(initialOffsetY = { it / 2 })
-                    ) {
-                        ScheduleCard(
-                            schedule = schedule,
-                            onSelect = {
-                                if (viewModel.isLoggedIn) {
-                                    viewModel.selectSchedule(schedule)
-                                    onScheduleSelected()
-                                } else {
-                                    onLoginRequired()
-                                }
-                            }
+            if (viewModel.isLoadingSchedules) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    androidx.compose.material3.CircularProgressIndicator(color = WhooshRed)
+                }
+            } else if (viewModel.schedules.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            Icons.Filled.Schedule,
+                            null,
+                            modifier = Modifier.size(64.dp),
+                            tint = Color.LightGray
                         )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = "Tidak ada jadwal tersedia",
+                            color = WhooshTextSecondary,
+                            fontSize = 16.sp
+                        )
+                    }
+                }
+            } else {
+                Text(
+                    text = "${viewModel.schedules.size} jadwal tersedia",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = WhooshTextSecondary,
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)
+                )
+
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                        top = 4.dp,
+                        bottom = 20.dp
+                    )
+                ) {
+                    itemsIndexed(viewModel.schedules) { index, schedule ->
+                        val isVisible = index < visibleItems.size && visibleItems[index]
+                        AnimatedVisibility(
+                            visible = isVisible,
+                            enter = fadeIn() + slideInVertically(initialOffsetY = { it / 2 })
+                        ) {
+                            ScheduleCard(
+                                schedule = schedule,
+                                onSelect = {
+                                    if (viewModel.isLoggedIn) {
+                                        viewModel.selectSchedule(schedule)
+                                        onScheduleSelected()
+                                    } else {
+                                        onLoginRequired()
+                                    }
+                                }
+                            )
+                        }
                     }
                 }
             }

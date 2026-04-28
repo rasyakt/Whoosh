@@ -46,12 +46,17 @@ import com.example.whoossh.viewmodel.BookingViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import androidx.compose.runtime.LaunchedEffect
 
 @Composable
 fun TravelHistoryScreen(
     viewModel: BookingViewModel,
     onBack: () -> Unit
 ) {
+    LaunchedEffect(Unit) {
+        viewModel.refreshTickets()
+    }
+
     val allTickets = viewModel.activeTickets + viewModel.historyTickets
 
     Scaffold(

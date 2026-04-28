@@ -9,16 +9,17 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.whoossh.api.*
 import com.example.whoossh.data.StationData
 import com.example.whoossh.data.UserPreferences
 import com.example.whoossh.model.BookingData
 import com.example.whoossh.model.CoachClass
 import com.example.whoossh.model.Schedule
-import com.example.whoossh.model.User
 import com.example.whoossh.utils.EmailSender
 import com.example.whoossh.utils.TicketUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -26,9 +27,12 @@ import java.util.Locale
 class BookingViewModel(application: Application) : AndroidViewModel(application) {
 
     private val userPreferences = UserPreferences(application)
+    private val api = ApiClient.apiService
 
     // Login State
     var isLoggedIn by mutableStateOf(false)
+        private set
+    var userId by mutableIntStateOf(0)
         private set
     var userName by mutableStateOf("")
         private set
@@ -39,6 +43,8 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
     var loginError by mutableStateOf<String?>(null)
         private set
     var registerError by mutableStateOf<String?>(null)
+        private set
+    var isLoading by mutableStateOf(false)
         private set
 
     // Booking Form State
@@ -84,80 +90,170 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
         private set
 
     init {
-        // Check if user was previously logged in
+        // Check if user was previously logged in (dari cache lokal)
         val savedUser = userPreferences.getLoggedInUser()
-        if (savedUser != null) {
+        val savedUserId = userPreferences.getUserId()
+        if (savedUser != null && savedUserId > 0) {
             isLoggedIn = true
+            userId = savedUserId
             userName = savedUser.name
             userEmail = savedUser.email
             userPhone = savedUser.phone
+            Log.i("BookingViewModel", "Restored session: userId=$userId, name=$userName")
             refreshTickets()
+        } else if (savedUser != null && savedUserId <= 0) {
+            // Cache lama dari sebelum migrasi, userId tidak valid
+            // Paksa user login ulang agar mendapat userId dari server
+            Log.w("BookingViewModel", "Cache lama terdeteksi (userId=0), memaksa login ulang")
+            userPreferences.clearLoggedInUser()
+            isLoggedIn = false
+        }
+        
+        // Sinkronisasi data stasiun dari API
+        refreshStations()
+    }
+
+    // ── STATIONS SYNC ────────────────────────────────────────────────────────
+
+    fun refreshStations() {
+        viewModelScope.launch {
+            try {
+                val response = withContext(Dispatchers.IO) {
+                    api.getStations()
+                }
+                if (response.isSuccessful && response.body()?.status == "success") {
+                    val stationResponses = response.body()?.data ?: emptyList()
+                    if (stationResponses.isNotEmpty()) {
+                        val newStations = stationResponses.map { 
+                            com.example.whoossh.model.Station(it.id, it.name)
+                        }
+                        StationData.updateStations(newStations)
+                        Log.i("BookingViewModel", "Stations synced: ${newStations.size} stations")
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("BookingViewModel", "Failed to sync stations: ${e.message}")
+            }
         }
     }
 
     // ── LOGIN & REGISTER ─────────────────────────────────────────────────────
 
-    fun login(email: String, password: String): Boolean {
+    fun login(email: String, password: String, onResult: (Boolean) -> Unit) {
         loginError = null
         if (email.isBlank() || password.isBlank()) {
             loginError = "Email dan password tidak boleh kosong"
-            return false
+            onResult(false)
+            return
         }
-        val user = userPreferences.loginUser(email, password)
-        if (user != null) {
-            userName = user.name
-            userEmail = user.email
-            userPhone = user.phone
-            isLoggedIn = true
-            userPreferences.saveLoggedInUser(user)
-            refreshTickets()
-            return true
+
+        isLoading = true
+        viewModelScope.launch {
+            try {
+                val response = withContext(Dispatchers.IO) {
+                    api.login(LoginRequest(email, password))
+                }
+
+                if (response.isSuccessful && response.body()?.status == "success") {
+                    val user = response.body()!!.data!!
+                    userId = user.id
+                    userName = user.name
+                    userEmail = user.email
+                    userPhone = user.phone
+                    isLoggedIn = true
+
+                    // Cache locally
+                    userPreferences.saveLoggedInUser(
+                        com.example.whoossh.model.User(user.name, user.email, user.phone, ""),
+                        user.id
+                    )
+                    refreshTickets()
+                    onResult(true)
+                } else {
+                    val errorBody = response.body()?.message ?: "Email atau password salah"
+                    loginError = errorBody
+                    onResult(false)
+                }
+            } catch (e: Exception) {
+                Log.e("BookingViewModel", "Login error", e)
+                loginError = "Gagal terhubung ke server: ${e.localizedMessage}"
+                onResult(false)
+            } finally {
+                isLoading = false
+            }
         }
-        loginError = "Email atau password salah"
-        return false
     }
 
-    fun register(name: String, email: String, phone: String, password: String, confirmPassword: String): Boolean {
+    fun register(
+        name: String, email: String, phone: String,
+        password: String, confirmPassword: String,
+        onResult: (Boolean) -> Unit
+    ) {
         registerError = null
         if (name.isBlank() || email.isBlank() || phone.isBlank() || password.isBlank()) {
             registerError = "Semua field harus diisi"
-            return false
+            onResult(false)
+            return
         }
         if (!email.contains("@") || !email.contains(".")) {
             registerError = "Format email tidak valid"
-            return false
+            onResult(false)
+            return
         }
         if (phone.length < 10) {
             registerError = "Nomor HP minimal 10 digit"
-            return false
+            onResult(false)
+            return
         }
         if (password.length < 6) {
             registerError = "Password minimal 6 karakter"
-            return false
+            onResult(false)
+            return
         }
         if (password != confirmPassword) {
             registerError = "Konfirmasi password tidak cocok"
-            return false
+            onResult(false)
+            return
         }
 
-        val user = User(name = name, email = email, phone = phone, password = password)
-        val success = userPreferences.registerUser(user)
-        if (!success) {
-            registerError = "Email sudah terdaftar"
-            return false
-        }
+        isLoading = true
+        viewModelScope.launch {
+            try {
+                val response = withContext(Dispatchers.IO) {
+                    api.register(RegisterRequest(name, email, phone, password))
+                }
 
-        // Auto-login after registration
-        userName = name
-        userEmail = email
-        userPhone = phone
-        isLoggedIn = true
-        userPreferences.saveLoggedInUser(user)
-        return true
+                if (response.isSuccessful && response.body()?.status == "success") {
+                    val user = response.body()!!.data!!
+                    userId = user.id
+                    userName = user.name
+                    userEmail = user.email
+                    userPhone = user.phone
+                    isLoggedIn = true
+
+                    // Cache locally
+                    userPreferences.saveLoggedInUser(
+                        com.example.whoossh.model.User(user.name, user.email, user.phone, ""),
+                        user.id
+                    )
+                    onResult(true)
+                } else {
+                    registerError = response.body()?.message ?: "Registrasi gagal"
+                    onResult(false)
+                }
+            } catch (e: Exception) {
+                Log.e("BookingViewModel", "Register error", e)
+                registerError = "Gagal terhubung ke server: ${e.localizedMessage}"
+                onResult(false)
+            } finally {
+                isLoading = false
+            }
+        }
     }
 
     fun logout() {
         isLoggedIn = false
+        userId = 0
         userName = ""
         userEmail = ""
         userPhone = ""
@@ -169,40 +265,168 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
 
     // ── PROFILE ──────────────────────────────────────────────────────────────
 
-    fun updateProfile(name: String, email: String, phone: String): Boolean {
-        if (name.isBlank() || email.isBlank() || phone.isBlank()) return false
-        if (!email.contains("@") || !email.contains(".")) return false
+    fun updateProfile(name: String, email: String, phone: String, onResult: (Boolean) -> Unit) {
+        if (name.isBlank() || email.isBlank() || phone.isBlank()) {
+            onResult(false)
+            return
+        }
+        if (!email.contains("@") || !email.contains(".")) {
+            onResult(false)
+            return
+        }
 
-        val currentUser = userPreferences.getLoggedInUser() ?: return false
-        val updated = currentUser.copy(name = name, email = email, phone = phone)
-        userPreferences.updateUser(currentUser.email, updated)
-        userName = name
-        userEmail = email
-        userPhone = phone
-        return true
+        isLoading = true
+        viewModelScope.launch {
+            try {
+                val response = withContext(Dispatchers.IO) {
+                    api.updateProfile(UpdateProfileRequest(userId, name, email, phone))
+                }
+
+                if (response.isSuccessful && response.body()?.status == "success") {
+                    val user = response.body()!!.data!!
+                    userName = user.name
+                    userEmail = user.email
+                    userPhone = user.phone
+
+                    // Update cache
+                    userPreferences.saveLoggedInUser(
+                        com.example.whoossh.model.User(user.name, user.email, user.phone, ""),
+                        user.id
+                    )
+                    onResult(true)
+                } else {
+                    onResult(false)
+                }
+            } catch (e: Exception) {
+                Log.e("BookingViewModel", "Update profile error", e)
+                onResult(false)
+            } finally {
+                isLoading = false
+            }
+        }
     }
 
-    fun changePassword(oldPassword: String, newPassword: String, confirmPassword: String): String? {
+    fun changePassword(
+        oldPassword: String, newPassword: String, confirmPassword: String,
+        onResult: (String?) -> Unit
+    ) {
         if (oldPassword.isBlank() || newPassword.isBlank() || confirmPassword.isBlank()) {
-            return "Semua field harus diisi"
+            onResult("Semua field harus diisi")
+            return
         }
-        if (newPassword.length < 6) return "Password baru minimal 6 karakter"
-        if (newPassword != confirmPassword) return "Konfirmasi password tidak cocok"
-        if (oldPassword == newPassword) return "Password baru harus berbeda"
+        if (newPassword.length < 6) {
+            onResult("Password baru minimal 6 karakter")
+            return
+        }
+        if (newPassword != confirmPassword) {
+            onResult("Konfirmasi password tidak cocok")
+            return
+        }
+        if (oldPassword == newPassword) {
+            onResult("Password baru harus berbeda")
+            return
+        }
 
-        val success = userPreferences.changePassword(userEmail, oldPassword, newPassword)
-        return if (success) null else "Password lama salah"
+        isLoading = true
+        viewModelScope.launch {
+            try {
+                val response = withContext(Dispatchers.IO) {
+                    api.changePassword(ChangePasswordRequest(userId, oldPassword, newPassword))
+                }
+
+                if (response.isSuccessful && response.body()?.status == "success") {
+                    onResult(null) // null = success
+                } else {
+                    onResult(response.body()?.message ?: "Password lama salah")
+                }
+            } catch (e: Exception) {
+                Log.e("BookingViewModel", "Change password error", e)
+                onResult("Gagal terhubung ke server")
+            } finally {
+                isLoading = false
+            }
+        }
     }
 
     // ── TICKETS PERSISTENCE ──────────────────────────────────────────────────
 
     fun refreshTickets() {
-        activeTickets = userPreferences.getActiveTickets()
-        historyTickets = userPreferences.getHistoryTickets()
+        if (userId <= 0) {
+            Log.w("BookingViewModel", "refreshTickets: userId=$userId, skipping")
+            return
+        }
+
+        Log.d("BookingViewModel", "refreshTickets: fetching tickets for userId=$userId")
+
+        viewModelScope.launch {
+            try {
+                // Strategy 1: Non-generic TicketsListResponse (avoids Gson type erasure)
+                val response = withContext(Dispatchers.IO) {
+                    api.getTicketsList(userId)
+                }
+
+                Log.d("BookingViewModel", "refreshTickets: HTTP ${response.code()}")
+
+                if (response.isSuccessful && response.body()?.status == "success") {
+                    val tickets = response.body()!!.data ?: emptyList()
+                    Log.i("BookingViewModel", "refreshTickets: received ${tickets.size} tickets from server")
+                    applyTickets(tickets)
+                    return@launch
+                } else {
+                    val errorBody = response.errorBody()?.string()
+                    Log.e("BookingViewModel", "refreshTickets Strategy 1 failed: HTTP ${response.code()} - $errorBody")
+                }
+            } catch (e: Exception) {
+                Log.e("BookingViewModel", "refreshTickets Strategy 1 error: ${e.javaClass.simpleName} - ${e.message}")
+            }
+
+            // Strategy 2: Raw JSON + manual parsing
+            try {
+                Log.d("BookingViewModel", "refreshTickets: trying raw JSON fallback...")
+                val rawResponse = withContext(Dispatchers.IO) {
+                    api.getTicketsRaw(userId)
+                }
+
+                if (rawResponse.isSuccessful) {
+                    val jsonString = rawResponse.body()?.string() ?: ""
+                    Log.d("BookingViewModel", "refreshTickets raw response: ${jsonString.take(200)}")
+
+                    val gson = com.google.gson.Gson()
+                    val type = object : com.google.gson.reflect.TypeToken<TicketsListResponse>() {}.type
+                    val parsed = gson.fromJson<TicketsListResponse>(jsonString, type)
+
+                    if (parsed.status == "success" && parsed.data != null) {
+                        Log.i("BookingViewModel", "refreshTickets Strategy 2: parsed ${parsed.data.size} tickets")
+                        applyTickets(parsed.data)
+                        return@launch
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("BookingViewModel", "refreshTickets Strategy 2 error: ${e.javaClass.simpleName} - ${e.message}", e)
+            }
+
+            Log.w("BookingViewModel", "refreshTickets: all strategies failed, keeping existing ${activeTickets.size} local tickets")
+        }
     }
 
-    fun getTotalTrips(): Int = userPreferences.getTicketCount()
-    fun getActiveTicketCount(): Int = userPreferences.getActiveTicketCount()
+    private fun applyTickets(tickets: List<BookingResponse>) {
+        val bookings = tickets.mapNotNull { ticket ->
+            try {
+                ticket.toBookingData(userName)
+            } catch (e: Exception) {
+                Log.e("BookingViewModel", "Error parsing ticket ${ticket.bookingCode}: ${e.message}")
+                null
+            }
+        }
+
+        // Dedup berdasarkan bookingCode (menghindari duplikat dari confirmBooking lokal)
+        activeTickets = bookings.filter { !it.isUsed }.distinctBy { it.bookingCode }
+        historyTickets = bookings.filter { it.isUsed }.distinctBy { it.bookingCode }
+        Log.i("BookingViewModel", "applyTickets: ${activeTickets.size} active, ${historyTickets.size} history")
+    }
+
+    fun getTotalTrips(): Int = activeTickets.size + historyTickets.size
+    fun getActiveTicketCount(): Int = activeTickets.size
 
     // ── STATION FUNCTIONS ────────────────────────────────────────────────────
 
@@ -241,6 +465,9 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
 
     // ── SEARCH SCHEDULE ──────────────────────────────────────────────────────
 
+    var isLoadingSchedules by mutableStateOf(false)
+        private set
+
     fun searchSchedules(): Boolean {
         val error = TicketUtils.validateBookingForm(
             originStation, destinationStation, ticketCount, departureDate
@@ -250,45 +477,63 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
             return false
         }
 
-        val duration = StationData.getDuration(originStation, destinationStation)
-        val allTimes = TicketUtils.generateScheduleTimes()
-
-        // Real-time filtering logic
-        val sdf = SimpleDateFormat("EEEE, dd MMM yyyy", Locale("id", "ID"))
-        val todayStr = sdf.format(Calendar.getInstance().time)
-        val isToday = departureDate == todayStr
-
-        val filteredTimes = if (isToday) {
-            val currentTime = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Calendar.getInstance().time)
-            // Filter times that are in the future
-            allTimes.filter { it > currentTime }
-        } else {
-            allTimes
-        }
-
-        if (filteredTimes.isEmpty()) {
-            formError = if (isToday) {
-                "Jadwal untuk hari ini sudah berakhir. Silakan pilih tanggal lain."
-            } else {
-                "Tidak ada jadwal tersedia untuk rute ini."
-            }
-            return false
-        }
-
-        schedules = filteredTimes.mapIndexed { index, time ->
-            Schedule(
-                departureTime = time,
-                arrivalTime = TicketUtils.calculateArrivalTime(time, duration),
-                duration = duration,
-                originStation = originStation,
-                destinationStation = destinationStation,
-                price = TicketUtils.getTicketPrice(1, CoachClass.EKONOMI),
-                trainCode = TicketUtils.generateTrainCode(time, index),
-                stops = TicketUtils.getStops(originStation, destinationStation),
-                stopDetails = TicketUtils.getStopDetails(originStation, destinationStation, time)
-            )
-        }
+        // Jalankan fetch dari API di background
+        fetchSchedulesFromApi()
+        
         return true
+    }
+
+    private fun fetchSchedulesFromApi() {
+        isLoadingSchedules = true
+        schedules = emptyList() // Reset list lama
+
+        viewModelScope.launch {
+            try {
+                val response = withContext(Dispatchers.IO) {
+                    api.getSchedules(originStation, destinationStation)
+                }
+
+                if (response.isSuccessful && response.body()?.status == "success") {
+                    val apiSchedules = response.body()?.data ?: emptyList()
+                    val duration = StationData.getDuration(originStation, destinationStation)
+                    
+                    val mappedSchedules = apiSchedules.map { s ->
+                        Schedule(
+                            departureTime = s.departureTime,
+                            arrivalTime = TicketUtils.calculateArrivalTime(s.departureTime, duration),
+                            duration = duration,
+                            originStation = s.originStation,
+                            destinationStation = s.destinationStation,
+                            price = TicketUtils.getTicketPrice(1, CoachClass.EKONOMI),
+                            trainCode = s.trainCode,
+                            stops = TicketUtils.getStops(s.originStation, s.destinationStation),
+                            stopDetails = TicketUtils.getStopDetails(s.originStation, s.destinationStation, s.departureTime)
+                        )
+                    }
+
+                    // Real-time filtering logic
+                    val sdf = SimpleDateFormat("EEEE, dd MMM yyyy", Locale("id", "ID"))
+                    val todayStr = sdf.format(Calendar.getInstance().time)
+                    val isToday = departureDate == todayStr
+
+                    schedules = if (isToday) {
+                        val currentTime = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Calendar.getInstance().time)
+                        mappedSchedules.filter { it.departureTime > currentTime }
+                    } else {
+                        mappedSchedules
+                    }
+
+                    Log.i("BookingViewModel", "Schedules synced: ${schedules.size} items from API (Filtered: $isToday)")
+                } else {
+                    Log.e("BookingViewModel", "Failed to fetch schedules: ${response.message()}")
+                    // Fallback ke local generation jika API gagal (opsional, tapi untuk demo kita biarkan kosong agar terlihat sync gap sudah diperbaiki)
+                }
+            } catch (e: Exception) {
+                Log.e("BookingViewModel", "Error fetching schedules: ${e.message}")
+            } finally {
+                isLoadingSchedules = false
+            }
+        }
     }
 
     // ── SELECT SCHEDULE ──────────────────────────────────────────────────────
@@ -351,6 +596,8 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
         val coach = selectedCoachClass!!
         val pricePerTicket = TicketUtils.getTicketPrice(ticketCount, coach)
         val total = pricePerTicket * ticketCount
+        val bookingCode = TicketUtils.generateBookingCode()
+        val timestamp = System.currentTimeMillis()
 
         val data = BookingData(
             userName = userName,
@@ -364,17 +611,72 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
             coachClass = coach,
             pricePerTicket = pricePerTicket,
             totalPrice = total,
-            bookingCode = TicketUtils.generateBookingCode(),
+            bookingCode = bookingCode,
             selectedCarriage = selectedCarriage ?: 1,
             selectedSeats = selectedSeats.toList(),
-            bookingTimestamp = System.currentTimeMillis(),
+            bookingTimestamp = timestamp,
             isUsed = false
         )
         bookingData = data
 
-        // Save to persistent storage
-        userPreferences.saveTicket(data)
-        refreshTickets()
+        // Langsung tambahkan ke daftar tiket aktif agar segera tampil di halaman Tiket
+        activeTickets = listOf(data) + activeTickets
+        Log.i("BookingViewModel", "Tiket ditambahkan ke activeTickets: ${data.bookingCode}, total: ${activeTickets.size}")
+
+        // Simpan ke server via API
+        Log.i("BookingViewModel", "Attempting to save booking: code=$bookingCode, userId=$userId")
+
+        if (userId <= 0) {
+            Log.e("BookingViewModel", "GAGAL: userId=$userId tidak valid! User harus login ulang.")
+            return data
+        }
+
+        viewModelScope.launch {
+            try {
+                val request = CreateBookingRequest(
+                    userId = userId,
+                    bookingCode = bookingCode,
+                    originStation = schedule.originStation,
+                    destinationStation = schedule.destinationStation,
+                    departureDate = departureDate,
+                    departureTime = schedule.departureTime,
+                    arrivalTime = schedule.arrivalTime,
+                    duration = schedule.duration,
+                    coachClass = coach.name,
+                    ticketCount = ticketCount,
+                    pricePerTicket = pricePerTicket,
+                    totalPrice = total,
+                    selectedCarriage = selectedCarriage ?: 1,
+                    selectedSeats = selectedSeats.sorted().joinToString(","),
+                    bookingTimestamp = timestamp
+                )
+
+                Log.d("BookingViewModel", "Sending booking request to API...")
+                val response = withContext(Dispatchers.IO) {
+                    api.createBooking(request)
+                }
+
+                if (response.isSuccessful && response.body()?.status == "success") {
+                    Log.i("BookingViewModel", "✅ Booking saved to server: $bookingCode")
+                    refreshTickets()
+                } else {
+                    val errorMsg = response.body()?.message ?: "Unknown error"
+                    val httpCode = response.code()
+                    Log.e("BookingViewModel", "❌ Failed to save booking: HTTP $httpCode - $errorMsg")
+                    // Coba baca error body jika response body null
+                    if (response.body() == null) {
+                        val errorBody = response.errorBody()?.string()
+                        Log.e("BookingViewModel", "Error body: $errorBody")
+                    }
+                }
+            } catch (e: java.net.ConnectException) {
+                Log.e("BookingViewModel", "❌ Tidak bisa terhubung ke server! Pastikan Laragon/Apache running dan URL benar.", e)
+            } catch (e: java.net.SocketTimeoutException) {
+                Log.e("BookingViewModel", "❌ Koneksi timeout ke server!", e)
+            } catch (e: Exception) {
+                Log.e("BookingViewModel", "❌ Create booking error: ${e.javaClass.simpleName} - ${e.message}", e)
+            }
+        }
 
         // Kirim e-ticket via email secara background
         if (userEmail.isNotBlank()) {
@@ -398,18 +700,39 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
 
     fun loadTicketByCode(code: String) {
         Log.d("BookingViewModel", "Mencoba memuat tiket: $code")
-        
-        // Pastikan data terbaru sudah dimuat dari SharedPreferences
-        refreshTickets()
 
-        val ticket = activeTickets.find { it.bookingCode.equals(code, ignoreCase = true) }
-            ?: historyTickets.find { it.bookingCode.equals(code, ignoreCase = true) }
+        viewModelScope.launch {
+            try {
+                val response = withContext(Dispatchers.IO) {
+                    api.getTicketByCode(code)
+                }
 
-        if (ticket != null) {
-            Log.i("BookingViewModel", "Tiket ditemukan: ${ticket.bookingCode}")
-            bookingData = ticket
-        } else {
-            Log.w("BookingViewModel", "Tiket tidak ditemukan untuk kode: $code")
+                if (response.isSuccessful && response.body()?.status == "success") {
+                    val ticket = response.body()!!.data!!
+                    bookingData = ticket.toBookingData(ticket.userName.ifBlank { userName })
+                    Log.i("BookingViewModel", "Tiket ditemukan dari server: $code")
+                } else {
+                    // Fallback: cari di list lokal
+                    val localTicket = activeTickets.find { it.bookingCode.equals(code, ignoreCase = true) }
+                        ?: historyTickets.find { it.bookingCode.equals(code, ignoreCase = true) }
+
+                    if (localTicket != null) {
+                        bookingData = localTicket
+                        Log.i("BookingViewModel", "Tiket ditemukan dari cache lokal: $code")
+                    } else {
+                        Log.w("BookingViewModel", "Tiket tidak ditemukan: $code")
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("BookingViewModel", "Load ticket error", e)
+                // Fallback lokal
+                refreshTickets()
+                val localTicket = activeTickets.find { it.bookingCode.equals(code, ignoreCase = true) }
+                    ?: historyTickets.find { it.bookingCode.equals(code, ignoreCase = true) }
+                if (localTicket != null) {
+                    bookingData = localTicket
+                }
+            }
         }
     }
 
@@ -427,6 +750,7 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
         selectedCarriage = null
         selectedSeats.clear()
         bookingData = null
+        emailSentStatus = null
     }
 
     // ── SETTINGS ─────────────────────────────────────────────────────────────
@@ -449,4 +773,27 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
     fun clearLoginError() { loginError = null }
     fun clearRegisterError() { registerError = null }
     fun clearFormError() { formError = null }
+}
+
+// ── Extension: Convert API response to domain model ──────────────────────────
+
+fun BookingResponse.toBookingData(fallbackName: String = ""): BookingData {
+    return BookingData(
+        userName = userName.ifBlank { fallbackName },
+        originStation = originStation,
+        destinationStation = destinationStation,
+        ticketCount = ticketCount,
+        departureDate = departureDate,
+        departureTime = departureTime,
+        arrivalTime = arrivalTime,
+        duration = duration,
+        coachClass = try { CoachClass.valueOf(coachClass) } catch (_: Exception) { CoachClass.EKONOMI },
+        pricePerTicket = pricePerTicket,
+        totalPrice = totalPrice,
+        bookingCode = bookingCode,
+        selectedCarriage = selectedCarriage,
+        selectedSeats = if (selectedSeats.isBlank()) emptyList() else selectedSeats.split(","),
+        bookingTimestamp = bookingTimestamp,
+        isUsed = isUsed
+    )
 }

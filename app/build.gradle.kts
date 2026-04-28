@@ -65,6 +65,9 @@ dependencies {
     implementation(libs.android.mail)
     implementation(libs.android.activation)
     implementation(libs.zxing.core)
+    implementation(libs.retrofit.core)
+    implementation(libs.retrofit.converter.gson)
+    implementation(libs.okhttp.logging)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

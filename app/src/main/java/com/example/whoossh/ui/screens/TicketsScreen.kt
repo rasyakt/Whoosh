@@ -1,5 +1,6 @@
 package com.example.whoossh.ui.screens
 
+import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
@@ -27,6 +28,7 @@ import androidx.compose.material.icons.filled.ConfirmationNumber
 import androidx.compose.material.icons.filled.Train
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -37,7 +39,11 @@ import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -46,7 +52,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.whoossh.api.ApiClient
+import com.example.whoossh.api.BookingResponse
+import com.example.whoossh.api.TicketsListResponse
 import com.example.whoossh.model.BookingData
+import com.example.whoossh.model.CoachClass
 import com.example.whoossh.ui.theme.WhooshGreen
 import com.example.whoossh.ui.theme.WhooshGreenLight
 import com.example.whoossh.ui.theme.WhooshOrange
@@ -56,7 +66,10 @@ import com.example.whoossh.ui.theme.WhooshTextSecondary
 import com.example.whoossh.ui.theme.WhooshWhite
 import com.example.whoossh.utils.TicketUtils
 import com.example.whoossh.viewmodel.BookingViewModel
+import com.example.whoossh.viewmodel.toBookingData
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -70,9 +83,83 @@ fun TicketsScreen(
     val pagerState = rememberPagerState(pageCount = { tabs.size })
     val scope = rememberCoroutineScope()
 
-    LaunchedEffect(Unit) {
-        viewModel.refreshTickets()
+    // Local state for tickets loaded directly from API
+    var localActiveTickets by remember { mutableStateOf<List<BookingData>>(emptyList()) }
+    var localHistoryTickets by remember { mutableStateOf<List<BookingData>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    // Fetch tickets directly from API (bypassing ViewModel to guarantee it works)
+    LaunchedEffect(viewModel.userId) {
+        if (viewModel.userId <= 0) {
+            Log.w("TicketsScreen", "userId=${viewModel.userId}, skipping fetch")
+            isLoading = false
+            return@LaunchedEffect
+        }
+
+        Log.d("TicketsScreen", "Fetching tickets for userId=${viewModel.userId}")
+        isLoading = true
+        errorMessage = null
+
+        try {
+            // Direct API call with non-generic response
+            val response = withContext(Dispatchers.IO) {
+                ApiClient.apiService.getTicketsList(viewModel.userId)
+            }
+
+            Log.d("TicketsScreen", "API response: HTTP ${response.code()}")
+
+            if (response.isSuccessful && response.body()?.status == "success") {
+                val tickets = response.body()!!.data ?: emptyList()
+                Log.i("TicketsScreen", "Received ${tickets.size} tickets from API")
+
+                val bookings = tickets.mapNotNull { ticket ->
+                    try {
+                        ticket.toBookingData(viewModel.userName)
+                    } catch (e: Exception) {
+                        Log.e("TicketsScreen", "Parse error for ${ticket.bookingCode}: ${e.message}")
+                        null
+                    }
+                }
+
+                localActiveTickets = bookings.filter { !it.isUsed }
+                localHistoryTickets = bookings.filter { it.isUsed }
+                Log.i("TicketsScreen", "Active: ${localActiveTickets.size}, History: ${localHistoryTickets.size}")
+
+                // Also update ViewModel state
+                viewModel.refreshTickets()
+            } else {
+                val errorBody = response.errorBody()?.string()
+                errorMessage = "Server error: ${response.code()}"
+                Log.e("TicketsScreen", "API failed: HTTP ${response.code()} - $errorBody")
+
+                // Fallback to raw parsing
+                tryRawParsing(viewModel) { active, history ->
+                    localActiveTickets = active
+                    localHistoryTickets = history
+                    errorMessage = null
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("TicketsScreen", "Fetch error: ${e.javaClass.simpleName} - ${e.message}", e)
+            errorMessage = "Gagal memuat tiket: ${e.localizedMessage}"
+
+            // Fallback: show locally-added tickets from ViewModel
+            localActiveTickets = viewModel.activeTickets
+            localHistoryTickets = viewModel.historyTickets
+            if (localActiveTickets.isNotEmpty() || localHistoryTickets.isNotEmpty()) {
+                errorMessage = null // We have local data, no need to show error
+            }
+        } finally {
+            isLoading = false
+        }
     }
+
+    // Combine: API tickets + locally added tickets (from confirmBooking)
+    val combinedActiveTickets = (localActiveTickets + viewModel.activeTickets)
+        .distinctBy { it.bookingCode }
+    val combinedHistoryTickets = (localHistoryTickets + viewModel.historyTickets)
+        .distinctBy { it.bookingCode }
 
     Column(
         modifier = Modifier
@@ -126,59 +213,111 @@ fun TicketsScreen(
             state = pagerState,
             modifier = Modifier.fillMaxSize()
         ) { page ->
-            val tickets = if (page == 0) viewModel.activeTickets else viewModel.historyTickets
+            val tickets = if (page == 0) combinedActiveTickets else combinedHistoryTickets
 
-            if (tickets.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            Icons.Filled.ConfirmationNumber,
-                            contentDescription = null,
-                            modifier = Modifier.size(80.dp),
-                            tint = Color.LightGray
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = if (page == 0) "Belum ada tiket aktif" else "Belum ada riwayat tiket",
-                            fontSize = 16.sp,
-                            color = WhooshTextSecondary,
-                            fontWeight = FontWeight.Medium
-                        )
-                        Text(
-                            text = if (page == 0) "Pesan tiket sekarang untuk\nmemulai perjalanan Anda"
-                            else "Riwayat tiket yang sudah\ndigunakan akan muncul di sini",
-                            fontSize = 13.sp,
-                            color = Color.LightGray,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.padding(top = 4.dp)
-                        )
+            when {
+                isLoading -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(color = WhooshRed)
                     }
                 }
-            } else {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 16.dp)
-                ) {
-                    itemsIndexed(tickets) { index, ticket ->
-                        AnimatedVisibility(
-                            visible = true,
-                            enter = fadeIn() + slideInVertically(initialOffsetY = { it / 3 })
-                        ) {
-                            TicketCard(
-                                ticket = ticket,
-                                onClick = { onTicketClick(ticket) }
+                tickets.isEmpty() -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                Icons.Filled.ConfirmationNumber,
+                                contentDescription = null,
+                                modifier = Modifier.size(80.dp),
+                                tint = Color.LightGray
                             )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                text = if (page == 0) "Belum ada tiket aktif" else "Belum ada riwayat tiket",
+                                fontSize = 16.sp,
+                                color = WhooshTextSecondary,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Text(
+                                text = if (page == 0) "Pesan tiket sekarang untuk\nmemulai perjalanan Anda"
+                                else "Riwayat tiket yang sudah\ndigunakan akan muncul di sini",
+                                fontSize = 13.sp,
+                                color = Color.LightGray,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.padding(top = 4.dp)
+                            )
+                            if (errorMessage != null) {
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Text(
+                                    text = errorMessage!!,
+                                    fontSize = 12.sp,
+                                    color = WhooshRed,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
+                    }
+                }
+                else -> {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 16.dp)
+                    ) {
+                        itemsIndexed(tickets) { index, ticket ->
+                            AnimatedVisibility(
+                                visible = true,
+                                enter = fadeIn() + slideInVertically(initialOffsetY = { it / 3 })
+                            ) {
+                                TicketCard(
+                                    ticket = ticket,
+                                    onClick = { onTicketClick(ticket) }
+                                )
+                            }
                         }
                     }
                 }
             }
         }
+    }
+}
+
+private suspend fun tryRawParsing(
+    viewModel: BookingViewModel,
+    onSuccess: (List<BookingData>, List<BookingData>) -> Unit
+) {
+    try {
+        val rawResponse = withContext(Dispatchers.IO) {
+            ApiClient.apiService.getTicketsRaw(viewModel.userId)
+        }
+        if (rawResponse.isSuccessful) {
+            val jsonString = rawResponse.body()?.string() ?: ""
+            Log.d("TicketsScreen", "Raw response: ${jsonString.take(300)}")
+
+            val gson = com.google.gson.Gson()
+            val type = object : com.google.gson.reflect.TypeToken<TicketsListResponse>() {}.type
+            val parsed = gson.fromJson<TicketsListResponse>(jsonString, type)
+
+            if (parsed.status == "success" && parsed.data != null) {
+                val bookings = parsed.data.mapNotNull { ticket ->
+                    try { ticket.toBookingData(viewModel.userName) } catch (_: Exception) { null }
+                }
+                onSuccess(
+                    bookings.filter { !it.isUsed },
+                    bookings.filter { it.isUsed }
+                )
+                Log.i("TicketsScreen", "Raw parsing success: ${bookings.size} tickets")
+            }
+        }
+    } catch (e: Exception) {
+        Log.e("TicketsScreen", "Raw parsing also failed: ${e.message}")
     }
 }
 

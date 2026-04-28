@@ -157,16 +157,18 @@ fun ChangePasswordScreen(
             Spacer(modifier = Modifier.height(32.dp))
 
             WhooshButton(
-                text = "Ubah Password",
+                text = if (viewModel.isLoading) "Memproses..." else "Ubah Password",
                 onClick = {
-                    val error = viewModel.changePassword(oldPassword, newPassword, confirmPassword)
-                    if (error == null) {
-                        Toast.makeText(context, "Password berhasil diubah", Toast.LENGTH_SHORT).show()
-                        onBack()
-                    } else {
-                        Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
+                    viewModel.changePassword(oldPassword, newPassword, confirmPassword) { error ->
+                        if (error == null) {
+                            Toast.makeText(context, "Password berhasil diubah", Toast.LENGTH_SHORT).show()
+                            onBack()
+                        } else {
+                            Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
+                        }
                     }
-                }
+                },
+                enabled = !viewModel.isLoading
             )
         }
     }
