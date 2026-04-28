@@ -234,18 +234,31 @@ fun SelectCoachScreen(
                                 )
                             } else {
                                 Text(
-                                    text = "${selectedPassengers.size}/15 Penumpang",
+                                    text = "${selectedPassengers.size}/15 Penumpang Terpilih",
                                     fontSize = 14.sp,
                                     color = Color.Black,
                                     fontWeight = FontWeight.SemiBold
                                 )
-                                Text(
-                                    text = selectedPassengers.joinToString(", ") { it.name },
-                                    fontSize = 12.sp,
-                                    color = WhooshTextSecondary,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Column {
+                                    selectedPassengers.take(3).forEachIndexed { index, passenger ->
+                                        Text(
+                                            text = "${index + 1}. ${passenger.name}",
+                                            fontSize = 11.sp,
+                                            color = WhooshTextSecondary,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                    if (selectedPassengers.size > 3) {
+                                        Text(
+                                            text = "+${selectedPassengers.size - 3} lainnya",
+                                            fontSize = 11.sp,
+                                            color = WhooshRed,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
+                                }
                             }
                         }
                         Icon(

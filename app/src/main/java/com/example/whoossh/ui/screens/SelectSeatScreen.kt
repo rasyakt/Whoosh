@@ -21,12 +21,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -115,6 +113,71 @@ fun SelectSeatScreen(
                 .padding(paddingValues)
                 .background(Color(0xFFFAFAFA))
         ) {
+            // Passenger Selection (Top)
+            val selectedPassengers = viewModel.selectedPassengers.collectAsState().value
+            if (selectedPassengers.isNotEmpty()) {
+                var isExpanded by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+                
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 12.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color.White)
+                        .border(1.dp, Color(0xFFEEEEEE), RoundedCornerShape(12.dp))
+                        .clickable { isExpanded = !isExpanded }
+                        .padding(16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Penumpang Terpilih",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color.Black
+                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "${selectedPassengers.size} Penumpang",
+                                fontSize = 12.sp,
+                                color = WhooshRed,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            androidx.compose.material3.Icon(
+                                imageVector = if (isExpanded) androidx.compose.material.icons.Icons.Default.KeyboardArrowUp 
+                                             else androidx.compose.material.icons.Icons.Default.KeyboardArrowDown,
+                                contentDescription = null,
+                                tint = WhooshRed,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                    
+                    Spacer(modifier = Modifier.height(12.dp))
+                    
+                    if (isExpanded) {
+                        // Show all selected passengers
+                        selectedPassengers.forEachIndexed { index, passenger ->
+                            PassengerItem(index + 1, passenger)
+                            if (index < selectedPassengers.lastIndex) {
+                                HorizontalDivider(
+                                    modifier = Modifier.padding(vertical = 10.dp),
+                                    thickness = 0.5.dp,
+                                    color = Color(0xFFF5F5F5)
+                                )
+                            }
+                        }
+                    } else {
+                        // Show only the first passenger
+                        PassengerItem(1, selectedPassengers.first())
+                    }
+                }
+            }
+
             // Carriage Selection
             Row(
                 modifier = Modifier
@@ -137,7 +200,7 @@ fun SelectSeatScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 16.dp),
+                    .padding(horizontal = 20.dp, vertical = 10.dp),
                 horizontalArrangement = Arrangement.Center
             ) {
                 LegendItem("Tersedia", Color.White, Color.LightGray)
@@ -343,5 +406,36 @@ private fun SeatItem(
                      )
              )
         }
+    }
+}
+
+@Composable
+private fun PassengerItem(index: Int, passenger: com.example.whoossh.model.Passenger) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(24.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .background(WhooshRed.copy(alpha = 0.1f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "$index",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                color = WhooshRed
+            )
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        Text(
+            text = passenger.name,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Medium,
+            color = Color.Black,
+            modifier = Modifier.weight(1f)
+        )
     }
 }

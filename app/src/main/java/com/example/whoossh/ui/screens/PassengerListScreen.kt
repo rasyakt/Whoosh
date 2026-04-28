@@ -39,7 +39,12 @@ fun PassengerListScreen(
 ) {
     val selectedPassengers by viewModel.selectedPassengers.collectAsState()
     val savedPassengers by viewModel.savedPassengers.collectAsState()
-    val maxPassengers = 15 // Maximum 15 passengers including the user
+    val maxPassengers = 15
+
+    // Auto-refresh data when entering screen
+    LaunchedEffect(Unit) {
+        viewModel.refreshSavedPassengers()
+    }
 
     Scaffold(
         topBar = {

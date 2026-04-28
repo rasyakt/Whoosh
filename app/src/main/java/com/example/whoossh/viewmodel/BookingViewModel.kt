@@ -763,6 +763,7 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
         if (current.size < 15 && current.none { it.id == passenger.id }) {
             current.add(passenger)
             _selectedPassengers.value = current
+            ticketCount = current.size // Sync ticketCount
             Log.i("BookingViewModel", "Passenger added: ${passenger.name}, total: ${current.size}")
         }
     }
@@ -771,6 +772,7 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
         val current = _selectedPassengers.value.toMutableList()
         current.removeAll { it.id == passenger.id }
         _selectedPassengers.value = current
+        ticketCount = if (current.isEmpty()) 1 else current.size // Sync ticketCount
         Log.i("BookingViewModel", "Passenger removed: ${passenger.name}, remaining: ${current.size}")
     }
 
@@ -806,8 +808,23 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
                     api.addPassenger(request)
                 }
 
-                if (response.isSuccessful) {
+                if (response.isSuccessful && response.body()?.status == "success") {
                     Log.i("BookingViewModel", "Passenger saved to database: ${passenger.name}")
+                    
+                    // Capture new ID from DB if it was a new passenger
+                    val data = response.body()?.data
+                    val newId = (data?.get("id") as? Double)?.toInt() ?: (data?.get("id") as? Int)
+                    
+                    if (newId != null) {
+                        // Update current selected list with real ID instead of UUID
+                        val selected = _selectedPassengers.value.toMutableList()
+                        val sIdx = selected.indexOfFirst { it.id == passenger.id }
+                        if (sIdx != -1) {
+                            selected[sIdx] = selected[sIdx].copy(id = newId.toString(), isSaved = true)
+                            _selectedPassengers.value = selected
+                        }
+                    }
+                    
                     refreshSavedPassengers()
                 }
             } catch (e: Exception) {
