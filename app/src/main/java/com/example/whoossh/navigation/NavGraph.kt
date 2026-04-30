@@ -137,6 +137,9 @@ fun NavGraph(
                 onNavigateToHelpCenter = {
                     navController.navigate(Screen.HelpCenter.route)
                 },
+                onNavigateToPassengerList = {
+                    navController.navigate(Screen.PassengerList.route)
+                },
                 onNavigateToETicket = {
                     navController.navigate(Screen.ETicket.route)
                 },

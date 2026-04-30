@@ -112,6 +112,7 @@ fun DashboardScreen(
     onNavigateToPrivacy: () -> Unit = {},
     onNavigateToChangePassword: () -> Unit = {},
     onNavigateToHelpCenter: () -> Unit = {},
+    onNavigateToPassengerList: () -> Unit = {},
     onNavigateToETicket: () -> Unit = {},
     onNavigateToUnpaidTicket: () -> Unit = {}
 ) {
@@ -205,6 +206,7 @@ fun DashboardScreen(
                     onNavigateToPrivacy = onNavigateToPrivacy,
                     onNavigateToChangePassword = onNavigateToChangePassword,
                     onNavigateToHelpCenter = onNavigateToHelpCenter,
+                    onNavigateToPassengerList = onNavigateToPassengerList,
                     onLogout = onLogout
                 )
             }

@@ -34,6 +34,7 @@ import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.LocalOffer
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material.icons.outlined.People
 import androidx.compose.material.icons.outlined.PrivacyTip
 import androidx.compose.material.icons.outlined.Security
 import androidx.compose.material.icons.outlined.StarOutline
@@ -80,6 +81,7 @@ fun AccountScreen(
     onNavigateToPrivacy: () -> Unit,
     onNavigateToChangePassword: () -> Unit,
     onNavigateToHelpCenter: () -> Unit,
+    onNavigateToPassengerList: () -> Unit = {},
     onLogout: () -> Unit
 ) {
     val context = LocalContext.current
@@ -220,6 +222,8 @@ fun AccountScreen(
             SectionLabel("Akun")
             MenuCard {
                 MenuRow(Icons.Outlined.Edit, "Edit Profil", onClick = onNavigateToEditProfile)
+                MenuDivider()
+                MenuRow(Icons.Outlined.People, "Kelola Penumpang", onClick = onNavigateToPassengerList)
                 MenuDivider()
                 MenuRow(Icons.Outlined.History, "Riwayat Perjalanan", onClick = onNavigateToHistory)
                 MenuDivider()
