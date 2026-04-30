@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -276,82 +277,70 @@ private fun HomeContent(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(230.dp) // Sedikit lebih tinggi agar visual background lebih leluasa
+                    .clip(RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp))
             ) {
-                // Background Image - Ditransformasi agar kereta lebih naik dan menutupi seluruh area
-                Image(
-                    painter = painterResource(id = R.drawable.whoosh_train_bg),
-                    contentDescription = "Whoosh Train Background",
-                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .scale(1.4f) 
-                        .offset(y = (-35).dp)
+                val carouselImages = listOf(
+                    R.drawable.carousel_1,
+                    R.drawable.carousel_2,
+                    R.drawable.carousel_3,
+                    R.drawable.carousel_4,
+                    R.drawable.carousel_5
                 )
-                
-                // Thematic Red Overlay - Dipertajam gradasinya agar menyatu
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(
-                            brush = Brush.verticalGradient(
-                                colors = listOf(
-                                    Color.Transparent,
-                                    WhooshRed.copy(alpha = 0.3f),
-                                    WhooshRed.copy(alpha = 0.85f)
-                                )
-                            )
-                        )
-                )
+                val pagerState = androidx.compose.foundation.pager.rememberPagerState(pageCount = { carouselImages.size })
 
+                LaunchedEffect(pagerState) {
+                    while (true) {
+                        kotlinx.coroutines.delay(3000)
+                        if (carouselImages.isNotEmpty()) {
+                            val nextPage = (pagerState.currentPage + 1) % carouselImages.size
+                            pagerState.animateScrollToPage(nextPage)
+                        }
+                    }
+                }
+
+                androidx.compose.foundation.pager.HorizontalPager(
+                    state = pagerState,
+                    modifier = Modifier.fillMaxWidth().wrapContentHeight()
+                ) { page ->
+                    Image(
+                        painter = painterResource(id = carouselImages[page]),
+                        contentDescription = "Carousel Image $page",
+                        contentScale = androidx.compose.ui.layout.ContentScale.FillWidth,
+                        modifier = Modifier.fillMaxWidth().wrapContentHeight()
+                    )
+                }
+                
                 // Foreground Content
                 Box(
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier.matchParentSize()
                 ) {
-                    // Logo Top-Left: Lebih ke pojok, ukuran diperkecil elegan
-                    Image(
-                        painter = painterResource(id = R.drawable.logo_whoosh), // Menggunakan versi putih murni untuk tema merah-putih
-                        contentDescription = "Whoosh Logo",
-                        modifier = Modifier
-                            .align(Alignment.TopStart)
-                            .padding(start = 16.dp, top = 20.dp)
-                            .width(72.dp),
-                        contentScale = androidx.compose.ui.layout.ContentScale.FillWidth
-                    )
 
-                    // Refined Typography Top-Right: Sempurna dan proporsional
-                    Column(
+                    // Carousel Dots Indicator
+                    Row(
                         modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(end = 16.dp, top = 20.dp),
-                        horizontalAlignment = Alignment.End
+                            .align(Alignment.TopCenter)
+                            .padding(top = 135.dp), // Berada tepat di atas form modal booking
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = "CONNECTING",
-                            color = WhooshWhite,
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Black,
-                            fontStyle = FontStyle.Italic,
-                            letterSpacing = 2.sp
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = "SHARING",
-                            color = WhooshWhite.copy(alpha = 0.9f),
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            fontStyle = FontStyle.Italic,
-                            letterSpacing = 4.sp
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = "GROWTH",
-                            color = WhooshWhite.copy(alpha = 0.75f),
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            fontStyle = FontStyle.Italic,
-                            letterSpacing = 6.sp
-                        )
+                        repeat(carouselImages.size) { iteration ->
+                            val isSelected = pagerState.currentPage == iteration
+                            val color = if (isSelected) WhooshWhite else WhooshWhite.copy(alpha = 0.5f)
+                            val width = if (isSelected) 18.dp else 8.dp
+                            val animatedWidth by androidx.compose.animation.core.animateDpAsState(
+                                targetValue = width,
+                                animationSpec = androidx.compose.animation.core.tween(300),
+                                label = "width"
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .padding(horizontal = 4.dp)
+                                    .height(8.dp)
+                                    .width(animatedWidth)
+                                    .clip(CircleShape)
+                                    .background(color)
+                            )
+                        }
                     }
                 }
             }
@@ -465,60 +454,7 @@ private fun HomeContent(
                     Icon(Icons.Filled.CalendarMonth, null, tint = WhooshRed.copy(alpha = 0.6f), modifier = Modifier.size(18.dp))
                 }
 
-                HorizontalDivider(
-                    modifier = Modifier.padding(vertical = 12.dp),
-                    color = Color(0xFFEEEEEE),
-                    thickness = 1.dp
-                )
 
-                // ── PASSENGERS ────────────────────────────────────────────────
-                Text(
-                    "Penumpang",
-                    color = WhooshTextSecondary,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    letterSpacing = 0.5.sp
-                )
-                Spacer(modifier = Modifier.height(6.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        "${viewModel.ticketCount} Orang",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF1A1A1A)
-                    )
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        // Minus
-                        Box(
-                            modifier = Modifier
-                                .size(34.dp)
-                                .clip(CircleShape)
-                                .border(1.dp, if (viewModel.ticketCount > 1) WhooshRed.copy(0.3f) else Color(0xFFDDDDDD), CircleShape)
-                                .background(if (viewModel.ticketCount > 1) WhooshRed.copy(0.06f) else Color(0xFFF5F5F5))
-                                .clickable { viewModel.decrementTicket() },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(Icons.Filled.Remove, "Kurangi", tint = if (viewModel.ticketCount > 1) WhooshRed else Color(0xFFCCCCCC), modifier = Modifier.size(16.dp))
-                        }
-                        Spacer(modifier = Modifier.width(12.dp))
-                        // Plus
-                        Box(
-                            modifier = Modifier
-                                .size(34.dp)
-                                .clip(CircleShape)
-                                .border(1.dp, if (viewModel.ticketCount < 10) WhooshRed.copy(0.3f) else Color(0xFFDDDDDD), CircleShape)
-                                .background(if (viewModel.ticketCount < 10) WhooshRed.copy(0.06f) else Color(0xFFF5F5F5))
-                                .clickable { viewModel.incrementTicket() },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(Icons.Filled.Add, "Tambah", tint = if (viewModel.ticketCount < 10) WhooshRed else Color(0xFFCCCCCC), modifier = Modifier.size(16.dp))
-                        }
-                    }
-                }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
