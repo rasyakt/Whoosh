@@ -299,7 +299,13 @@ fun NavGraph(
                     navController.navigate(Screen.Payment.route)
                 },
                 onCancel = { navController.popBackStack() },
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                onReturnTrip = {
+                    // Navigate back to dashboard with swapped stations
+                    navController.navigate(Screen.Dashboard.route) {
+                        popUpTo(Screen.Dashboard.route) { inclusive = true }
+                    }
+                }
             )
         }
 
@@ -381,6 +387,18 @@ fun NavGraph(
                     navController.navigate(Screen.Dashboard.route) {
                         popUpTo(Screen.Dashboard.route) { inclusive = true }
                     }
+                },
+                onReschedule = {
+                    // Navigate to reschedule flow (future implementation)
+                    // For now, handled by dialog in ETicketScreen
+                },
+                onRefund = {
+                    // Navigate to refund flow (future implementation)
+                    // For now, handled by dialog in ETicketScreen
+                },
+                onAddInfant = {
+                    // Navigate to add infant flow (future implementation)
+                    // For now, handled by dialog in ETicketScreen
                 }
             )
         }

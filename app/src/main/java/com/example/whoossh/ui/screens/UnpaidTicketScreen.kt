@@ -8,6 +8,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AccessTime
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -30,7 +32,8 @@ fun UnpaidTicketScreen(
     viewModel: BookingViewModel,
     onPay: () -> Unit,
     onCancel: () -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onReturnTrip: () -> Unit = {}
 ) {
     val schedule = viewModel.selectedSchedule ?: return
     val coach = viewModel.selectedCoachClass ?: return
@@ -45,6 +48,11 @@ fun UnpaidTicketScreen(
     val minutes = timeLeft / 60
     val seconds = timeLeft % 60
     val timerText = String.format("%02d m %02d s", minutes, seconds)
+    
+    // Dialog state
+    var showCancelDialog by remember { mutableStateOf(false) }
+    var showSuccessDialog by remember { mutableStateOf(false) }
+    var cancelMessage by remember { mutableStateOf("") }
 
     Scaffold(
         topBar = {
@@ -72,6 +80,11 @@ fun UnpaidTicketScreen(
             )
         },
         bottomBar = {
+            // Sembunyikan tombol jika tiket sudah dibatalkan atau timer habis
+            val isCancelled = viewModel.bookingData?.isCancelled == true
+            val isTimerExpired = viewModel.paymentTimeLeft <= 0
+            
+            if (!isCancelled && !isTimerExpired) {
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shadowElevation = 8.dp,
@@ -120,7 +133,7 @@ fun UnpaidTicketScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         OutlinedButton(
-                            onClick = onCancel,
+                            onClick = { showCancelDialog = true },
                             modifier = Modifier
                                 .weight(1f)
                                 .fillMaxHeight(),
@@ -132,7 +145,11 @@ fun UnpaidTicketScreen(
                             Text("Cancel", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                         }
                         OutlinedButton(
-                            onClick = { /* Return trip logic */ },
+                            onClick = {
+                                // Return trip: swap origin & destination, navigate back to dashboard
+                                viewModel.swapStations()
+                                onReturnTrip()
+                            },
                             modifier = Modifier
                                 .weight(1f)
                                 .fillMaxHeight(),
@@ -158,9 +175,10 @@ fun UnpaidTicketScreen(
                             contentPadding = PaddingValues(0.dp)
                         ) {
                             Text("Pay", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
-                        }
                     }
                 }
+            }
+            }
             }
         }
     ) { paddingValues ->
@@ -172,25 +190,60 @@ fun UnpaidTicketScreen(
                 .verticalScroll(rememberScrollState())
         ) {
             // Timer Bar
-            val payTime = viewModel.paymentTimeLeft
+            val isCancelled = viewModel.bookingData?.isCancelled == true
+            val isTimerExpired = viewModel.paymentTimeLeft <= 0
             
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color(0xFFFFF0F0))
-                    .padding(12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
-            ) {
-                Icon(Icons.Default.AccessTime, null, tint = WhooshTextSecondary, modifier = Modifier.size(16.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(text = "Remaining payment time: ", fontSize = 12.sp, color = WhooshTextSecondary)
-                Text(
-                    text = "${payTime / 60}:${String.format("%02d", payTime % 60)}",
-                    fontSize = 12.sp,
-                    color = WhooshRed,
-                    fontWeight = FontWeight.Bold
-                )
+            when {
+                isCancelled -> {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Color(0xFFFFF0F0))
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(Icons.Default.Close, null, tint = WhooshRed, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(text = "Tiket ini telah dibatalkan", fontSize = 12.sp, color = WhooshRed, fontWeight = FontWeight.Bold)
+                    }
+                }
+                isTimerExpired -> {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Color(0xFFFFF0F0))
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(Icons.Default.Close, null, tint = WhooshRed, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(text = "Waktu pembayaran telah habis", fontSize = 12.sp, color = WhooshRed, fontWeight = FontWeight.Bold)
+                    }
+                }
+                else -> {
+                    val payTime = viewModel.paymentTimeLeft
+                    
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Color(0xFFFFF0F0))
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(Icons.Default.AccessTime, null, tint = WhooshTextSecondary, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(text = "Remaining payment time: ", fontSize = 12.sp, color = WhooshTextSecondary)
+                        Text(
+                            text = "${payTime / 60}:${String.format("%02d", payTime % 60)}",
+                            fontSize = 12.sp,
+                            color = WhooshRed,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
             }
             
             Spacer(modifier = Modifier.height(16.dp))
@@ -388,5 +441,110 @@ fun UnpaidTicketScreen(
             
             Spacer(modifier = Modifier.height(32.dp))
         }
+    }
+    
+    // Cancel Confirmation Dialog
+    if (showCancelDialog) {
+        AlertDialog(
+            onDismissRequest = { showCancelDialog = false },
+            title = {
+                Text(
+                    "Batalkan Tiket?",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp
+                )
+            },
+            text = {
+                Column {
+                    Text(
+                        "Apakah Anda yakin ingin membatalkan tiket ini?",
+                        fontSize = 14.sp,
+                        color = Color.Black
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        "• Timer pembayaran akan dihentikan\n• Kursi akan dilepas",
+                        fontSize = 12.sp,
+                        color = WhooshTextSecondary,
+                        lineHeight = 18.sp
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showCancelDialog = false
+                        viewModel.cancelUnpaidTicket { success, message ->
+                            cancelMessage = message
+                            if (success) {
+                                showSuccessDialog = true
+                            }
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = WhooshRed)
+                ) {
+                    Text("Ya, Batalkan", color = Color.White)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(
+                    onClick = { showCancelDialog = false },
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFD0D0D0))
+                ) {
+                    Text("Tidak", color = Color.Black)
+                }
+            }
+        )
+    }
+    
+    // Success Dialog
+    if (showSuccessDialog) {
+        AlertDialog(
+            onDismissRequest = { 
+                showSuccessDialog = false
+                onCancel()
+            },
+            title = {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = null,
+                        tint = Color(0xFF4CAF50),
+                        modifier = Modifier.size(48.dp)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        "Tiket Dibatalkan",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                }
+            },
+            text = {
+                Text(
+                    cancelMessage,
+                    fontSize = 14.sp,
+                    color = Color.Black,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showSuccessDialog = false
+                        onCancel()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = WhooshRed),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("OK", color = Color.White)
+                }
+            }
+        )
     }
 }

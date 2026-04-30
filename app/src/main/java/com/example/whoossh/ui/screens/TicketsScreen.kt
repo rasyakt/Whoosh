@@ -94,10 +94,15 @@ fun TicketsScreen(
     val errorMessage = null
 
     // Filter tickets from ViewModel's state directly
-    val combinedUnpaidTickets = viewModel.activeTickets.filter { !it.isPaid && !it.isCancelled }
-    val combinedPaidTickets = viewModel.activeTickets.filter { it.isPaid && !it.isUsed }
+    val combinedUnpaidTickets = viewModel.activeTickets
+        .filter { !it.isPaid && !it.isCancelled }
+        .sortedByDescending { it.bookingTimestamp }  // ✅ Urutkan dari terbaru ke terlama
+    val combinedPaidTickets = viewModel.activeTickets
+        .filter { it.isPaid && !it.isUsed }
+        .sortedByDescending { it.bookingTimestamp }  // ✅ Urutkan dari terbaru ke terlama
     val combinedHistoryTickets = (viewModel.historyTickets + viewModel.activeTickets.filter { it.isCancelled })
         .distinctBy { it.bookingCode }
+        .sortedByDescending { it.bookingTimestamp }  // ✅ Urutkan dari terbaru ke terlama
 
     Column(
         modifier = Modifier

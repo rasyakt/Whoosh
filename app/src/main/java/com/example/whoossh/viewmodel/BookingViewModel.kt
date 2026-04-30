@@ -24,6 +24,8 @@ import com.example.whoossh.utils.TicketUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -32,6 +34,9 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
 
     private val userPreferences = UserPreferences(application)
     private val api = ApiClient.apiService
+    
+    // Mutex for timer synchronization
+    private val timerMutex = Mutex()
 
     // Login State
     var isLoggedIn by mutableStateOf(false)
@@ -132,6 +137,16 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
         
         // Sinkronisasi data stasiun dari API
         refreshStations()
+    }
+    
+    /**
+     * Clean up resources when ViewModel is destroyed
+     * Prevents memory leaks from running coroutines
+     */
+    override fun onCleared() {
+        super.onCleared()
+        timerJob?.cancel()
+        Log.i("BookingViewModel", "ViewModel cleared, timer cancelled")
     }
 
     // ── STATIONS SYNC ────────────────────────────────────────────────────────
@@ -282,6 +297,7 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
         userPhone = ""
         userPreferences.clearLoggedInUser()
         userPreferences.clearPaidTicketsCache() // Bersihkan cache tiket yang sudah dibayar
+        userPreferences.clearCancelledTicketsCache() // Bersihkan cache tiket yang dibatalkan
         resetBooking()
         activeTickets = emptyList()
         historyTickets = emptyList()
@@ -445,23 +461,44 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
         val paidTicketsCache = userPreferences.getPaidTickets()
         Log.d("BookingViewModel", "applyTickets: Paid tickets cache: ${paidTicketsCache.joinToString()}")
         
+        // Ambil cache booking codes yang sudah dibatalkan dari SharedPreferences
+        val cancelledTicketsCache = userPreferences.getCancelledTickets()
+        Log.d("BookingViewModel", "applyTickets: Cancelled tickets cache: ${cancelledTicketsCache.joinToString()}")
+        
         val serverBookings = tickets.mapNotNull { ticket ->
             try {
                 val booking = ticket.toBookingData(userName)
                 
-                // Override isPaid jika ada di cache lokal
-                val finalBooking = if (paidTicketsCache.contains(booking.bookingCode) && !booking.isPaid) {
-                    Log.w("BookingViewModel", "  ⚠️ Overriding server status for ${booking.bookingCode}: server says unpaid, but local cache says PAID")
-                    booking.copy(isPaid = true)
+                // PROTEKSI 1: Jika tiket ada di cache cancelled, SKIP (jangan tampilkan)
+                if (cancelledTicketsCache.contains(booking.bookingCode)) {
+                    Log.w("BookingViewModel", "  ⚠️ SKIPPING ${booking.bookingCode}: cache says CANCELLED")
+                    
+                    // Jika server sudah update ke cancelled, hapus dari cache
+                    if (ticket.isCancelled == 1) {
+                        Log.i("BookingViewModel", "  ✅ Server synced for ${booking.bookingCode}, removing from cancelled cache")
+                        userPreferences.removeCancelledTicket(ticket.bookingCode)
+                    }
+                    
+                    return@mapNotNull null // Skip tiket ini
+                }
+                
+                // PROTEKSI 2: Jika tiket ada di cache paid, PAKSA isPaid=true dan isCancelled=false
+                val finalBooking = if (paidTicketsCache.contains(booking.bookingCode)) {
+                    if (!booking.isPaid || booking.isCancelled) {
+                        Log.w("BookingViewModel", "  ⚠️ PROTECTING ${booking.bookingCode}: cache says PAID, forcing isPaid=true, isCancelled=false")
+                        booking.copy(isPaid = true, isCancelled = false)
+                    } else {
+                        booking
+                    }
                 } else {
                     booking
                 }
                 
-                Log.d("BookingViewModel", "  Server ticket: ${ticket.bookingCode} isPaid=${ticket.isPaid} (raw) -> ${finalBooking.isPaid} (final)")
+                Log.d("BookingViewModel", "  Server ticket: ${ticket.bookingCode} isPaid=${ticket.isPaid} isCancelled=${ticket.isCancelled} (raw) -> isPaid=${finalBooking.isPaid} isCancelled=${finalBooking.isCancelled} (final)")
                 
                 // Jika server sudah update ke paid, hapus dari cache
                 if (ticket.isPaid == 1 && paidTicketsCache.contains(ticket.bookingCode)) {
-                    Log.i("BookingViewModel", "  ✅ Server synced for ${ticket.bookingCode}, removing from cache")
+                    Log.i("BookingViewModel", "  ✅ Server synced for ${ticket.bookingCode}, removing from paid cache")
                     userPreferences.removePaidTicket(ticket.bookingCode)
                 }
                 
@@ -476,10 +513,10 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
         val localMap = activeTickets.associateBy { it.bookingCode }
         Log.d("BookingViewModel", "applyTickets: Current local tickets: ${localMap.keys.joinToString()}")
         localMap.forEach { (code, ticket) ->
-            Log.d("BookingViewModel", "  Local ticket: $code isPaid=${ticket.isPaid}")
+            Log.d("BookingViewModel", "  Local ticket: $code isPaid=${ticket.isPaid} isCancelled=${ticket.isCancelled}")
         }
         
-        val serverActive = serverBookings.filter { !it.isUsed }
+        val serverActive = serverBookings.filter { !it.isUsed && !it.isCancelled }
 
         // Gabungkan: untuk tiap booking code, pilih versi yang isPaid=true jika ada
         val mergedMap = mutableMapOf<String, BookingData>()
@@ -494,13 +531,15 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
         for (ticket in activeTickets) {
             val server = mergedMap[ticket.bookingCode]
             if (server != null) {
-                // Jika lokal sudah bayar tapi server belum, pertahankan status lokal
-                if (ticket.isPaid && !server.isPaid) {
-                    mergedMap[ticket.bookingCode] = ticket
-                    Log.w("BookingViewModel", "⚠️ PRESERVING local paid status for ${ticket.bookingCode} (local=paid, server=unpaid)")
-                } else if (ticket.isPaid && server.isPaid) {
-                    // Keduanya sudah bayar, gunakan server (lebih update)
-                    Log.i("BookingViewModel", "✅ Both paid for ${ticket.bookingCode}, using server data")
+                // PROTEKSI: Jika lokal sudah paid, JANGAN PERNAH ubah jadi cancelled
+                if (ticket.isPaid) {
+                    if (!server.isPaid || server.isCancelled) {
+                        Log.w("BookingViewModel", "⚠️ PRESERVING local paid status for ${ticket.bookingCode} (local=paid, server=unpaid/cancelled)")
+                        mergedMap[ticket.bookingCode] = ticket.copy(isCancelled = false)
+                    } else {
+                        // Keduanya sudah bayar, gunakan server (lebih update)
+                        Log.i("BookingViewModel", "✅ Both paid for ${ticket.bookingCode}, using server data")
+                    }
                 } else if (!ticket.isPaid && server.isPaid) {
                     // Server sudah update, lokal belum
                     Log.i("BookingViewModel", "✅ Server updated to paid for ${ticket.bookingCode}")
@@ -513,14 +552,92 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
             }
         }
 
-        activeTickets = mergedMap.values.toList()
+        // ✅ FITUR BARU: Auto-update status tiket yang sudah lewat waktu keberangkatan
+        val updatedTickets = mergedMap.values.map { ticket ->
+            if (ticket.isPaid && !ticket.isUsed && !ticket.isCancelled) {
+                if (isTicketExpired(ticket)) {
+                    Log.i("BookingViewModel", "🕐 Auto-marking ${ticket.bookingCode} as USED (departure time passed)")
+                    // Update ke server
+                    markTicketAsUsed(ticket.bookingCode)
+                    // Update lokal
+                    ticket.copy(isUsed = true)
+                } else {
+                    ticket
+                }
+            } else {
+                ticket
+            }
+        }
 
-        historyTickets = (serverBookings.filter { it.isUsed } + historyTickets)
+        activeTickets = updatedTickets.filter { !it.isUsed && !it.isCancelled }
+
+        historyTickets = (serverBookings.filter { it.isUsed || it.isCancelled } + 
+                         updatedTickets.filter { it.isUsed || it.isCancelled } + 
+                         historyTickets)
             .distinctBy { it.bookingCode }
+            .sortedByDescending { it.bookingTimestamp }  // ✅ Urutkan dari terbaru ke terlama
 
         Log.i("BookingViewModel", "applyTickets RESULT: ${activeTickets.size} active (merged), ${historyTickets.size} history")
         activeTickets.forEach { ticket ->
-            Log.i("BookingViewModel", "  Final: ${ticket.bookingCode} isPaid=${ticket.isPaid}")
+            Log.i("BookingViewModel", "  Final: ${ticket.bookingCode} isPaid=${ticket.isPaid} isCancelled=${ticket.isCancelled} isUsed=${ticket.isUsed}")
+        }
+    }
+    
+    /**
+     * Cek apakah tiket sudah melewati waktu keberangkatan
+     */
+    private fun isTicketExpired(ticket: BookingData): Boolean {
+        try {
+            // Parse tanggal keberangkatan
+            val dateFormat = SimpleDateFormat("EEEE, dd MMM yyyy", Locale("id", "ID"))
+            val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
+            
+            val departureDate = dateFormat.parse(ticket.departureDate) ?: return false
+            val departureTime = timeFormat.parse(ticket.departureTime) ?: return false
+            
+            // Gabungkan tanggal dan waktu
+            val calendar = Calendar.getInstance()
+            calendar.time = departureDate
+            
+            val timeCalendar = Calendar.getInstance()
+            timeCalendar.time = departureTime
+            
+            calendar.set(Calendar.HOUR_OF_DAY, timeCalendar.get(Calendar.HOUR_OF_DAY))
+            calendar.set(Calendar.MINUTE, timeCalendar.get(Calendar.MINUTE))
+            calendar.set(Calendar.SECOND, 0)
+            calendar.set(Calendar.MILLISECOND, 0)
+            
+            val departureTimestamp = calendar.timeInMillis
+            val now = System.currentTimeMillis()
+            
+            // Tiket dianggap expired jika sudah lewat waktu keberangkatan
+            return now > departureTimestamp
+        } catch (e: Exception) {
+            Log.e("BookingViewModel", "Error checking ticket expiry: ${e.message}")
+            return false
+        }
+    }
+    
+    /**
+     * Tandai tiket sebagai sudah digunakan di server
+     */
+    private fun markTicketAsUsed(bookingCode: String) {
+        viewModelScope.launch {
+            try {
+                val response = withContext(Dispatchers.IO) {
+                    api.updateBookingStatus(mapOf(
+                        "booking_code" to bookingCode,
+                        "is_used" to 1
+                    ))
+                }
+                if (response.isSuccessful && response.body()?.status == "success") {
+                    Log.i("BookingViewModel", "✅ Ticket $bookingCode marked as USED on server")
+                } else {
+                    Log.e("BookingViewModel", "❌ Failed to mark ticket as used: ${response.message()}")
+                }
+            } catch (e: Exception) {
+                Log.e("BookingViewModel", "❌ Error marking ticket as used: ${e.message}")
+            }
         }
     }
 
@@ -877,6 +994,88 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
         
         Log.i("BookingViewModel", "✅ Tiket ${current.bookingCode} berhasil ditandai sebagai SUDAH BAYAR (lokal + cache)")
     }
+    
+    /**
+     * Batalkan tiket yang belum dibayar
+     */
+    fun cancelUnpaidTicket(onResult: (Boolean, String) -> Unit) {
+        val current = bookingData ?: run {
+            onResult(false, "Tidak ada tiket yang dipilih")
+            return
+        }
+        
+        if (current.isPaid) {
+            onResult(false, "Tiket yang sudah dibayar tidak bisa dibatalkan di sini. Gunakan fitur Refund.")
+            return
+        }
+        
+        if (current.isCancelled) {
+            onResult(false, "Tiket ini sudah dibatalkan sebelumnya.")
+            return
+        }
+        
+        Log.i("BookingViewModel", "cancelUnpaidTicket: Cancelling ${current.bookingCode}")
+        
+        // Update status lokal
+        val cancelled = current.copy(isCancelled = true)
+        bookingData = cancelled
+        
+        // Stop timer
+        stopTimer()
+        
+        // Simpan ke cancelled cache untuk mencegah tiket muncul lagi
+        userPreferences.saveCancelledTicket(current.bookingCode)
+        Log.i("BookingViewModel", "✅ Saved ${current.bookingCode} to cancelled cache")
+        
+        // Update ke server
+        viewModelScope.launch {
+            try {
+                Log.d("BookingViewModel", "cancelUnpaidTicket: Sending cancel to server for ${current.bookingCode}")
+                val response = withContext(Dispatchers.IO) {
+                    api.updateBookingStatus(mapOf(
+                        "booking_code" to current.bookingCode,
+                        "is_cancelled" to 1
+                    ))
+                }
+                
+                if (response.isSuccessful && response.body()?.status == "success") {
+                    Log.i("BookingViewModel", "✅ Server status updated to CANCELLED: ${current.bookingCode}")
+                    
+                    // Hapus dari activeTickets dan pindah ke historyTickets
+                    activeTickets = activeTickets.filter { it.bookingCode != current.bookingCode }
+                    
+                    // Tambahkan ke historyTickets dengan proteksi duplikat
+                    val existingHistory = historyTickets.filter { it.bookingCode != current.bookingCode }
+                    historyTickets = (listOf(cancelled) + existingHistory).sortedByDescending { it.bookingTimestamp }
+                    
+                    onResult(true, "Tiket berhasil dibatalkan")
+                } else {
+                    val errorMsg = response.body()?.message ?: response.message()
+                    Log.e("BookingViewModel", "❌ Failed to cancel on server: HTTP ${response.code()} - $errorMsg")
+                    
+                    // Meskipun gagal di server, status lokal sudah dibatalkan dan di-cache
+                    activeTickets = activeTickets.filter { it.bookingCode != current.bookingCode }
+                    val existingHistory = historyTickets.filter { it.bookingCode != current.bookingCode }
+                    historyTickets = (listOf(cancelled) + existingHistory).sortedByDescending { it.bookingTimestamp }
+                    
+                    // Pesan tanpa "(lokal)" karena sudah di-cache dengan aman
+                    onResult(true, "Tiket berhasil dibatalkan")
+                }
+            } catch (e: Exception) {
+                Log.e("BookingViewModel", "❌ Error cancelling ticket: ${e.message}", e)
+                
+                // Meskipun gagal di server, status lokal sudah dibatalkan dan di-cache
+                activeTickets = activeTickets.filter { it.bookingCode != current.bookingCode }
+                val existingHistory = historyTickets.filter { it.bookingCode != current.bookingCode }
+                historyTickets = (listOf(cancelled) + existingHistory).sortedByDescending { it.bookingTimestamp }
+                
+                // Pesan tanpa "(lokal)" karena sudah di-cache dengan aman
+                onResult(true, "Tiket berhasil dibatalkan")
+            }
+        }
+        
+        Log.i("BookingViewModel", "✅ Tiket ${current.bookingCode} berhasil dibatalkan")
+    }
 
     fun viewTicket(ticket: BookingData) {
         bookingData = ticket
@@ -1116,6 +1315,377 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
         return _selectedPassengers.value.find { it.id == id }
     }
 
+    // ── RESCHEDULE ───────────────────────────────────────────────────────────
+
+    fun canReschedule(booking: BookingData): Pair<Boolean, String> {
+        if (!booking.isPaid) {
+            return Pair(false, "Ticket must be paid before rescheduling")
+        }
+        if (booking.isUsed) {
+            return Pair(false, "Cannot reschedule used ticket")
+        }
+        if (booking.isCancelled) {
+            return Pair(false, "Cannot reschedule cancelled ticket")
+        }
+        
+        // Check if departure time is at least 2 hours away
+        val now = Calendar.getInstance()
+        val departureDateTime = parseDateTime(booking.departureDate, booking.departureTime)
+        val twoHoursInMillis = 2 * 60 * 60 * 1000
+        
+        if (departureDateTime != null && departureDateTime.timeInMillis - now.timeInMillis < twoHoursInMillis) {
+            return Pair(false, "Reschedule must be done at least 2 hours before departure")
+        }
+        
+        return Pair(true, "")
+    }
+
+    fun calculateRescheduleFee(currentDate: String, newDate: String, originalPrice: Int): Int {
+        // If same day, no fee
+        if (currentDate == newDate) {
+            return 0
+        }
+        // Different day: 25% fee
+        return (originalPrice * 0.25).toInt()
+    }
+
+    fun rescheduleTicket(
+        booking: BookingData,
+        newDate: String,
+        newSchedule: Schedule,
+        onResult: (Boolean, String) -> Unit
+    ) {
+        val (canReschedule, errorMsg) = canReschedule(booking)
+        if (!canReschedule) {
+            onResult(false, errorMsg)
+            return
+        }
+
+        val rescheduleFee = calculateRescheduleFee(booking.departureDate, newDate, booking.totalPrice)
+        val totalAmount = if (rescheduleFee > 0) rescheduleFee else 0
+
+        isLoading = true
+        viewModelScope.launch {
+            try {
+                // Update booking with new schedule
+                val response = withContext(Dispatchers.IO) {
+                    api.updateBookingStatus(mapOf(
+                        "booking_code" to booking.bookingCode,
+                        "departure_date" to newDate,
+                        "departure_time" to newSchedule.departureTime,
+                        "arrival_time" to newSchedule.arrivalTime,
+                        "reschedule_fee" to rescheduleFee
+                    ))
+                }
+
+                if (response.isSuccessful && response.body()?.status == "success") {
+                    // Update local booking data
+                    val updatedBooking = booking.copy(
+                        departureDate = newDate,
+                        departureTime = newSchedule.departureTime,
+                        arrivalTime = newSchedule.arrivalTime
+                    )
+                    bookingData = updatedBooking
+                    
+                    // Update in activeTickets list
+                    activeTickets = activeTickets.map { 
+                        if (it.bookingCode == booking.bookingCode) updatedBooking else it 
+                    }
+                    
+                    refreshTickets()
+                    
+                    val message = if (rescheduleFee > 0) {
+                        "Ticket rescheduled successfully. Fee: ${TicketUtils.formatRupiah(rescheduleFee)}"
+                    } else {
+                        "Ticket rescheduled successfully (same day, no fee)"
+                    }
+                    onResult(true, message)
+                } else {
+                    onResult(false, response.body()?.message ?: "Failed to reschedule ticket")
+                }
+            } catch (e: Exception) {
+                Log.e("BookingViewModel", "Reschedule error", e)
+                onResult(false, "Failed to connect to server: ${e.localizedMessage}")
+            } finally {
+                isLoading = false
+            }
+        }
+    }
+
+    // ── REFUND ───────────────────────────────────────────────────────────────
+
+    fun canRefund(booking: BookingData): Pair<Boolean, String> {
+        if (!booking.isPaid) {
+            return Pair(false, "Only paid tickets can be refunded")
+        }
+        if (booking.isUsed) {
+            return Pair(false, "Cannot refund used ticket")
+        }
+        if (booking.isCancelled) {
+            return Pair(false, "Ticket already cancelled")
+        }
+        
+        // Check if departure time is at least 2 hours away
+        val now = Calendar.getInstance()
+        val departureDateTime = parseDateTime(booking.departureDate, booking.departureTime)
+        val twoHoursInMillis = 2 * 60 * 60 * 1000
+        
+        if (departureDateTime != null && departureDateTime.timeInMillis - now.timeInMillis < twoHoursInMillis) {
+            return Pair(false, "Refund must be requested at least 2 hours before departure")
+        }
+        
+        return Pair(true, "")
+    }
+
+    fun calculateRefundAmount(originalPrice: Int): Int {
+        // 10% cancellation fee
+        val cancellationFee = (originalPrice * 0.10).toInt()
+        return originalPrice - cancellationFee
+    }
+
+    fun refundTicket(booking: BookingData, onResult: (Boolean, String, Int) -> Unit) {
+        val (canRefund, errorMsg) = canRefund(booking)
+        if (!canRefund) {
+            onResult(false, errorMsg, 0)
+            return
+        }
+
+        val refundAmount = calculateRefundAmount(booking.totalPrice)
+
+        isLoading = true
+        viewModelScope.launch {
+            try {
+                val response = withContext(Dispatchers.IO) {
+                    api.updateBookingStatus(mapOf(
+                        "booking_code" to booking.bookingCode,
+                        "is_cancelled" to 1,
+                        "refund_amount" to refundAmount
+                    ))
+                }
+
+                if (response.isSuccessful && response.body()?.status == "success") {
+                    // Update local booking data
+                    val updatedBooking = booking.copy(isCancelled = true)
+                    bookingData = updatedBooking
+                    
+                    // Remove from activeTickets, add to history
+                    activeTickets = activeTickets.filter { it.bookingCode != booking.bookingCode }
+                    historyTickets = listOf(updatedBooking) + historyTickets
+                    
+                    refreshTickets()
+                    
+                    onResult(true, "Refund request submitted successfully", refundAmount)
+                } else {
+                    onResult(false, response.body()?.message ?: "Failed to process refund", 0)
+                }
+            } catch (e: Exception) {
+                Log.e("BookingViewModel", "Refund error", e)
+                onResult(false, "Failed to connect to server: ${e.localizedMessage}", 0)
+            } finally {
+                isLoading = false
+            }
+        }
+    }
+
+    // ── ADD INFANT ───────────────────────────────────────────────────────────
+
+    var infantPassengers = mutableStateListOf<Passenger>()
+        private set
+
+    fun addInfantToBooking(
+        booking: BookingData,
+        infantName: String,
+        infantIdentityNo: String,
+        infantDateOfBirth: String,
+        onResult: (Boolean, String) -> Unit
+    ) {
+        // Validate inputs
+        if (infantName.isBlank()) {
+            onResult(false, "Nama infant tidak boleh kosong")
+            return
+        }
+        if (infantName.length < 3) {
+            onResult(false, "Nama infant minimal 3 karakter")
+            return
+        }
+        if (infantIdentityNo.isBlank()) {
+            onResult(false, "Nomor akta kelahiran tidak boleh kosong")
+            return
+        }
+        if (infantIdentityNo.length < 5) {
+            onResult(false, "Nomor akta kelahiran tidak valid")
+            return
+        }
+        
+        // Validate date format and value
+        val dateError = validateDateString(infantDateOfBirth, "Tanggal lahir")
+        if (dateError != null) {
+            onResult(false, dateError)
+            return
+        }
+
+        // Validate infant age (must be under 3 years old)
+        val infantAge = calculateAge(infantDateOfBirth)
+        if (infantAge < 0) {
+            onResult(false, "Tanggal lahir tidak valid")
+            return
+        }
+        if (infantAge >= 3) {
+            onResult(false, "Infant harus berusia di bawah 3 tahun (usia saat ini: $infantAge tahun)")
+            return
+        }
+
+        isLoading = true
+        viewModelScope.launch {
+            try {
+                val infantPassenger = PassengerRequest(
+                    name = infantName.trim(),
+                    identityNo = infantIdentityNo.trim(),
+                    gender = "Male", // Can be updated with actual selection
+                    dateOfBirth = infantDateOfBirth,
+                    passengerType = "Infant",
+                    discountType = "infant",
+                    country = "Indonesia",
+                    documentType = "Birth Certificate",
+                    expiryDate = "",
+                    whatsapp = userPhone,
+                    email = userEmail,
+                    isSaved = false,
+                    userId = userId,
+                    seatNumber = null // Infants don't get seats
+                )
+
+                val response = withContext(Dispatchers.IO) {
+                    api.addPassenger(infantPassenger)
+                }
+
+                if (response.isSuccessful && response.body()?.status == "success") {
+                    // Add to local list
+                    val infant = Passenger(
+                        id = response.body()?.data?.get("id")?.toString() ?: "",
+                        name = infantName.trim(),
+                        identityNo = infantIdentityNo.trim(),
+                        gender = "Male",
+                        dateOfBirth = infantDateOfBirth,
+                        passengerType = "Infant",
+                        discountType = "infant",
+                        country = "Indonesia",
+                        documentType = "Birth Certificate",
+                        expiryDate = "",
+                        whatsapp = userPhone,
+                        email = userEmail,
+                        isSaved = false
+                    )
+                    infantPassengers.add(infant)
+                    
+                    onResult(true, "Infant berhasil ditambahkan (gratis)")
+                } else {
+                    onResult(false, response.body()?.message ?: "Gagal menambahkan infant")
+                }
+            } catch (e: Exception) {
+                Log.e("BookingViewModel", "Add infant error", e)
+                onResult(false, "Gagal terhubung ke server: ${e.localizedMessage}")
+            } finally {
+                isLoading = false
+            }
+        }
+    }
+
+    // ── HELPER FUNCTIONS ─────────────────────────────────────────────────────
+
+    private fun parseDateTime(date: String, time: String): Calendar? {
+        return try {
+            val sdf = SimpleDateFormat("EEEE, dd MMM yyyy HH:mm", Locale("id", "ID"))
+            val dateTimeStr = "$date $time"
+            val parsedDate = sdf.parse(dateTimeStr)
+            if (parsedDate != null) {
+                Calendar.getInstance().apply { this.time = parsedDate }
+            } else null
+        } catch (e: Exception) {
+            Log.e("BookingViewModel", "Error parsing date time: $date $time", e)
+            null
+        }
+    }
+
+    private fun calculateAge(dateOfBirth: String): Int {
+        return try {
+            val sdf = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+            sdf.isLenient = false // Strict date parsing
+            val birthDate = sdf.parse(dateOfBirth)
+            if (birthDate != null) {
+                val birthCal = Calendar.getInstance().apply { time = birthDate }
+                val today = Calendar.getInstance()
+                
+                // Validate date is not in the future
+                if (birthCal.after(today)) {
+                    Log.w("BookingViewModel", "Birth date is in the future: $dateOfBirth")
+                    return -1
+                }
+                
+                // Validate date is not too old (max 150 years)
+                val maxAge = Calendar.getInstance().apply {
+                    add(Calendar.YEAR, -150)
+                }
+                if (birthCal.before(maxAge)) {
+                    Log.w("BookingViewModel", "Birth date is too old: $dateOfBirth")
+                    return -1
+                }
+                
+                var age = today.get(Calendar.YEAR) - birthCal.get(Calendar.YEAR)
+                if (today.get(Calendar.DAY_OF_YEAR) < birthCal.get(Calendar.DAY_OF_YEAR)) {
+                    age--
+                }
+                age
+            } else {
+                Log.w("BookingViewModel", "Failed to parse birth date: $dateOfBirth")
+                -1
+            }
+        } catch (e: Exception) {
+            Log.e("BookingViewModel", "Error calculating age: ${e.message}", e)
+            -1
+        }
+    }
+    
+    /**
+     * Validate date string format and value
+     */
+    private fun validateDateString(dateStr: String, fieldName: String): String? {
+        if (dateStr.isBlank()) {
+            return "$fieldName tidak boleh kosong"
+        }
+        
+        // Check format dd/MM/yyyy
+        val datePattern = Regex("""^\d{2}/\d{2}/\d{4}$""")
+        if (!datePattern.matches(dateStr)) {
+            return "$fieldName harus dalam format DD/MM/YYYY"
+        }
+        
+        try {
+            val sdf = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+            sdf.isLenient = false
+            val date = sdf.parse(dateStr)
+            if (date == null) {
+                return "$fieldName tidak valid"
+            }
+            
+            // Check if date is in reasonable range
+            val cal = Calendar.getInstance().apply { time = date }
+            val today = Calendar.getInstance()
+            val minDate = Calendar.getInstance().apply { add(Calendar.YEAR, -150) }
+            
+            if (cal.after(today)) {
+                return "$fieldName tidak boleh di masa depan"
+            }
+            if (cal.before(minDate)) {
+                return "$fieldName terlalu lama (maksimal 150 tahun yang lalu)"
+            }
+        } catch (e: Exception) {
+            return "$fieldName tidak valid: ${e.message}"
+        }
+        
+        return null
+    }
+
     // ── RESET ────────────────────────────────────────────────────────────────
 
     fun resetBooking() {
@@ -1154,20 +1724,49 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
     }
 
     private fun startTimer() {
-        if (timerJob?.isActive == true) return
-        
-        timerJob = viewModelScope.launch {
-            while (true) {
-                kotlinx.coroutines.delay(1000)
-                if (seatLockTimeLeft > 0) seatLockTimeLeft--
-                if (paymentTimeLeft > 0) paymentTimeLeft--
-                
-                // Logic: Release seats if lock expires but not paid
-                if (seatLockTimeLeft == 0 && bookingData != null && bookingData?.isPaid == false) {
-                    releaseSeats()
+        viewModelScope.launch {
+            timerMutex.withLock {
+                // Prevent multiple timer instances
+                if (timerJob?.isActive == true) {
+                    Log.w("BookingViewModel", "Timer already running, skipping")
+                    return@launch
                 }
+                
+                timerJob = viewModelScope.launch {
+                    try {
+                        while (true) {
+                            kotlinx.coroutines.delay(1000)
+                            
+                            // Jangan countdown jika sudah dibayar
+                            val currentBooking = bookingData
+                            if (currentBooking?.isPaid == true) {
+                                Log.i("BookingViewModel", "Timer stopped: ticket already paid")
+                                stopTimer()
+                                break
+                            }
+                            
+                            if (seatLockTimeLeft > 0) seatLockTimeLeft--
+                            if (paymentTimeLeft > 0) paymentTimeLeft--
+                            
+                            // Logic: Release seats if lock expires but not paid
+                            if (seatLockTimeLeft == 0 && bookingData != null && bookingData?.isPaid == false) {
+                                releaseSeats()
+                            }
 
-                if (seatLockTimeLeft == 0 && paymentTimeLeft == 0) break
+                            // PENTING: Jangan batalkan tiket otomatis saat timer habis
+                            // User harus manual cancel atau admin yang cancel
+                            if (paymentTimeLeft == 0) {
+                                Log.w("BookingViewModel", "Payment timer expired for ${bookingData?.bookingCode}")
+                                // Hanya log warning, TIDAK membatalkan tiket
+                                break
+                            }
+                            
+                            if (seatLockTimeLeft == 0 && paymentTimeLeft == 0) break
+                        }
+                    } catch (e: Exception) {
+                        Log.e("BookingViewModel", "Timer error: ${e.message}", e)
+                    }
+                }
             }
         }
     }
@@ -1211,6 +1810,43 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
 // ── Extension: Convert API response to domain model ──────────────────────────
 
 fun BookingResponse.toBookingData(fallbackName: String = ""): BookingData {
+    var calculatedIsUsed = isUsed == 1
+    
+    // Auto-mark as used if the arrival time has passed
+    if (isPaid == 1 && !calculatedIsUsed) {
+        try {
+            val sdf = java.text.SimpleDateFormat("EEEE, dd MMM yyyy", java.util.Locale("id", "ID"))
+            val date = sdf.parse(departureDate)
+            if (date != null) {
+                val cal = java.util.Calendar.getInstance()
+                cal.time = date
+                
+                // arrivalTime format: "HH:mm" or "HH:mm (+X hari)"
+                val timeStr = arrivalTime.substringBefore(" (")
+                val timeParts = timeStr.split(":")
+                
+                if (timeParts.size >= 2) {
+                    val hours = timeParts[0].toIntOrNull() ?: 0
+                    val minutes = timeParts[1].toIntOrNull() ?: 0
+                    cal.set(java.util.Calendar.HOUR_OF_DAY, hours)
+                    cal.set(java.util.Calendar.MINUTE, minutes)
+                    cal.set(java.util.Calendar.SECOND, 0)
+                    
+                    if (arrivalTime.contains("(+")) {
+                         cal.add(java.util.Calendar.DAY_OF_YEAR, 1)
+                    }
+                    
+                    if (System.currentTimeMillis() > cal.timeInMillis) {
+                        calculatedIsUsed = true
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            // Ignore parsing errors, keep default value
+            android.util.Log.e("BookingViewModel", "Error calculating isUsed status: ${e.message}")
+        }
+    }
+
     return BookingData(
         userName = userName.ifBlank { fallbackName },
         originStation = originStation,
@@ -1227,7 +1863,7 @@ fun BookingResponse.toBookingData(fallbackName: String = ""): BookingData {
         selectedCarriage = selectedCarriage,
         selectedSeats = if (selectedSeats.isBlank()) emptyList() else selectedSeats.split(","),
         bookingTimestamp = bookingTimestamp,
-        isUsed = isUsed == 1,
+        isUsed = calculatedIsUsed,
         isPaid = isPaid == 1,
         isCancelled = isCancelled == 1
     )

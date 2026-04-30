@@ -31,6 +31,7 @@ class UserPreferences(context: Context) {
         private const val KEY_BIOMETRIC = "biometric_login"
         private const val KEY_SAVE_LOGIN = "save_login"
         private const val KEY_PAID_TICKETS = "paid_tickets_cache"
+        private const val KEY_CANCELLED_TICKETS = "cancelled_tickets_cache"
     }
 
     // ── USER SESSION CACHE ──────────────────────────────────────────────────
@@ -87,6 +88,29 @@ class UserPreferences(context: Context) {
 
     fun clearPaidTicketsCache() {
         prefs.edit().remove(KEY_PAID_TICKETS).apply()
+    }
+
+    // ── CANCELLED TICKETS CACHE ──────────────────────────────────────────────
+    // Cache booking codes yang sudah dibatalkan untuk mengatasi delay sync server
+
+    fun saveCancelledTicket(bookingCode: String) {
+        val cancelledTickets = getCancelledTickets().toMutableSet()
+        cancelledTickets.add(bookingCode)
+        prefs.edit().putStringSet(KEY_CANCELLED_TICKETS, cancelledTickets).apply()
+    }
+
+    fun getCancelledTickets(): Set<String> {
+        return prefs.getStringSet(KEY_CANCELLED_TICKETS, emptySet()) ?: emptySet()
+    }
+
+    fun removeCancelledTicket(bookingCode: String) {
+        val cancelledTickets = getCancelledTickets().toMutableSet()
+        cancelledTickets.remove(bookingCode)
+        prefs.edit().putStringSet(KEY_CANCELLED_TICKETS, cancelledTickets).apply()
+    }
+
+    fun clearCancelledTicketsCache() {
+        prefs.edit().remove(KEY_CANCELLED_TICKETS).apply()
     }
 
     // ── NOTIFICATION SETTINGS ────────────────────────────────────────────────

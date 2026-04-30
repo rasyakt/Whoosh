@@ -44,6 +44,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.whoossh.R
+import com.example.whoossh.model.Schedule
 import com.example.whoossh.ui.components.InfoRow
 import com.example.whoossh.ui.components.WhooshButton
 import com.example.whoossh.ui.components.WhooshOutlinedButton
@@ -56,16 +57,40 @@ import com.example.whoossh.ui.theme.WhooshWhite
 import com.example.whoossh.utils.QrCodeUtils
 import com.example.whoossh.utils.TicketUtils
 import com.example.whoossh.viewmodel.BookingViewModel
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ETicketScreen(
     viewModel: BookingViewModel,
-    onBackToDashboard: () -> Unit
+    onBackToDashboard: () -> Unit,
+    onReschedule: () -> Unit = {},
+    onRefund: () -> Unit = {},
+    onAddInfant: () -> Unit = {}
 ) {
     val booking = viewModel.bookingData
     val context = LocalContext.current
     var showQrDialog by remember { mutableStateOf(false) }
+    var showRescheduleDialog by remember { mutableStateOf(false) }
+    var showRefundDialog by remember { mutableStateOf(false) }
+    var showAddInfantDialog by remember { mutableStateOf(false) }
+    
+    // Reschedule state
+    var rescheduleDate by remember { mutableStateOf("") }
+    var showDatePicker by remember { mutableStateOf(false) }
+    var availableSchedules by remember { mutableStateOf<List<Schedule>>(emptyList()) }
+    var selectedNewSchedule by remember { mutableStateOf<Schedule?>(null) }
+    var rescheduleFee by remember { mutableIntStateOf(0) }
+    
+    // Refund state
+    var refundAmount by remember { mutableIntStateOf(0) }
+    
+    // Infant state
+    var infantName by remember { mutableStateOf("") }
+    var infantIdentityNo by remember { mutableStateOf("") }
+    var infantDateOfBirth by remember { mutableStateOf("") }
 
     if (booking == null) {
         Box(
@@ -204,7 +229,7 @@ fun ETicketScreen(
                     
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         OutlinedButton(
-                            onClick = { },
+                            onClick = { showRescheduleDialog = true },
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(8.dp),
                             border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE0E0E0))
@@ -212,7 +237,7 @@ fun ETicketScreen(
                             Text("Reschedule", color = Color.Black)
                         }
                         OutlinedButton(
-                            onClick = { },
+                            onClick = { showRefundDialog = true },
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(8.dp),
                             border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE0E0E0))
@@ -285,7 +310,7 @@ fun ETicketScreen(
                     Spacer(modifier = Modifier.height(20.dp))
                     
                     OutlinedButton(
-                        onClick = { },
+                        onClick = { showAddInfantDialog = true },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(8.dp),
                         border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE0E0E0))
@@ -512,6 +537,506 @@ fun ETicketScreen(
                 }
             }
         }
+    }
+
+    // RESCHEDULE DIALOG
+    if (showRescheduleDialog && booking != null) {
+        val (canReschedule, errorMsg) = viewModel.canReschedule(booking)
+        
+        if (!canReschedule) {
+            AlertDialog(
+                onDismissRequest = { showRescheduleDialog = false },
+                title = { Text("Cannot Reschedule", fontWeight = FontWeight.Bold) },
+                text = { Text(errorMsg, fontSize = 14.sp) },
+                confirmButton = {
+                    Button(
+                        onClick = { showRescheduleDialog = false },
+                        colors = ButtonDefaults.buttonColors(containerColor = WhooshRed)
+                    ) {
+                        Text("OK")
+                    }
+                }
+            )
+        } else {
+            AlertDialog(
+                onDismissRequest = { showRescheduleDialog = false },
+                title = { Text("Reschedule Ticket", fontWeight = FontWeight.Bold) },
+                text = {
+                    Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                        Text("Current Schedule:", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                        Text("${booking.departureDate} at ${booking.departureTime}", fontSize = 13.sp, color = Color.Gray)
+                        Text("${booking.originStation} → ${booking.destinationStation}", fontSize = 13.sp, color = Color.Gray)
+                        
+                        Spacer(modifier = Modifier.height(16.dp))
+                        
+                        Text("Select New Date:", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                        OutlinedButton(
+                            onClick = { showDatePicker = true },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(if (rescheduleDate.isBlank()) "Choose Date" else rescheduleDate)
+                        }
+                        
+                        if (rescheduleDate.isNotBlank()) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            
+                            // Calculate fee
+                            val fee = viewModel.calculateRescheduleFee(booking.departureDate, rescheduleDate, booking.totalPrice)
+                            rescheduleFee = fee
+                            
+                            if (fee > 0) {
+                                Text(
+                                    "Reschedule Fee (25%): ${TicketUtils.formatRupiah(fee)}",
+                                    fontSize = 13.sp,
+                                    color = WhooshRed,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            } else {
+                                Text(
+                                    "Same day reschedule: No fee",
+                                    fontSize = 13.sp,
+                                    color = Color(0xFF4CAF50),
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                            
+                            Spacer(modifier = Modifier.height(12.dp))
+                            
+                            // Load available schedules
+                            LaunchedEffect(rescheduleDate) {
+                                viewModel.setDate(rescheduleDate)
+                                if (viewModel.searchSchedules()) {
+                                    // Wait for schedules to load
+                                    kotlinx.coroutines.delay(500)
+                                    availableSchedules = viewModel.schedules
+                                }
+                            }
+                            
+                            if (availableSchedules.isNotEmpty()) {
+                                Text("Available Schedules:", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                                Spacer(modifier = Modifier.height(8.dp))
+                                
+                                availableSchedules.take(3).forEach { schedule ->
+                                    val isSelected = selectedNewSchedule == schedule
+                                    Surface(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable { selectedNewSchedule = schedule },
+                                        shape = RoundedCornerShape(8.dp),
+                                        border = androidx.compose.foundation.BorderStroke(
+                                            1.dp,
+                                            if (isSelected) WhooshRed else Color(0xFFE0E0E0)
+                                        ),
+                                        color = if (isSelected) Color(0xFFFFF0F0) else Color.White
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(12.dp),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Column {
+                                                Text(
+                                                    "${schedule.departureTime} - ${schedule.arrivalTime}",
+                                                    fontSize = 14.sp,
+                                                    fontWeight = FontWeight.SemiBold
+                                                )
+                                                Text(
+                                                    schedule.trainCode,
+                                                    fontSize = 12.sp,
+                                                    color = Color.Gray
+                                                )
+                                            }
+                                            Text(
+                                                "${schedule.duration} m",
+                                                fontSize = 12.sp,
+                                                color = Color.Gray
+                                            )
+                                        }
+                                    }
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                }
+                            } else if (viewModel.isLoadingSchedules) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(24.dp),
+                                    color = WhooshRed
+                                )
+                            }
+                        }
+                        
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            "Note: Reschedule is subject to seat availability.",
+                            fontSize = 11.sp,
+                            color = WhooshTextSecondary,
+                            lineHeight = 14.sp
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            if (selectedNewSchedule != null) {
+                                viewModel.rescheduleTicket(
+                                    booking = booking,
+                                    newDate = rescheduleDate,
+                                    newSchedule = selectedNewSchedule!!
+                                ) { success, message ->
+                                    Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                                    if (success) {
+                                        showRescheduleDialog = false
+                                        rescheduleDate = ""
+                                        selectedNewSchedule = null
+                                    }
+                                }
+                            } else {
+                                Toast.makeText(context, "Please select a new schedule", Toast.LENGTH_SHORT).show()
+                            }
+                        },
+                        enabled = selectedNewSchedule != null && !viewModel.isLoading,
+                        colors = ButtonDefaults.buttonColors(containerColor = WhooshRed)
+                    ) {
+                        if (viewModel.isLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                color = Color.White,
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Text("Confirm Reschedule")
+                        }
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { 
+                        showRescheduleDialog = false
+                        rescheduleDate = ""
+                        selectedNewSchedule = null
+                    }) {
+                        Text("Cancel", color = Color.Gray)
+                    }
+                }
+            )
+        }
+        
+        // Date Picker Dialog
+        if (showDatePicker) {
+            val calendar = Calendar.getInstance()
+            val datePickerDialog = android.app.DatePickerDialog(
+                context,
+                { _, year, month, dayOfMonth ->
+                    val selectedCal = Calendar.getInstance().apply {
+                        set(year, month, dayOfMonth)
+                    }
+                    val sdf = SimpleDateFormat("EEEE, dd MMM yyyy", Locale("id", "ID"))
+                    rescheduleDate = sdf.format(selectedCal.time)
+                    showDatePicker = false
+                },
+                calendar.get(Calendar.YEAR),
+                calendar.get(Calendar.MONTH),
+                calendar.get(Calendar.DAY_OF_MONTH)
+            )
+            datePickerDialog.datePicker.minDate = System.currentTimeMillis()
+            datePickerDialog.setOnDismissListener { showDatePicker = false }
+            datePickerDialog.show()
+        }
+    }
+
+    // REFUND DIALOG
+    if (showRefundDialog && booking != null) {
+        val (canRefund, errorMsg) = viewModel.canRefund(booking)
+        
+        LaunchedEffect(Unit) {
+            if (canRefund) {
+                refundAmount = viewModel.calculateRefundAmount(booking.totalPrice)
+            }
+        }
+        
+        if (!canRefund) {
+            AlertDialog(
+                onDismissRequest = { showRefundDialog = false },
+                title = { Text("Cannot Refund", fontWeight = FontWeight.Bold) },
+                text = { Text(errorMsg, fontSize = 14.sp) },
+                confirmButton = {
+                    Button(
+                        onClick = { showRefundDialog = false },
+                        colors = ButtonDefaults.buttonColors(containerColor = WhooshRed)
+                    ) {
+                        Text("OK")
+                    }
+                }
+            )
+        } else {
+            AlertDialog(
+                onDismissRequest = { showRefundDialog = false },
+                title = { Text("Refund Ticket", fontWeight = FontWeight.Bold) },
+                text = {
+                    Column {
+                        Text("Are you sure you want to request a refund for this ticket?", fontSize = 14.sp)
+                        
+                        Spacer(modifier = Modifier.height(16.dp))
+                        
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(8.dp),
+                            color = Color(0xFFF5F5F5)
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text("Original Amount:", fontSize = 13.sp, color = Color.Gray)
+                                    Text(
+                                        TicketUtils.formatRupiah(booking.totalPrice),
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text("Cancellation Fee (10%):", fontSize = 13.sp, color = Color.Gray)
+                                    Text(
+                                        "- ${TicketUtils.formatRupiah(booking.totalPrice - refundAmount)}",
+                                        fontSize = 13.sp,
+                                        color = WhooshRed
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(8.dp))
+                                HorizontalDivider(thickness = 0.5.dp, color = Color(0xFFE0E0E0))
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text("Refund Amount:", fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                                    Text(
+                                        TicketUtils.formatRupiah(refundAmount),
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFF4CAF50)
+                                    )
+                                }
+                            }
+                        }
+                        
+                        Spacer(modifier = Modifier.height(12.dp))
+                        
+                        Text(
+                            "• Refund will be processed within 3-7 business days\n" +
+                            "• Amount will be returned to your original payment method\n" +
+                            "• This action cannot be undone",
+                            fontSize = 12.sp,
+                            color = WhooshTextSecondary,
+                            lineHeight = 16.sp
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            viewModel.refundTicket(booking) { success, message, amount ->
+                                if (success) {
+                                    Toast.makeText(
+                                        context,
+                                        "Refund request submitted. You will receive ${TicketUtils.formatRupiah(amount)}",
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                    showRefundDialog = false
+                                    // Navigate back to dashboard after refund
+                                    onBackToDashboard()
+                                } else {
+                                    Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                                }
+                            }
+                        },
+                        enabled = !viewModel.isLoading,
+                        colors = ButtonDefaults.buttonColors(containerColor = WhooshRed)
+                    ) {
+                        if (viewModel.isLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                color = Color.White,
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Text("Confirm Refund")
+                        }
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showRefundDialog = false }) {
+                        Text("Cancel", color = Color.Gray)
+                    }
+                }
+            )
+        }
+    }
+
+    // ADD INFANT DIALOG
+    if (showAddInfantDialog && booking != null) {
+        AlertDialog(
+            onDismissRequest = { showAddInfantDialog = false },
+            title = { Text("Add Infant", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                    Text(
+                        "Add an infant passenger (under 3 years old) to this booking.",
+                        fontSize = 13.sp,
+                        color = Color.Gray
+                    )
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    // Infant Name
+                    Text("Infant Name *", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    OutlinedTextField(
+                        value = infantName,
+                        onValueChange = { infantName = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("Enter infant's full name", fontSize = 13.sp) },
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = WhooshRed,
+                            unfocusedBorderColor = Color(0xFFE0E0E0)
+                        )
+                    )
+                    
+                    Spacer(modifier = Modifier.height(12.dp))
+                    
+                    // Identity Number (Birth Certificate)
+                    Text("Birth Certificate No. *", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    OutlinedTextField(
+                        value = infantIdentityNo,
+                        onValueChange = { infantIdentityNo = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("Enter birth certificate number", fontSize = 13.sp) },
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = WhooshRed,
+                            unfocusedBorderColor = Color(0xFFE0E0E0)
+                        )
+                    )
+                    
+                    Spacer(modifier = Modifier.height(12.dp))
+                    
+                    // Date of Birth
+                    Text("Date of Birth *", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    OutlinedTextField(
+                        value = infantDateOfBirth,
+                        onValueChange = { infantDateOfBirth = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("DD/MM/YYYY", fontSize = 13.sp) },
+                        singleLine = true,
+                        trailingIcon = {
+                            IconButton(onClick = {
+                                val calendar = Calendar.getInstance()
+                                val datePickerDialog = android.app.DatePickerDialog(
+                                    context,
+                                    { _, year, month, dayOfMonth ->
+                                        infantDateOfBirth = String.format("%02d/%02d/%04d", dayOfMonth, month + 1, year)
+                                    },
+                                    calendar.get(Calendar.YEAR),
+                                    calendar.get(Calendar.MONTH),
+                                    calendar.get(Calendar.DAY_OF_MONTH)
+                                )
+                                // Set max date to 3 years ago
+                                val threeYearsAgo = Calendar.getInstance().apply {
+                                    add(Calendar.YEAR, -3)
+                                }
+                                datePickerDialog.datePicker.maxDate = System.currentTimeMillis()
+                                datePickerDialog.datePicker.minDate = threeYearsAgo.timeInMillis
+                                datePickerDialog.show()
+                            }) {
+                                Icon(
+                                    painter = painterResource(id = android.R.drawable.ic_menu_my_calendar),
+                                    contentDescription = "Select date",
+                                    tint = WhooshRed
+                                )
+                            }
+                        },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = WhooshRed,
+                            unfocusedBorderColor = Color(0xFFE0E0E0)
+                        )
+                    )
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(8.dp),
+                        color = Color(0xFFF0F4F8),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFD0DCE8))
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text("Important Notes:", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                "• Infants travel free of charge\n" +
+                                "• No separate seat required\n" +
+                                "• Must be accompanied by an adult\n" +
+                                "• Age must be under 3 years old",
+                                fontSize = 11.sp,
+                                color = WhooshTextSecondary,
+                                lineHeight = 16.sp
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (infantName.isBlank() || infantIdentityNo.isBlank() || infantDateOfBirth.isBlank()) {
+                            Toast.makeText(context, "Please fill all required fields", Toast.LENGTH_SHORT).show()
+                        } else {
+                            viewModel.addInfantToBooking(
+                                booking = booking,
+                                infantName = infantName,
+                                infantIdentityNo = infantIdentityNo,
+                                infantDateOfBirth = infantDateOfBirth
+                            ) { success, message ->
+                                Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                                if (success) {
+                                    showAddInfantDialog = false
+                                    infantName = ""
+                                    infantIdentityNo = ""
+                                    infantDateOfBirth = ""
+                                }
+                            }
+                        }
+                    },
+                    enabled = !viewModel.isLoading,
+                    colors = ButtonDefaults.buttonColors(containerColor = WhooshRed)
+                ) {
+                    if (viewModel.isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            color = Color.White,
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Text("Add Infant")
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { 
+                    showAddInfantDialog = false
+                    infantName = ""
+                    infantIdentityNo = ""
+                    infantDateOfBirth = ""
+                }) {
+                    Text("Cancel", color = Color.Gray)
+                }
+            }
+        )
     }
 }
 
