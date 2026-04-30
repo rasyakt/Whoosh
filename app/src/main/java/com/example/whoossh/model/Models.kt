@@ -46,7 +46,9 @@ data class BookingData(
     val selectedCarriage: Int = 1,
     val selectedSeats: List<String> = emptyList(),
     val bookingTimestamp: Long = System.currentTimeMillis(),
-    val isUsed: Boolean = false
+    val isUsed: Boolean = false,
+    val isPaid: Boolean = false,
+    val isCancelled: Boolean = false
 )
 
 data class User(

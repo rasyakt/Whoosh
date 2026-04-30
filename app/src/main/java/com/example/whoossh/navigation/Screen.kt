@@ -11,6 +11,8 @@ sealed class Screen(val route: String) {
     data object AddPassenger : Screen("add_passenger")
     data object EditPassenger : Screen("edit_passenger")
     data object SelectSeat : Screen("select_seat")
+    data object UnpaidTicket : Screen("unpaid_ticket")
+    data object Payment : Screen("payment")
     data object Summary : Screen("summary")
     data object ETicket : Screen("e_ticket")
     data object EditProfile : Screen("edit_profile")

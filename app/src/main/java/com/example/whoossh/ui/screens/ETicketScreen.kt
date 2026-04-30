@@ -24,15 +24,14 @@ import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.QrCode2
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Train
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.Composable
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -58,6 +57,7 @@ import com.example.whoossh.utils.QrCodeUtils
 import com.example.whoossh.utils.TicketUtils
 import com.example.whoossh.viewmodel.BookingViewModel
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ETicketScreen(
     viewModel: BookingViewModel,
@@ -65,6 +65,7 @@ fun ETicketScreen(
 ) {
     val booking = viewModel.bookingData
     val context = LocalContext.current
+    var showQrDialog by remember { mutableStateOf(false) }
 
     if (booking == null) {
         Box(
@@ -87,307 +88,445 @@ fun ETicketScreen(
     }
 
     val qrBitmap = remember(booking.bookingCode) {
-        QrCodeUtils.generateQRCode(booking.bookingCode, 400)
+        QrCodeUtils.generateQRCode(booking.bookingCode, 600)
     }
 
     Scaffold(
         topBar = {
-            WhooshTopBar(title = "E-Ticket")
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(WhooshRed)
+                    .padding(bottom = 20.dp)
+            ) {
+                CenterAlignedTopAppBar(
+                    title = { 
+                        Text(
+                            "Payment Succeeded", 
+                            fontSize = 18.sp, 
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color.White
+                        ) 
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = onBackToDashboard) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+                        }
+                    },
+                    actions = {
+                        Text(
+                            "Rules", 
+                            color = Color.White, 
+                            fontSize = 14.sp, 
+                            modifier = Modifier.padding(end = 16.dp)
+                        )
+                    },
+                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                        containerColor = WhooshRed
+                    )
+                )
+                
+                Column(modifier = Modifier.padding(horizontal = 20.dp)) {
+                    Text(
+                        "Order Number: ${booking.bookingCode}", 
+                        color = Color.White.copy(alpha = 0.9f),
+                        fontSize = 13.sp
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        "Order Time: ${booking.departureTime} ${booking.departureDate}", 
+                        color = Color.White.copy(alpha = 0.9f),
+                        fontSize = 13.sp
+                    )
+                }
+            }
         }
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .background(MaterialTheme.colorScheme.background)
+                .background(Color(0xFFF7F7F7))
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(horizontal = 16.dp, vertical = 12.dp)
         ) {
-            // Ticket Card
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(
-                        color = WhooshWhite,
-                        shape = RoundedCornerShape(24.dp)
-                    )
+            // Trip Card
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                color = Color.White,
+                shadowElevation = 2.dp
             ) {
-                Column {
-                    // Ticket Header
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(
-                                brush = androidx.compose.ui.graphics.Brush.horizontalGradient(
-                                    colors = listOf(WhooshGradientStart, WhooshGradientEnd)
-                                ),
-                                shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
-                            )
-                            .padding(20.dp)
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
+                        Text(booking.departureDate, fontSize = 14.sp, color = Color.Gray)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Train, contentDescription = null, modifier = Modifier.size(14.dp), tint = Color.Gray)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("${booking.duration} m", fontSize = 14.sp, color = Color.Gray)
+                        }
+                    }
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(booking.departureTime, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                            Text(booking.originStation, fontSize = 14.sp, color = Color.Black)
+                        }
+                        
                         Column(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.weight(0.5f),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Image(
-                                    painter = painterResource(id = R.drawable.logo_white),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(32.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = "Ticket",
-                                    fontSize = 22.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = WhooshWhite
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Text(
-                                text = "Boarding Pass",
-                                fontSize = 13.sp,
-                                color = WhooshWhite.copy(alpha = 0.8f),
-                                letterSpacing = 3.sp
-                            )
+                            Text("G1063", fontSize = 13.sp, color = Color.Gray)
+                            Icon(Icons.Default.ArrowForward, contentDescription = null, tint = Color.LightGray, modifier = Modifier.size(20.dp))
+                        }
+                        
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            horizontalAlignment = Alignment.End
+                        ) {
+                            Text(booking.arrivalTime, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                            Text(booking.destinationStation, fontSize = 14.sp, color = Color.Black, textAlign = TextAlign.End)
                         }
                     }
-
-                    // Booking Code
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(WhooshRed.copy(alpha = 0.06f))
-                            .padding(vertical = 12.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = "KODE BOOKING",
-                                fontSize = 10.sp,
-                                color = WhooshTextSecondary,
-                                letterSpacing = 2.sp
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = booking.bookingCode,
-                                fontSize = 24.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = WhooshRed,
-                                letterSpacing = 3.sp
-                            )
-                        }
-                    }
-
-                    // Route
-                    Column(
-                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 20.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment = Alignment.CenterVertically
+                    
+                    Spacer(modifier = Modifier.height(24.dp))
+                    
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        OutlinedButton(
+                            onClick = { },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(8.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE0E0E0))
                         ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text(
-                                    text = booking.departureTime,
-                                    fontSize = 26.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Text(
-                                    text = booking.originStation,
-                                    fontSize = 14.sp,
-                                    color = WhooshTextSecondary
-                                )
-                            }
-                            Column(
-                                modifier = Modifier.padding(horizontal = 24.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Text(
-                                    text = "${booking.duration} min",
-                                    fontSize = 11.sp,
-                                    color = WhooshRed
-                                )
-                                Icon(
-                                    Icons.Filled.ArrowForward,
-                                    contentDescription = null,
-                                    tint = WhooshRed,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text(
-                                    text = booking.arrivalTime,
-                                    fontSize = 26.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Text(
-                                    text = booking.destinationStation,
-                                    fontSize = 14.sp,
-                                    color = WhooshTextSecondary
-                                )
-                            }
+                            Text("Reschedule", color = Color.Black)
                         }
-
-                        Spacer(modifier = Modifier.height(20.dp))
-
-                        // Dashed line divider
-                        Canvas(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(1.dp)
+                        OutlinedButton(
+                            onClick = { },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(8.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE0E0E0))
                         ) {
-                            drawLine(
-                                color = Color.LightGray,
-                                start = Offset(0f, 0f),
-                                end = Offset(size.width, 0f),
-                                pathEffect = PathEffect.dashPathEffect(
-                                    floatArrayOf(10f, 10f),
-                                    0f
-                                ),
-                                strokeWidth = 2f
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(20.dp))
-
-                        // Details
-                        InfoRow(label = "Nama Penumpang", value = booking.userName)
-                        InfoRow(label = "Tanggal", value = booking.departureDate)
-                        InfoRow(label = "Kelas", value = booking.coachClass.displayName)
-                        InfoRow(label = "Nomor Gerbong", value = "Gerbong ${booking.selectedCarriage}")
-                        InfoRow(label = "Nomor Kursi", value = booking.selectedSeats.sorted().joinToString(", ").ifEmpty { "-" })
-                        InfoRow(label = "Jumlah Tiket", value = "${booking.ticketCount} tiket")
-                        InfoRow(
-                            label = "Harga per Tiket",
-                            value = TicketUtils.formatRupiah(booking.pricePerTicket)
-                        )
-
-                        Spacer(modifier = Modifier.height(10.dp))
-                        HorizontalDivider(color = Color.LightGray.copy(alpha = 0.5f))
-                        Spacer(modifier = Modifier.height(10.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(
-                                text = "Total Pembayaran",
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 15.sp
-                            )
-                            Text(
-                                text = TicketUtils.formatRupiah(booking.totalPrice),
-                                fontSize = 20.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = WhooshRed
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(24.dp))
-
-                        // QR Code placeholder
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(130.dp)
-                                        .background(
-                                            color = WhooshRed.copy(alpha = 0.06f),
-                                            shape = RoundedCornerShape(16.dp)
-                                        ),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    if (qrBitmap != null) {
-                                        Image(
-                                            bitmap = qrBitmap,
-                                            contentDescription = "QR Code",
-                                            modifier = Modifier.size(110.dp)
-                                        )
-                                    } else {
-                                        Icon(
-                                            Icons.Filled.QrCode2,
-                                            contentDescription = "QR Code Placeholder",
-                                            tint = WhooshRed,
-                                            modifier = Modifier.size(100.dp)
-                                        )
-                                    }
-                                }
-                                Spacer(modifier = Modifier.height(6.dp))
-                                Text(
-                                    text = "Scan untuk validasi tiket",
-                                    fontSize = 11.sp,
-                                    color = WhooshTextSecondary,
-                                    textAlign = TextAlign.Center
-                                )
-                            }
+                            Text("Refund", color = Color.Black)
                         }
                     }
                 }
             }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Action Buttons
-            Row(
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // Passenger Card
+            Surface(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                shape = RoundedCornerShape(16.dp),
+                color = Color.White,
+                shadowElevation = 2.dp
             ) {
-                WhooshOutlinedButton(
-                    text = "Download",
-                    icon = Icons.Filled.Download,
-                    onClick = {
-                        Toast.makeText(context, "Tiket berhasil disimpan ke dokumen", Toast.LENGTH_SHORT).show()
-                    },
-                    modifier = Modifier.weight(1f)
-                )
-                WhooshOutlinedButton(
-                    text = "Share",
-                    icon = Icons.Filled.Share,
-                    onClick = {
-                        val shareText = """
-                            🎫 E-TICKET WHOOSH
-                            Booking Code: ${booking.bookingCode}
-                            ---------------------------
-                            Rute: ${booking.originStation} -> ${booking.destinationStation}
-                            Waktu: ${booking.departureDate}, ${booking.departureTime}
-                            Kelas: ${booking.coachClass.displayName}
-                            Kursi: Gerbong ${booking.selectedCarriage}, Seat ${booking.selectedSeats.joinToString()}
-                            ---------------------------
-                            Gunakan QR Code di aplikasi untuk akses masuk.
-                        """.trimIndent()
-
-                        val sendIntent: Intent = Intent().apply {
-                            action = Intent.ACTION_SEND
-                            putExtra(Intent.EXTRA_TEXT, shareText)
-                            type = "text/plain"
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(booking.userName, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .background(Color(0xFFF5F5F5), RoundedCornerShape(4.dp))
+                                        .padding(horizontal = 4.dp, vertical = 2.dp)
+                                ) {
+                                    Text("Adult ticket", fontSize = 10.sp, color = Color.Gray)
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text("Identity No. 3206****03", fontSize = 13.sp, color = Color.Gray)
+                            Text(
+                                "Coach ${booking.selectedCarriage} | ${booking.coachClass.displayName}", 
+                                fontSize = 13.sp, 
+                                color = Color.Gray
+                            )
+                            Text(
+                                "Class ${booking.selectedSeats.firstOrNull() ?: "04A"}", 
+                                fontSize = 13.sp, 
+                                color = Color.Gray
+                            )
                         }
-                        val shareIntent = Intent.createChooser(sendIntent, null)
-                        context.startActivity(shareIntent)
-                    },
-                    modifier = Modifier.weight(1f)
-                )
+                        
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text(TicketUtils.formatRupiah(booking.pricePerTicket), fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Box(
+                                modifier = Modifier
+                                    .background(Color(0xFFFFF3E0), RoundedCornerShape(4.dp))
+                                    .padding(horizontal = 8.dp, vertical = 6.dp)
+                                    .clickable { showQrDialog = true },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.QrCode2, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color(0xFFE65100))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("QR Code >", fontSize = 12.sp, color = Color(0xFFE65100), fontWeight = FontWeight.Medium)
+                                }
+                            }
+                        }
+                    }
+                    
+                    Spacer(modifier = Modifier.height(20.dp))
+                    
+                    OutlinedButton(
+                        onClick = { },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(8.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE0E0E0))
+                    ) {
+                        Text("Add Infant", color = Color.Black)
+                    }
+                }
             }
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            WhooshButton(
-                text = "Kembali ke Dashboard",
-                onClick = onBackToDashboard,
-                icon = Icons.Filled.Home
-            )
-
-            Spacer(modifier = Modifier.height(30.dp))
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // Total Amount Card
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                color = Color.White
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Total payment amount:", fontSize = 14.sp, color = Color.Gray)
+                    Text(TicketUtils.formatRupiah(booking.totalPrice), fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // Reminder
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                color = Color.White,
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE0E0E0))
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text("Reminder", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color.DarkGray)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        "1. The ticket you purchased this time has been issued, You can enter the station with the QR code of the ticket, or enter the station after exchanging the paper ticket at the station window.",
+                        fontSize = 13.sp, color = Color.Gray, lineHeight = 18.sp
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        "2. After exchanging for a paper ticket, the ticket cannot be refunded or Rescheduled on the APP.",
+                        fontSize = 13.sp, color = Color.Gray, lineHeight = 18.sp
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        "3. You can save a screenshot of the current order details interface so that you can view the seat position when taking the bus.",
+                        fontSize = 13.sp, color = Color.Gray, lineHeight = 18.sp
+                    )
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(40.dp))
         }
+    }
+
+    // QR CODE DIALOG
+    if (showQrDialog) {
+        androidx.compose.ui.window.Dialog(onDismissRequest = { showQrDialog = false }) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp),
+                shape = RoundedCornerShape(20.dp),
+                color = Color.White
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    // Dialog Header
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.logo_whoosh),
+                            contentDescription = null,
+                            modifier = Modifier.height(24.dp)
+                        )
+                        Text(
+                            "QR Code", 
+                            fontSize = 18.sp, 
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(start = 8.dp)
+                        )
+                        IconButton(onClick = { showQrDialog = false }, modifier = Modifier.size(28.dp)) {
+                            Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.LightGray)
+                        }
+                    }
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    // Code String
+                    Text(
+                        "62001Xz086202604199253096", 
+                        fontSize = 14.sp, 
+                        color = Color.Gray,
+                        textAlign = TextAlign.Center
+                    )
+                    
+                    Spacer(modifier = Modifier.height(12.dp))
+                    
+                    // QR Code Image
+                    if (qrBitmap != null) {
+                        Box(
+                            modifier = Modifier
+                                .size(240.dp)
+                                .padding(8.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Image(
+                                bitmap = qrBitmap,
+                                contentDescription = "QR Code",
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+                    }
+                    
+                    // Refresh Link
+                    Row(
+                        modifier = Modifier
+                            .clickable { /* Refresh logic */ }
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Click to Refresh Status", color = Color(0xFF03A9F4), fontSize = 13.sp)
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(14.dp), tint = Color(0xFF03A9F4))
+                    }
+                    
+                    Spacer(modifier = Modifier.height(12.dp))
+                    
+                    // Trip Summary (Route)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            booking.originStation, 
+                            fontSize = 15.sp, 
+                            fontWeight = FontWeight.Bold,
+                            color = Color.Black
+                        )
+                        
+                        Spacer(modifier = Modifier.width(10.dp))
+                        
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("G1063", fontSize = 11.sp, color = WhooshRed, fontWeight = FontWeight.Bold)
+                            Icon(
+                                Icons.Default.ArrowForward, 
+                                contentDescription = null, 
+                                modifier = Modifier.size(16.dp), 
+                                tint = Color.LightGray
+                            )
+                        }
+                        
+                        Spacer(modifier = Modifier.width(10.dp))
+                        
+                        Text(
+                            booking.destinationStation, 
+                            fontSize = 15.sp, 
+                            fontWeight = FontWeight.Bold,
+                            color = Color.Black
+                        )
+                    }
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    // Details List
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        // Departure Time
+                        DetailItemRow("Departure Time") {
+                            Text(
+                                text = "${booking.departureTime} ${booking.departureDate}",
+                                fontSize = 14.sp,
+                                color = WhooshRed,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        
+                        // Seat Detail
+                        DetailItemRow("Seat") {
+                            Row {
+                                Text("Coach ", fontSize = 14.sp, color = Color.Black)
+                                Text(booking.selectedCarriage.toString(), fontSize = 14.sp, color = Color.Black, fontWeight = FontWeight.Bold)
+                                Text(" | ${booking.coachClass.displayName}", fontSize = 14.sp, color = Color.Black)
+                            }
+                        }
+                        
+                        // Class/Seat Code
+                        DetailItemRow(null) {
+                            Text(
+                                text = "Class ${booking.selectedSeats.firstOrNull() ?: "04A"}",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.Black
+                            )
+                        }
+                        
+                        // Name
+                        DetailItemRow("Name") {
+                            Text(booking.userName, fontSize = 14.sp, color = Color.Black)
+                        }
+                        
+                        // Identity
+                        DetailItemRow("Identity No.") {
+                            Text("3206****03", fontSize = 14.sp, color = Color.Black)
+                        }
+                    }
+                    
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DetailItemRow(label: String?, content: @Composable () -> Unit) {
+    Row(
+        modifier = Modifier.padding(vertical = 1.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (label != null) {
+            Text("$label: ", fontSize = 14.sp, color = Color.Gray)
+        } else {
+            // Optional: indentation for items without labels
+            Spacer(modifier = Modifier.width(0.dp)) 
+        }
+        content()
     }
 }

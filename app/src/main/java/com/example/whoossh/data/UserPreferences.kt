@@ -11,6 +11,7 @@ import com.google.gson.Gson
  * Setelah migrasi ke SQL Server API, class ini hanya digunakan untuk:
  * 1. Cache session user yang sedang login (agar tidak perlu login ulang tiap buka app)
  * 2. Menyimpan pengaturan lokal (notifikasi, bahasa, biometric, dll.)
+ * 3. Cache status pembayaran tiket (untuk mengatasi delay sync dengan server)
  *
  * Semua operasi CRUD (register, login, booking, tiket) sudah ditangani oleh API.
  */
@@ -29,6 +30,7 @@ class UserPreferences(context: Context) {
         private const val KEY_LANGUAGE = "app_language"
         private const val KEY_BIOMETRIC = "biometric_login"
         private const val KEY_SAVE_LOGIN = "save_login"
+        private const val KEY_PAID_TICKETS = "paid_tickets_cache"
     }
 
     // ── USER SESSION CACHE ──────────────────────────────────────────────────
@@ -62,6 +64,29 @@ class UserPreferences(context: Context) {
             .remove(KEY_LOGGED_IN_USER)
             .remove(KEY_USER_ID)
             .apply()
+    }
+
+    // ── PAID TICKETS CACHE ───────────────────────────────────────────────────
+    // Cache booking codes yang sudah dibayar untuk mengatasi delay sync server
+
+    fun savePaidTicket(bookingCode: String) {
+        val paidTickets = getPaidTickets().toMutableSet()
+        paidTickets.add(bookingCode)
+        prefs.edit().putStringSet(KEY_PAID_TICKETS, paidTickets).apply()
+    }
+
+    fun getPaidTickets(): Set<String> {
+        return prefs.getStringSet(KEY_PAID_TICKETS, emptySet()) ?: emptySet()
+    }
+
+    fun removePaidTicket(bookingCode: String) {
+        val paidTickets = getPaidTickets().toMutableSet()
+        paidTickets.remove(bookingCode)
+        prefs.edit().putStringSet(KEY_PAID_TICKETS, paidTickets).apply()
+    }
+
+    fun clearPaidTicketsCache() {
+        prefs.edit().remove(KEY_PAID_TICKETS).apply()
     }
 
     // ── NOTIFICATION SETTINGS ────────────────────────────────────────────────

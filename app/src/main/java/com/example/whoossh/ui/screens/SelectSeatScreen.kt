@@ -51,6 +51,11 @@ fun SelectSeatScreen(
     val coachClass = viewModel.selectedCoachClass ?: return
     val availableCarriages = viewModel.getAvailableCarriages(coachClass)
     val selectedCarriage = viewModel.selectedCarriage ?: availableCarriages.firstOrNull() ?: 1
+    
+    // Start Seat Lock Timer (10 Minutes)
+    LaunchedEffect(Unit) {
+        viewModel.startSeatLockTimer()
+    }
 
     Scaffold(
         topBar = {

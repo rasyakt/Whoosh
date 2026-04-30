@@ -30,6 +30,11 @@ interface ApiService {
     @GET("booking/get_tickets.php")
     suspend fun getTickets(@Query("user_id") userId: Int): Response<ApiResponse<List<BookingResponse>>>
 
+    @POST("booking/update_status.php")
+    suspend fun updateBookingStatus(
+        @Body request: Map<String, Any>
+    ): Response<ApiResponse<Nothing>>
+
     // Non-generic version — avoids Gson type erasure
     @GET("booking/get_tickets.php")
     suspend fun getTicketsList(@Query("user_id") userId: Int): Response<TicketsListResponse>

@@ -79,86 +79,24 @@ fun TicketsScreen(
     viewModel: BookingViewModel,
     onTicketClick: (BookingData) -> Unit
 ) {
-    val tabs = listOf("Aktif", "Riwayat")
+    val tabs = listOf("Belum Bayar", "Sudah Bayar", "Riwayat")
     val pagerState = rememberPagerState(pageCount = { tabs.size })
     val scope = rememberCoroutineScope()
 
-    // Local state for tickets loaded directly from API
-    var localActiveTickets by remember { mutableStateOf<List<BookingData>>(emptyList()) }
-    var localHistoryTickets by remember { mutableStateOf<List<BookingData>>(emptyList()) }
-    var isLoading by remember { mutableStateOf(true) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
-
-    // Fetch tickets directly from API (bypassing ViewModel to guarantee it works)
+    // Fetch tickets via ViewModel
     LaunchedEffect(viewModel.userId) {
-        if (viewModel.userId <= 0) {
-            Log.w("TicketsScreen", "userId=${viewModel.userId}, skipping fetch")
-            isLoading = false
-            return@LaunchedEffect
-        }
-
-        Log.d("TicketsScreen", "Fetching tickets for userId=${viewModel.userId}")
-        isLoading = true
-        errorMessage = null
-
-        try {
-            // Direct API call with non-generic response
-            val response = withContext(Dispatchers.IO) {
-                ApiClient.apiService.getTicketsList(viewModel.userId)
-            }
-
-            Log.d("TicketsScreen", "API response: HTTP ${response.code()}")
-
-            if (response.isSuccessful && response.body()?.status == "success") {
-                val tickets = response.body()!!.data ?: emptyList()
-                Log.i("TicketsScreen", "Received ${tickets.size} tickets from API")
-
-                val bookings = tickets.mapNotNull { ticket ->
-                    try {
-                        ticket.toBookingData(viewModel.userName)
-                    } catch (e: Exception) {
-                        Log.e("TicketsScreen", "Parse error for ${ticket.bookingCode}: ${e.message}")
-                        null
-                    }
-                }
-
-                localActiveTickets = bookings.filter { !it.isUsed }
-                localHistoryTickets = bookings.filter { it.isUsed }
-                Log.i("TicketsScreen", "Active: ${localActiveTickets.size}, History: ${localHistoryTickets.size}")
-
-                // Also update ViewModel state
-                viewModel.refreshTickets()
-            } else {
-                val errorBody = response.errorBody()?.string()
-                errorMessage = "Server error: ${response.code()}"
-                Log.e("TicketsScreen", "API failed: HTTP ${response.code()} - $errorBody")
-
-                // Fallback to raw parsing
-                tryRawParsing(viewModel) { active, history ->
-                    localActiveTickets = active
-                    localHistoryTickets = history
-                    errorMessage = null
-                }
-            }
-        } catch (e: Exception) {
-            Log.e("TicketsScreen", "Fetch error: ${e.javaClass.simpleName} - ${e.message}", e)
-            errorMessage = "Gagal memuat tiket: ${e.localizedMessage}"
-
-            // Fallback: show locally-added tickets from ViewModel
-            localActiveTickets = viewModel.activeTickets
-            localHistoryTickets = viewModel.historyTickets
-            if (localActiveTickets.isNotEmpty() || localHistoryTickets.isNotEmpty()) {
-                errorMessage = null // We have local data, no need to show error
-            }
-        } finally {
-            isLoading = false
+        if (viewModel.userId > 0) {
+            viewModel.refreshTickets()
         }
     }
 
-    // Combine: API tickets + locally added tickets (from confirmBooking)
-    val combinedActiveTickets = (localActiveTickets + viewModel.activeTickets)
-        .distinctBy { it.bookingCode }
-    val combinedHistoryTickets = (localHistoryTickets + viewModel.historyTickets)
+    val isLoading = viewModel.isLoadingTickets
+    val errorMessage = null
+
+    // Filter tickets from ViewModel's state directly
+    val combinedUnpaidTickets = viewModel.activeTickets.filter { !it.isPaid && !it.isCancelled }
+    val combinedPaidTickets = viewModel.activeTickets.filter { it.isPaid && !it.isUsed }
+    val combinedHistoryTickets = (viewModel.historyTickets + viewModel.activeTickets.filter { it.isCancelled })
         .distinctBy { it.bookingCode }
 
     Column(
@@ -201,6 +139,7 @@ fun TicketsScreen(
                     text = {
                         Text(
                             text = title,
+                            fontSize = 13.sp,
                             fontWeight = if (pagerState.currentPage == index) FontWeight.Bold else FontWeight.Normal,
                             color = if (pagerState.currentPage == index) WhooshRed else Color.Gray
                         )
@@ -213,22 +152,20 @@ fun TicketsScreen(
             state = pagerState,
             modifier = Modifier.fillMaxSize()
         ) { page ->
-            val tickets = if (page == 0) combinedActiveTickets else combinedHistoryTickets
+            val tickets = when(page) {
+                0 -> combinedUnpaidTickets
+                1 -> combinedPaidTickets
+                else -> combinedHistoryTickets
+            }
 
             when {
                 isLoading -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator(color = WhooshRed)
                     }
                 }
                 tickets.isEmpty() -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Icon(
                                 Icons.Filled.ConfirmationNumber,
@@ -238,36 +175,32 @@ fun TicketsScreen(
                             )
                             Spacer(modifier = Modifier.height(16.dp))
                             Text(
-                                text = if (page == 0) "Belum ada tiket aktif" else "Belum ada riwayat tiket",
+                                text = when(page) {
+                                    0 -> "Belum ada tiket yang belum dibayar"
+                                    1 -> "Belum ada tiket aktif"
+                                    else -> "Belum ada riwayat tiket"
+                                },
                                 fontSize = 16.sp,
                                 color = WhooshTextSecondary,
                                 fontWeight = FontWeight.Medium
                             )
                             Text(
-                                text = if (page == 0) "Pesan tiket sekarang untuk\nmemulai perjalanan Anda"
-                                else "Riwayat tiket yang sudah\ndigunakan akan muncul di sini",
+                                text = when(page) {
+                                    0 -> "Selesaikan pembayaran untuk\nmendapatkan tiket Anda"
+                                    1 -> "Tiket yang sudah dibayar\nakan muncul di sini"
+                                    else -> "Riwayat tiket yang sudah\ndigunakan akan muncul di sini"
+                                },
                                 fontSize = 13.sp,
                                 color = Color.LightGray,
                                 textAlign = TextAlign.Center,
                                 modifier = Modifier.padding(top = 4.dp)
                             )
-                            if (errorMessage != null) {
-                                Spacer(modifier = Modifier.height(12.dp))
-                                Text(
-                                    text = errorMessage!!,
-                                    fontSize = 12.sp,
-                                    color = WhooshRed,
-                                    textAlign = TextAlign.Center
-                                )
-                            }
                         }
                     }
                 }
                 else -> {
                     LazyColumn(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 16.dp),
+                        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                         contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 16.dp)
                     ) {
@@ -291,7 +224,7 @@ fun TicketsScreen(
 
 private suspend fun tryRawParsing(
     viewModel: BookingViewModel,
-    onSuccess: (List<BookingData>, List<BookingData>) -> Unit
+    onSuccess: (List<BookingData>, List<BookingData>, List<BookingData>) -> Unit
 ) {
     try {
         val rawResponse = withContext(Dispatchers.IO) {
@@ -299,8 +232,6 @@ private suspend fun tryRawParsing(
         }
         if (rawResponse.isSuccessful) {
             val jsonString = rawResponse.body()?.string() ?: ""
-            Log.d("TicketsScreen", "Raw response: ${jsonString.take(300)}")
-
             val gson = com.google.gson.Gson()
             val type = object : com.google.gson.reflect.TypeToken<TicketsListResponse>() {}.type
             val parsed = gson.fromJson<TicketsListResponse>(jsonString, type)
@@ -310,14 +241,14 @@ private suspend fun tryRawParsing(
                     try { ticket.toBookingData(viewModel.userName) } catch (_: Exception) { null }
                 }
                 onSuccess(
-                    bookings.filter { !it.isUsed },
-                    bookings.filter { it.isUsed }
+                    bookings.filter { !it.isPaid && !it.isCancelled },
+                    bookings.filter { it.isPaid && !it.isUsed },
+                    bookings.filter { it.isUsed || it.isCancelled }
                 )
-                Log.i("TicketsScreen", "Raw parsing success: ${bookings.size} tickets")
             }
         }
     } catch (e: Exception) {
-        Log.e("TicketsScreen", "Raw parsing also failed: ${e.message}")
+        Log.e("TicketsScreen", "Raw parsing failed: ${e.message}")
     }
 }
 
@@ -362,19 +293,23 @@ private fun TicketCard(
                         color = WhooshRed
                     )
                 }
+                val (statusText, statusColor, statusBg) = when {
+                    ticket.isCancelled -> Triple("Dibatalkan", Color.Red, Color(0xFFFFF0F0))
+                    ticket.isUsed -> Triple("Selesai", Color.Gray, Color(0xFFF5F5F5))
+                    !ticket.isPaid -> Triple("Belum Bayar", WhooshOrange, WhooshOrangeLight)
+                    else -> Triple("Sudah Bayar", WhooshGreen, WhooshGreenLight)
+                }
+
                 Box(
                     modifier = Modifier
-                        .background(
-                            if (ticket.isUsed) WhooshGreenLight else WhooshOrangeLight,
-                            RoundedCornerShape(6.dp)
-                        )
+                        .background(statusBg, RoundedCornerShape(6.dp))
                         .padding(horizontal = 8.dp, vertical = 3.dp)
                 ) {
                     Text(
-                        text = if (ticket.isUsed) "Selesai" else "Aktif",
+                        text = statusText,
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
-                        color = if (ticket.isUsed) WhooshGreen else WhooshOrange
+                        color = statusColor
                     )
                 }
             }

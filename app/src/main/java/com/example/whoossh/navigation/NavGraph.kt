@@ -13,6 +13,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import androidx.navigation.navDeepLink
 import com.example.whoossh.ui.screens.*
+import com.example.whoossh.model.Passenger
+import com.example.whoossh.model.BookingData
 import com.example.whoossh.viewmodel.BookingViewModel
 
 @Composable
@@ -137,6 +139,9 @@ fun NavGraph(
                 },
                 onNavigateToETicket = {
                     navController.navigate(Screen.ETicket.route)
+                },
+                onNavigateToUnpaidTicket = {
+                    navController.navigate(Screen.UnpaidTicket.route)
                 }
             )
         }
@@ -244,8 +249,8 @@ fun NavGraph(
             }
         ) { backStackEntry ->
             val passengerId = backStackEntry.arguments?.getString("passengerId")
-            val passenger = passengerId?.let { 
-                viewModel.getSelectedPassengerById(it) ?: viewModel.getSavedPassengerById(it)
+            val passenger: Passenger? = passengerId?.let { id: String ->
+                viewModel.getSelectedPassengerById(id) ?: viewModel.getSavedPassengerById(id)
             }
             
             AddEditPassengerScreen(
@@ -271,7 +276,50 @@ fun NavGraph(
             SelectSeatScreen(
                 viewModel = viewModel,
                 onSeatSelected = {
-                    navController.navigate(Screen.Summary.route)
+                    viewModel.confirmBooking(isPaid = false)
+                    navController.navigate(Screen.UnpaidTicket.route)
+                },
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        // ── UNPAID TICKET ────────────────────────────────────────────────────
+        composable(
+            route = Screen.UnpaidTicket.route,
+            enterTransition = {
+                slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left, tween(400))
+            },
+            exitTransition = {
+                slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right, tween(300))
+            }
+        ) {
+            UnpaidTicketScreen(
+                viewModel = viewModel,
+                onPay = {
+                    navController.navigate(Screen.Payment.route)
+                },
+                onCancel = { navController.popBackStack() },
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        // ── PAYMENT ──────────────────────────────────────────────────────────
+        composable(
+            route = Screen.Payment.route,
+            enterTransition = {
+                slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Up, tween(400))
+            },
+            exitTransition = {
+                slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Down, tween(300))
+            }
+        ) {
+            PaymentScreen(
+                viewModel = viewModel,
+                onPaymentSuccess = {
+                    viewModel.markAsPaid()
+                    navController.navigate(Screen.ETicket.route) {
+                        popUpTo(Screen.Dashboard.route)
+                    }
                 },
                 onBack = { navController.popBackStack() }
             )
@@ -287,9 +335,11 @@ fun NavGraph(
                 slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right, tween(300))
             }
         ) {
-            SummaryScreen(
+            // Keep Summary for compatibility or redirect to Payment
+            PaymentScreen(
                 viewModel = viewModel,
-                onConfirm = {
+                onPaymentSuccess = {
+                    viewModel.confirmBooking(isPaid = true)
                     navController.navigate(Screen.ETicket.route) {
                         popUpTo(Screen.Dashboard.route)
                     }

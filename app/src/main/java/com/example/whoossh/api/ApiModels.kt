@@ -50,8 +50,18 @@ data class BookingResponse(
     @SerializedName("total_price") val totalPrice: Int,
     @SerializedName("selected_carriage") val selectedCarriage: Int,
     @SerializedName("selected_seats") val selectedSeats: String,
-    @SerializedName("is_used") val isUsed: Boolean,
-    @SerializedName("booking_timestamp") val bookingTimestamp: Long
+    @SerializedName("is_used") val isUsed: Int = 0,
+    @SerializedName("is_paid") val isPaid: Int = 0,
+    @SerializedName("is_cancelled") val isCancelled: Int = 0,
+    @SerializedName("booking_timestamp") val bookingTimestamp: Long,
+    @SerializedName("passengers") val passengers: List<PassengerInfo>? = null
+)
+
+data class PassengerInfo(
+    @SerializedName("name") val name: String,
+    @SerializedName("identity_no") val identityNo: String,
+    @SerializedName("passenger_type") val passengerType: String,
+    @SerializedName("seat_number") val seatNumber: String = ""
 )
 
 /**
@@ -139,6 +149,7 @@ data class CreateBookingRequest(
     @SerializedName("selected_carriage") val selectedCarriage: Int,
     @SerializedName("selected_seats") val selectedSeats: String,
     @SerializedName("booking_timestamp") val bookingTimestamp: Long,
+    @SerializedName("is_paid") val isPaid: Int = 0,
     @SerializedName("passengers") val passengers: List<PassengerRequest> = emptyList()
 )
 

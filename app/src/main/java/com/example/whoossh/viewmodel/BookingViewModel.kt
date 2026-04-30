@@ -88,6 +88,15 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
         private set
     var historyTickets by mutableStateOf<List<BookingData>>(emptyList())
         private set
+    var isLoadingTickets by mutableStateOf(false)
+        private set
+
+    // Timer State (Shared)
+    var seatLockTimeLeft by mutableStateOf(0)
+        private set
+    var paymentTimeLeft by mutableStateOf(0)
+        private set
+    private var timerJob: kotlinx.coroutines.Job? = null
 
     // Email Status
     var emailSentStatus by mutableStateOf<Boolean?>(null)
@@ -272,9 +281,11 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
         userEmail = ""
         userPhone = ""
         userPreferences.clearLoggedInUser()
+        userPreferences.clearPaidTicketsCache() // Bersihkan cache tiket yang sudah dibayar
         resetBooking()
         activeTickets = emptyList()
         historyTickets = emptyList()
+        Log.i("BookingViewModel", "User logged out, all caches cleared")
     }
 
     // ── PROFILE ──────────────────────────────────────────────────────────────
@@ -371,6 +382,7 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
         }
 
         Log.d("BookingViewModel", "refreshTickets: fetching tickets for userId=$userId")
+        isLoadingTickets = true
 
         viewModelScope.launch {
             try {
@@ -385,6 +397,7 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
                     val tickets = response.body()!!.data ?: emptyList()
                     Log.i("BookingViewModel", "refreshTickets: received ${tickets.size} tickets from server")
                     applyTickets(tickets)
+                    isLoadingTickets = false
                     return@launch
                 } else {
                     val errorBody = response.errorBody()?.string()
@@ -412,6 +425,7 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
                     if (parsed.status == "success" && parsed.data != null) {
                         Log.i("BookingViewModel", "refreshTickets Strategy 2: parsed ${parsed.data.size} tickets")
                         applyTickets(parsed.data)
+                        isLoadingTickets = false
                         return@launch
                     }
                 }
@@ -420,23 +434,94 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
             }
 
             Log.w("BookingViewModel", "refreshTickets: all strategies failed, keeping existing ${activeTickets.size} local tickets")
+            isLoadingTickets = false
         }
     }
 
     private fun applyTickets(tickets: List<BookingResponse>) {
-        val bookings = tickets.mapNotNull { ticket ->
+        Log.d("BookingViewModel", "applyTickets: Processing ${tickets.size} tickets from server")
+        
+        // Ambil cache booking codes yang sudah dibayar dari SharedPreferences
+        val paidTicketsCache = userPreferences.getPaidTickets()
+        Log.d("BookingViewModel", "applyTickets: Paid tickets cache: ${paidTicketsCache.joinToString()}")
+        
+        val serverBookings = tickets.mapNotNull { ticket ->
             try {
-                ticket.toBookingData(userName)
+                val booking = ticket.toBookingData(userName)
+                
+                // Override isPaid jika ada di cache lokal
+                val finalBooking = if (paidTicketsCache.contains(booking.bookingCode) && !booking.isPaid) {
+                    Log.w("BookingViewModel", "  ⚠️ Overriding server status for ${booking.bookingCode}: server says unpaid, but local cache says PAID")
+                    booking.copy(isPaid = true)
+                } else {
+                    booking
+                }
+                
+                Log.d("BookingViewModel", "  Server ticket: ${ticket.bookingCode} isPaid=${ticket.isPaid} (raw) -> ${finalBooking.isPaid} (final)")
+                
+                // Jika server sudah update ke paid, hapus dari cache
+                if (ticket.isPaid == 1 && paidTicketsCache.contains(ticket.bookingCode)) {
+                    Log.i("BookingViewModel", "  ✅ Server synced for ${ticket.bookingCode}, removing from cache")
+                    userPreferences.removePaidTicket(ticket.bookingCode)
+                }
+                
+                finalBooking
             } catch (e: Exception) {
                 Log.e("BookingViewModel", "Error parsing ticket ${ticket.bookingCode}: ${e.message}")
                 null
             }
         }
 
-        // Dedup berdasarkan bookingCode (menghindari duplikat dari confirmBooking lokal)
-        activeTickets = bookings.filter { !it.isUsed }.distinctBy { it.bookingCode }
-        historyTickets = bookings.filter { it.isUsed }.distinctBy { it.bookingCode }
-        Log.i("BookingViewModel", "applyTickets: ${activeTickets.size} active, ${historyTickets.size} history")
+        // Buat map dari tiket lokal untuk lookup cepat
+        val localMap = activeTickets.associateBy { it.bookingCode }
+        Log.d("BookingViewModel", "applyTickets: Current local tickets: ${localMap.keys.joinToString()}")
+        localMap.forEach { (code, ticket) ->
+            Log.d("BookingViewModel", "  Local ticket: $code isPaid=${ticket.isPaid}")
+        }
+        
+        val serverActive = serverBookings.filter { !it.isUsed }
+
+        // Gabungkan: untuk tiap booking code, pilih versi yang isPaid=true jika ada
+        val mergedMap = mutableMapOf<String, BookingData>()
+
+        // Masukkan tiket server dulu (sudah di-override dengan cache jika perlu)
+        for (ticket in serverActive) {
+            mergedMap[ticket.bookingCode] = ticket
+        }
+
+        // Timpa dengan data lokal JIKA lokal sudah isPaid=true dan server belum
+        // Ini memastikan status pembayaran lokal tidak hilang
+        for (ticket in activeTickets) {
+            val server = mergedMap[ticket.bookingCode]
+            if (server != null) {
+                // Jika lokal sudah bayar tapi server belum, pertahankan status lokal
+                if (ticket.isPaid && !server.isPaid) {
+                    mergedMap[ticket.bookingCode] = ticket
+                    Log.w("BookingViewModel", "⚠️ PRESERVING local paid status for ${ticket.bookingCode} (local=paid, server=unpaid)")
+                } else if (ticket.isPaid && server.isPaid) {
+                    // Keduanya sudah bayar, gunakan server (lebih update)
+                    Log.i("BookingViewModel", "✅ Both paid for ${ticket.bookingCode}, using server data")
+                } else if (!ticket.isPaid && server.isPaid) {
+                    // Server sudah update, lokal belum
+                    Log.i("BookingViewModel", "✅ Server updated to paid for ${ticket.bookingCode}")
+                }
+                // Jika lokal belum bayar, gunakan data server (default behavior)
+            } else {
+                // Tiket hanya ada di lokal (belum sync ke server), pertahankan
+                mergedMap[ticket.bookingCode] = ticket
+                Log.w("BookingViewModel", "⚠️ PRESERVING local-only ticket ${ticket.bookingCode} (isPaid=${ticket.isPaid})")
+            }
+        }
+
+        activeTickets = mergedMap.values.toList()
+
+        historyTickets = (serverBookings.filter { it.isUsed } + historyTickets)
+            .distinctBy { it.bookingCode }
+
+        Log.i("BookingViewModel", "applyTickets RESULT: ${activeTickets.size} active (merged), ${historyTickets.size} history")
+        activeTickets.forEach { ticket ->
+            Log.i("BookingViewModel", "  Final: ${ticket.bookingCode} isPaid=${ticket.isPaid}")
+        }
     }
 
     fun getTotalTrips(): Int = activeTickets.size + historyTickets.size
@@ -605,7 +690,7 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
 
     // ── CONFIRM BOOKING ──────────────────────────────────────────────────────
 
-    fun confirmBooking(): BookingData {
+    fun confirmBooking(isPaid: Boolean = false): BookingData {
         val schedule = selectedSchedule!!
         val coach = selectedCoachClass!!
         val pricePerTicket = TicketUtils.getTicketPrice(ticketCount, coach)
@@ -629,23 +714,24 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
             selectedCarriage = selectedCarriage ?: 1,
             selectedSeats = selectedSeats.toList(),
             bookingTimestamp = timestamp,
-            isUsed = false
+            isUsed = false,
+            isPaid = isPaid
         )
         bookingData = data
 
-        // Langsung tambahkan ke daftar tiket aktif agar segera tampil di halaman Tiket
-        activeTickets = listOf(data) + activeTickets
-        Log.i("BookingViewModel", "Tiket ditambahkan ke activeTickets: ${data.bookingCode}, total: ${activeTickets.size}")
-
-        // Simpan ke server via API
-        Log.i("BookingViewModel", "Attempting to save booking: code=$bookingCode, userId=$userId")
-
-        if (userId <= 0) {
-            Log.e("BookingViewModel", "GAGAL: userId=$userId tidak valid! User harus login ulang.")
-            return data
+        // Start Both Timers
+        if (!isPaid) {
+            startSeatLockTimer()    // 10 Min lock
+            startPaymentTimer()     // 20 Min total window
         }
 
-        viewModelScope.launch {
+        // Langsung tambahkan ke daftar tiket aktif agar segera tampil di halaman Tiket
+        activeTickets = listOf(data) + activeTickets
+        Log.i("BookingViewModel", "Tiket ditambahkan ke activeTickets: ${data.bookingCode}, status paid=$isPaid")
+
+        // Simpan ke server via API
+        if (userId > 0) {
+            viewModelScope.launch {
             try {
                 val request = CreateBookingRequest(
                     userId = userId,
@@ -663,6 +749,7 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
                     selectedCarriage = selectedCarriage ?: 1,
                     selectedSeats = selectedSeats.sorted().joinToString(","),
                     bookingTimestamp = timestamp,
+                    isPaid = if (isPaid) 1 else 0,
                     passengers = _selectedPassengers.value.mapIndexed { index, p ->
                         p.toRequestModel(
                             userId = userId,
@@ -697,14 +784,15 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
                 Log.e("BookingViewModel", "❌ Create booking error: ${e.javaClass.simpleName} - ${e.message}", e)
             }
         }
+    }
 
-        // Kirim e-ticket via email secara background
-        if (userEmail.isNotBlank()) {
+        // Kirim e-ticket via email secara background HANYA jika status sudah bayar
+        if (isPaid && userEmail.isNotBlank()) {
             viewModelScope.launch(Dispatchers.IO) {
                 val success = EmailSender.sendETicket(userEmail, data)
                 emailSentStatus = success
                 if (success) {
-                    Log.i("BookingViewModel", "E-ticket dikirim ke $userEmail")
+                    Log.i("BookingViewModel", "E-ticket dikirim ke $userEmail (Immediate Pay)")
                 } else {
                     Log.w("BookingViewModel", "Gagal mengirim e-ticket ke $userEmail")
                 }
@@ -714,8 +802,119 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
         return data
     }
 
+    fun markAsPaid() {
+        val current = bookingData ?: return
+        Log.i("BookingViewModel", "markAsPaid: Marking ${current.bookingCode} as PAID")
+        
+        val updated = current.copy(isPaid = true)
+        bookingData = updated
+        
+        // Simpan ke cache lokal SEGERA (persisten di SharedPreferences)
+        userPreferences.savePaidTicket(current.bookingCode)
+        Log.i("BookingViewModel", "✅ Saved ${current.bookingCode} to paid tickets cache")
+        
+        // Update di list activeTickets SEGERA agar UI langsung update
+        activeTickets = activeTickets.map { 
+            if (it.bookingCode == current.bookingCode) {
+                Log.i("BookingViewModel", "  Updated ${it.bookingCode} in activeTickets to isPaid=true")
+                updated
+            } else {
+                it
+            }
+        }
+        
+        Log.i("BookingViewModel", "markAsPaid: Local state updated. activeTickets count=${activeTickets.size}")
+        activeTickets.forEach { ticket ->
+            Log.d("BookingViewModel", "  activeTicket: ${ticket.bookingCode} isPaid=${ticket.isPaid}")
+        }
+        
+        // Stop all timers when paid
+        stopTimer()
+
+        // Update status ke server
+        viewModelScope.launch {
+            try {
+                Log.d("BookingViewModel", "markAsPaid: Sending update to server for ${current.bookingCode}")
+                val response = withContext(Dispatchers.IO) {
+                    api.updateBookingStatus(mapOf(
+                        "booking_code" to current.bookingCode,
+                        "is_paid" to 1
+                    ))
+                }
+                if (response.isSuccessful && response.body()?.status == "success") {
+                    Log.i("BookingViewModel", "✅ Server status updated to PAID: ${current.bookingCode}")
+                    // Refresh tickets setelah update berhasil untuk sinkronisasi
+                    // Cache akan dihapus otomatis di applyTickets() jika server sudah sync
+                    refreshTickets()
+                } else {
+                    val errorMsg = response.body()?.message ?: response.message()
+                    Log.e("BookingViewModel", "❌ Failed to update server status: HTTP ${response.code()} - $errorMsg")
+                    val errorBody = response.errorBody()?.string()
+                    if (errorBody != null) {
+                        Log.e("BookingViewModel", "Error body: $errorBody")
+                    }
+                    // Meskipun gagal update ke server, status lokal tetap paid (ada di cache)
+                    // Akan di-retry saat refreshTickets() berikutnya
+                }
+            } catch (e: Exception) {
+                Log.e("BookingViewModel", "❌ Failed to update paid status on server: ${e.javaClass.simpleName} - ${e.message}", e)
+                // Meskipun gagal update ke server, status lokal tetap paid (ada di cache)
+            }
+        }
+
+        // Kirim e-ticket via email setelah konfirmasi pembayaran
+        if (userEmail.isNotBlank()) {
+            viewModelScope.launch(Dispatchers.IO) {
+                val success = EmailSender.sendETicket(userEmail, updated)
+                emailSentStatus = success
+                if (success) {
+                    Log.i("BookingViewModel", "E-ticket berhasil dikirim ke $userEmail setelah pembayaran")
+                } else {
+                    Log.w("BookingViewModel", "Gagal mengirim e-ticket ke $userEmail")
+                }
+            }
+        }
+        
+        Log.i("BookingViewModel", "✅ Tiket ${current.bookingCode} berhasil ditandai sebagai SUDAH BAYAR (lokal + cache)")
+    }
+
     fun viewTicket(ticket: BookingData) {
         bookingData = ticket
+        selectedSchedule = com.example.whoossh.model.Schedule(
+            departureTime = ticket.departureTime,
+            arrivalTime = ticket.arrivalTime,
+            duration = ticket.duration,
+            originStation = ticket.originStation,
+            destinationStation = ticket.destinationStation,
+            price = ticket.pricePerTicket
+        )
+        selectedCoachClass = ticket.coachClass
+        ticketCount = ticket.ticketCount
+        originStation = ticket.originStation
+        destinationStation = ticket.destinationStation
+        departureDate = ticket.departureDate
+        
+        // Load passengers from server if this is a stored ticket
+        if (ticket.bookingCode.isNotEmpty()) {
+            loadTicketByCode(ticket.bookingCode)
+        }
+        
+        // Calculate remaining payment time (15 mins from timestamp)
+        if (!ticket.isPaid && !ticket.isCancelled) {
+            val now = System.currentTimeMillis()
+            val fifteenMinsMs = 15 * 60 * 1000
+            val elapsed = now - ticket.bookingTimestamp
+            val remainingMs = fifteenMinsMs - elapsed
+            
+            if (remainingMs > 0) {
+                paymentTimeLeft = (remainingMs / 1000).toInt()
+                startTimer() // Resume timer
+            } else {
+                paymentTimeLeft = 0
+            }
+        } else {
+            paymentTimeLeft = 0
+        }
     }
 
     fun loadTicketByCode(code: String) {
@@ -729,15 +928,35 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
 
                 if (response.isSuccessful && response.body()?.status == "success") {
                     val ticket = response.body()!!.data!!
-                    bookingData = ticket.toBookingData(ticket.userName.ifBlank { userName })
-                    Log.i("BookingViewModel", "Tiket ditemukan dari server: $code")
+                    val data = ticket.toBookingData(ticket.userName.ifBlank { userName })
+                    bookingData = data
+                    
+                    // Update passengers list in VM state
+                    ticket.passengers?.let { pList ->
+                        val domainPassengers = pList.map { p ->
+                            Passenger(
+                                name = p.name,
+                                identityNo = p.identityNo,
+                                passengerType = p.passengerType,
+                                gender = "Male", // Default
+                                dateOfBirth = "",
+                                expiryDate = "",
+                                whatsapp = "",
+                                email = ""
+                            )
+                        }
+                        _selectedPassengers.value = domainPassengers
+                        ticketCount = domainPassengers.size
+                    }
+                    
+                    Log.i("BookingViewModel", "Tiket ditemukan dari server: $code, passengers=${ticket.passengers?.size ?: 0}")
                 } else {
                     // Fallback: cari di list lokal
                     val localTicket = activeTickets.find { it.bookingCode.equals(code, ignoreCase = true) }
                         ?: historyTickets.find { it.bookingCode.equals(code, ignoreCase = true) }
 
                     if (localTicket != null) {
-                        bookingData = localTicket
+                        viewTicket(localTicket)
                         Log.i("BookingViewModel", "Tiket ditemukan dari cache lokal: $code")
                     } else {
                         Log.w("BookingViewModel", "Tiket tidak ditemukan: $code")
@@ -750,7 +969,7 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
                 val localTicket = activeTickets.find { it.bookingCode.equals(code, ignoreCase = true) }
                     ?: historyTickets.find { it.bookingCode.equals(code, ignoreCase = true) }
                 if (localTicket != null) {
-                    bookingData = localTicket
+                    viewTicket(localTicket)
                 }
             }
         }
@@ -913,6 +1132,58 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
         bookingData = null
         emailSentStatus = null
         clearSelectedPassengers()
+        stopTimer()
+    }
+
+    // ── TIMER LOGIC ──────────────────────────────────────────────────────────
+
+    fun startSeatLockTimer() {
+        if (seatLockTimeLeft <= 0) {
+            seatLockTimeLeft = 10 * 60 // 10 Minutes
+            startTimer()
+            Log.d("BookingViewModel", "Seat lock timer started: 10m")
+        }
+    }
+
+    fun startPaymentTimer() {
+        if (paymentTimeLeft <= 0) {
+            paymentTimeLeft = 20 * 60 // 20 Minutes
+            startTimer()
+            Log.d("BookingViewModel", "Payment timer started: 20m")
+        }
+    }
+
+    private fun startTimer() {
+        if (timerJob?.isActive == true) return
+        
+        timerJob = viewModelScope.launch {
+            while (true) {
+                kotlinx.coroutines.delay(1000)
+                if (seatLockTimeLeft > 0) seatLockTimeLeft--
+                if (paymentTimeLeft > 0) paymentTimeLeft--
+                
+                // Logic: Release seats if lock expires but not paid
+                if (seatLockTimeLeft == 0 && bookingData != null && bookingData?.isPaid == false) {
+                    releaseSeats()
+                }
+
+                if (seatLockTimeLeft == 0 && paymentTimeLeft == 0) break
+            }
+        }
+    }
+
+    private fun releaseSeats() {
+        val current = bookingData ?: return
+        if (current.selectedSeats.isNotEmpty()) {
+            bookingData = current.copy(selectedSeats = emptyList())
+            Log.w("BookingViewModel", "Seat lock expired! Seats for ${current.bookingCode} have been released.")
+        }
+    }
+
+    private fun stopTimer() {
+        timerJob?.cancel()
+        seatLockTimeLeft = 0
+        paymentTimeLeft = 0
     }
 
     // ── SETTINGS ─────────────────────────────────────────────────────────────
@@ -956,7 +1227,9 @@ fun BookingResponse.toBookingData(fallbackName: String = ""): BookingData {
         selectedCarriage = selectedCarriage,
         selectedSeats = if (selectedSeats.isBlank()) emptyList() else selectedSeats.split(","),
         bookingTimestamp = bookingTimestamp,
-        isUsed = isUsed
+        isUsed = isUsed == 1,
+        isPaid = isPaid == 1,
+        isCancelled = isCancelled == 1
     )
 }
 fun PassengerResponse.toDomainModel(): Passenger {
