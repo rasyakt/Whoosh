@@ -210,7 +210,6 @@ fun AccountScreen(
                 ) {
                     StatItem("Total Trip", "${viewModel.getTotalTrips()}", Icons.Outlined.Train)
                     StatItem("Tiket Aktif", "${viewModel.getActiveTicketCount()}", Icons.Outlined.ConfirmationNumber)
-                    StatItem("Rating", "4.8", Icons.Outlined.StarOutline)
                 }
             }
         }
@@ -253,16 +252,6 @@ fun AccountScreen(
         SectionLabel("Lainnya")
         MenuCard {
             MenuRow(Icons.AutoMirrored.Outlined.HelpOutline, "Pusat Bantuan", onClick = onNavigateToHelpCenter)
-            MenuDivider()
-            MenuRow(Icons.Outlined.StarOutline, "Beri Rating Aplikasi", onClick = {
-                try {
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=com.example.whoossh"))
-                    context.startActivity(intent)
-                } catch (e: Exception) {
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=com.example.whoossh"))
-                    context.startActivity(intent)
-                }
-            })
         }
 
         if (viewModel.isLoggedIn) {
@@ -281,19 +270,16 @@ fun AccountScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 16.dp),
+                        .padding(horizontal = 20.dp, vertical = 16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .background(Color(0xFFE53935).copy(alpha = 0.1f), RoundedCornerShape(10.dp))
-                            .border(1.dp, Color(0xFFE53935).copy(alpha = 0.15f), RoundedCornerShape(10.dp)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(Icons.AutoMirrored.Outlined.ExitToApp, null, tint = Color(0xFFE53935), modifier = Modifier.size(20.dp))
-                    }
-                    Spacer(modifier = Modifier.width(14.dp))
+                    Icon(
+                        Icons.AutoMirrored.Outlined.ExitToApp, 
+                        null, 
+                        tint = Color(0xFFE53935), 
+                        modifier = Modifier.size(22.dp)
+                    )
+                    Spacer(modifier = Modifier.width(18.dp))
                     Text(
                         text = "Keluar",
                         fontSize = 15.sp,
@@ -356,19 +342,16 @@ private fun MenuRow(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 14.dp),
+            .padding(horizontal = 20.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            modifier = Modifier
-                .size(36.dp)
-                .background(Color(0xFFF9F9F9), RoundedCornerShape(10.dp))
-                .border(1.dp, Color(0xFFF1F1F1), RoundedCornerShape(10.dp)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(icon, null, tint = iconColor, modifier = Modifier.size(20.dp))
-        }
-        Spacer(modifier = Modifier.width(14.dp))
+        Icon(
+            icon, 
+            null, 
+            tint = iconColor, 
+            modifier = Modifier.size(22.dp)
+        )
+        Spacer(modifier = Modifier.width(18.dp))
         Text(
             text = title,
             fontSize = 15.sp,
@@ -379,7 +362,7 @@ private fun MenuRow(
         Icon(
             Icons.Filled.ChevronRight,
             contentDescription = null,
-            tint = Color(0xFFD1D1D1),
+            tint = Color(0xFFE0E0E0),
             modifier = Modifier.size(16.dp)
         )
     }
