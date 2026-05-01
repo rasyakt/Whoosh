@@ -91,8 +91,23 @@ object TicketUtils {
     /**
      * Format arrival time with date indicator if next day
      */
-    fun formatArrivalTime(departureTime: String, durationMinutes: Int): String {
-        val (time, dayOffset) = calculateArrivalTimeWithDate(departureTime, durationMinutes)
+    fun formatArrivalTime(departureTime: String, durationMinutes: Int, origin: String = "", destination: String = ""): String {
+        // Jika rute utama, hitung durasi spesifik (Express 47m vs Regular 54m)
+        var actualDuration = durationMinutes
+        if ((origin.contains("Halim") && destination.contains("Tegalluar")) || 
+            (origin.contains("Tegalluar") && destination.contains("Halim"))) {
+            
+            val times = generateScheduleTimes(origin, destination)
+            val index = times.indexOf(departureTime)
+            
+            if (origin.contains("Halim")) {
+                actualDuration = if (index % 2 == 0) 54 else 47
+            } else {
+                actualDuration = if (index % 2 == 0) 47 else 54
+            }
+        }
+        
+        val (time, dayOffset) = calculateArrivalTimeWithDate(departureTime, actualDuration)
         return if (dayOffset > 0) {
             "$time (+$dayOffset hari)"
         } else {
@@ -100,20 +115,52 @@ object TicketUtils {
         }
     }
 
-    fun generateScheduleTimes(): List<String> {
-        val times = mutableListOf<String>()
-        var hour = 6
-        var minute = 0
-        while (hour < 22) {
-            if (hour == 21 && minute > 30) break
-            times.add(String.format("%02d:%02d", hour, minute))
-            minute += 30
-            if (minute >= 60) {
-                minute = 0
-                hour++
-            }
+    fun generateScheduleTimes(origin: String = "", destination: String = ""): List<String> {
+        val stations = listOf("Halim", "Karawang", "Padalarang", "Tegalluar")
+        val originIdx = stations.indexOf(origin)
+        val destIdx = stations.indexOf(destination)
+        
+        if (originIdx == -1 || destIdx == -1) return emptyList()
+
+        val isEastbound = destIdx > originIdx
+        val baselineTimes = if (isEastbound) {
+            listOf(
+                "06:25", "07:00", "07:25", "08:00", "08:25", "09:00", "09:25", "10:00", "10:25", "11:00",
+                "11:25", "12:00", "12:25", "13:00", "13:25", "14:00", "14:25", "15:00", "15:25", "16:00",
+                "16:25", "17:00", "17:25", "18:00", "18:25", "19:00", "19:25", "20:00", "20:25", "21:00", "21:25"
+            )
+        } else {
+            listOf(
+                "06:05", "06:35", "07:05", "07:35", "08:05", "08:35", "09:05", "09:35", "10:05", "10:35",
+                "11:05", "11:35", "12:05", "12:35", "13:05", "13:35", "14:05", "14:35", "15:05", "15:35",
+                "16:05", "16:35", "17:05", "17:35", "18:05", "18:35", "19:05", "19:35", "20:05", "20:35", "21:05"
+            )
         }
-        return times
+
+        val startStation = if (isEastbound) "Halim" else "Tegalluar"
+        if (origin == startStation) return baselineTimes
+
+        // Kalkulasi Offset Dinamis berdasarkan Kereta (Regular vs Express)
+        return baselineTimes.mapIndexed { index, time ->
+            val offset = if (isEastbound) {
+                // Eastbound: Halim -> ...
+                when (origin) {
+                    "Karawang" -> 17 // Hanya muncul jika index % 2 == 0
+                    "Padalarang" -> if (index % 2 == 0) 40 else 33
+                    "Tegalluar" -> if (index % 2 == 0) 54 else 47
+                    else -> 0
+                }
+            } else {
+                // Westbound: Tegalluar -> ...
+                when (origin) {
+                    "Padalarang" -> 18
+                    "Karawang" -> 39 // Hanya muncul jika index % 2 != 0
+                    "Halim" -> if (index % 2 != 0) 54 else 47
+                    else -> 0
+                }
+            }
+            calculateArrivalTimeWithDate(time, offset).first
+        }
     }
 
     fun validateBookingForm(
@@ -149,6 +196,59 @@ object TicketUtils {
         return null
     }
 
+    fun getActualDuration(departureTime: String, origin: String, destination: String): Int {
+        val stations = listOf("Halim", "Karawang", "Padalarang", "Tegalluar")
+        val originIdx = stations.indexOf(origin)
+        val destIdx = stations.indexOf(destination)
+        if (originIdx == -1 || destIdx == -1) return 45
+
+        val isEastbound = destIdx > originIdx
+        val startStation = if (isEastbound) "Halim" else "Tegalluar"
+        
+        // Cari jam keberangkatan di stasiun AWAL (Baseline) dengan simulasi
+        val baselineTimes = if (isEastbound) {
+            listOf("06:25", "07:00", "07:25", "08:00", "08:25", "09:00", "09:25", "10:00", "10:25", "11:00", "11:25", "12:00", "12:25", "13:00", "13:25", "14:00", "14:25", "15:00", "15:25", "16:00", "16:25", "17:00", "17:25", "18:00", "18:25", "19:00", "19:25", "20:00", "20:25", "21:00", "21:25")
+        } else {
+            listOf("06:05", "06:35", "07:05", "07:35", "08:05", "08:35", "09:05", "09:35", "10:05", "10:35", "11:05", "11:35", "12:05", "12:35", "13:05", "13:35", "14:05", "14:35", "15:05", "15:35", "16:05", "16:35", "17:05", "17:35", "18:05", "18:35", "19:05", "19:35", "20:05", "20:35", "21:05")
+        }
+
+        var foundIndex = -1
+        for (i in baselineTimes.indices) {
+            val offsetAtOrigin = getOffsetForTrain(i, isEastbound, origin)
+            val timeAtOrigin = calculateArrivalTimeWithDate(baselineTimes[i], offsetAtOrigin).first
+            if (timeAtOrigin == departureTime) {
+                foundIndex = i
+                break
+            }
+        }
+        
+        val startOffset = getOffsetForTrain(foundIndex, isEastbound, origin)
+        val endOffset = getOffsetForTrain(foundIndex, isEastbound, destination)
+        
+        return endOffset - startOffset
+    }
+
+    private fun getOffsetForTrain(index: Int, isEastbound: Boolean, targetStation: String): Int {
+        if (index == -1) return 0
+        return if (isEastbound) {
+            when (targetStation) {
+                "Halim" -> 0
+                "Karawang" -> 17
+                "Padalarang" -> if (index % 2 == 0) 40 else 33
+                "Tegalluar" -> if (index % 2 == 0) 54 else 47
+                else -> 0
+            }
+        } else {
+            when (targetStation) {
+                "Tegalluar" -> 0
+                "Padalarang" -> 18
+                "Karawang" -> 39
+                "Halim" -> if (index % 2 != 0) 54 else 47
+                else -> 0
+            }
+        }
+    }
+
     fun getStops(origin: String, destination: String): String {
         val stations = listOf("Tegalluar", "Padalarang", "Karawang", "Halim")
         val startIndex = stations.indexOf(origin)
@@ -165,45 +265,70 @@ object TicketUtils {
         return "Transit: " + stops.joinToString(", ")
     }
 
-    fun generateTrainCode(departureTime: String, index: Int): String {
-        // Mock Whoosh train code eg G1105
-        return "G" + (1100 + index + 1).toString()
+    fun generateTrainCode(departureTime: String, origin: String = ""): String {
+        val times = generateScheduleTimes(origin, if(origin.contains("Halim")) "Tegalluar" else "Halim")
+        val index = times.indexOf(departureTime)
+        
+        return if (origin.contains("Halim")) {
+            "G" + (1003 + (index * 2)).toString()
+        } else {
+            "G" + (1004 + (index * 2)).toString()
+        }
     }
 
     fun getStopDetails(origin: String, destination: String, departureTime: String): List<com.example.whoossh.model.StopDetail> {
-        val stations = listOf("Tegalluar", "Padalarang", "Karawang", "Halim")
+        val stations = if (origin.contains("Halim") || (origin.contains("Karawang") && destination.contains("Padalarang"))) 
+            listOf("Halim", "Karawang", "Padalarang", "Tegalluar")
+        else 
+            listOf("Tegalluar", "Padalarang", "Karawang", "Halim")
+            
         val startIndex = stations.indexOf(origin)
         val endIndex = stations.indexOf(destination)
         if (startIndex == -1 || endIndex == -1) return emptyList()
 
+        val times = generateScheduleTimes(stations[0], stations[3])
+        val trainIndex = times.indexOf(departureTime) // Note: This assumes search from start station
+        // In real case we'd need the train code or baseline departure time
+        
         val details = mutableListOf<com.example.whoossh.model.StopDetail>()
         val range = if (startIndex < endIndex) startIndex..endIndex else startIndex downTo endIndex
         
-        var currentTime = departureTime
-        var prevStation: String? = null
-        
+        // Simplified but accurate stop details based on the pamphlet pattern
         for (i in range) {
-            val stationStr = stations[i]
-            
-            if (stationStr == origin) {
-                details.add(com.example.whoossh.model.StopDetail(stationStr, currentTime, currentTime, "--"))
-            } else {
-                val duration = com.example.whoossh.data.StationData.getDuration(prevStation!!, stationStr)
-                val (arrivalTime, _) = calculateArrivalTimeWithDate(currentTime, duration)
-                
-                if (stationStr == destination) {
-                    details.add(com.example.whoossh.model.StopDetail(stationStr, arrivalTime, arrivalTime, "--"))
-                } else {
-                    val layover = 3 // 3 minutes layover
-                    val (departureTimeNew, _) = calculateArrivalTimeWithDate(arrivalTime, layover)
-                    details.add(com.example.whoossh.model.StopDetail(stationStr, arrivalTime, departureTimeNew, "$layover Menit"))
-                    currentTime = departureTimeNew
-                    prevStation = stationStr
-                    continue
-                }
-            }
-            prevStation = stationStr
+            val stationName = stations[i]
+            val timeAtStation = calculateTimeAtStation(departureTime, origin, stationName)
+            details.add(com.example.whoossh.model.StopDetail(
+                stationName, 
+                timeAtStation, 
+                timeAtStation, 
+                if (stationName == origin || stationName == destination) "--" else "3 Menit"
+            ))
         }
         return details
+    }
+
+    private fun calculateTimeAtStation(baselineTime: String, origin: String, targetStation: String): String {
+        val duration = getDurationBetween(origin, targetStation)
+        return calculateArrivalTimeWithDate(baselineTime, duration).first
+    }
+
+    private fun getDurationBetween(from: String, to: String): Int {
+        if (from == to) return 0
+        val stations = listOf("Halim", "Karawang", "Padalarang", "Tegalluar")
+        val fromIdx = stations.indexOf(from)
+        val toIdx = stations.indexOf(to)
+        if (fromIdx == -1 || toIdx == -1) return 0
+
+        val isEastbound = toIdx > fromIdx
+        
+        return if (isEastbound) {
+            // Baseline Offsets from Halim
+            val offsets = mapOf("Halim" to 0, "Karawang" to 17, "Padalarang" to 40, "Tegalluar" to 54)
+            (offsets[to] ?: 0) - (offsets[from] ?: 0)
+        } else {
+            // Baseline Offsets from Tegalluar
+            val offsets = mapOf("Tegalluar" to 0, "Padalarang" to 18, "Karawang" to 39, "Halim" to 54)
+            (offsets[to] ?: 0) - (offsets[from] ?: 0)
+        }
     }
 }

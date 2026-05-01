@@ -716,10 +716,11 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
                     val duration = StationData.getDuration(originStation, destinationStation)
                     
                     val mappedSchedules = apiSchedules.map { s ->
+                        val actualDuration = TicketUtils.getActualDuration(s.departureTime, s.originStation, s.destinationStation)
                         Schedule(
                             departureTime = s.departureTime,
-                            arrivalTime = TicketUtils.calculateArrivalTimeWithDate(s.departureTime, duration).first,
-                            duration = duration,
+                            arrivalTime = TicketUtils.calculateArrivalTimeWithDate(s.departureTime, actualDuration).first,
+                            duration = actualDuration,
                             originStation = s.originStation,
                             destinationStation = s.destinationStation,
                             price = TicketUtils.getPricePerTicket(1, CoachClass.EKONOMI),
@@ -748,7 +749,43 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
                     Log.i("BookingViewModel", "Schedules synced: ${schedules.size} items from API (Filtered: $isToday)")
                 } else {
                     Log.e("BookingViewModel", "Failed to fetch schedules: ${response.message()}")
-                    // Fallback ke local generation jika API gagal (opsional, tapi untuk demo kita biarkan kosong agar terlihat sync gap sudah diperbaiki)
+                }
+
+                // FALLBACK: Jika API gagal atau kosong, gunakan data lokal (Jadwal Asli)
+                if (schedules.isEmpty()) {
+                    Log.i("BookingViewModel", "Using local fallback for schedules")
+                    val duration = StationData.getDuration(originStation, destinationStation)
+                    val localTimes = TicketUtils.generateScheduleTimes(originStation, destinationStation)
+                    
+                    val fallbackSchedules = localTimes.map { time ->
+                        val actualDuration = TicketUtils.getActualDuration(time, originStation, destinationStation)
+                        Schedule(
+                            departureTime = time,
+                            arrivalTime = TicketUtils.calculateArrivalTimeWithDate(time, actualDuration).first,
+                            duration = actualDuration,
+                            originStation = originStation,
+                            destinationStation = destinationStation,
+                            price = TicketUtils.getPricePerTicket(1, CoachClass.EKONOMI),
+                            trainCode = TicketUtils.generateTrainCode(time, originStation),
+                            stops = TicketUtils.getStops(originStation, destinationStation),
+                            stopDetails = TicketUtils.getStopDetails(originStation, destinationStation, time)
+                        )
+                    }
+
+                    // Real-time filtering for today
+                    val sdf = SimpleDateFormat("EEEE, dd MMM yyyy", Locale("id", "ID"))
+                    val todayStr = sdf.format(Calendar.getInstance().time)
+                    val isToday = departureDate == todayStr
+
+                    schedules = if (isToday) {
+                        val cal = Calendar.getInstance()
+                        cal.add(Calendar.MINUTE, 15) // Buffer 15 menit
+                        val cutoffTime = SimpleDateFormat("HH:mm", Locale.getDefault()).format(cal.time)
+                        fallbackSchedules.filter { it.departureTime > cutoffTime }
+                    } else {
+                        fallbackSchedules
+                    }
+                    Log.i("BookingViewModel", "Fallback generated ${schedules.size} schedules")
                 }
             } catch (e: Exception) {
                 Log.e("BookingViewModel", "Error fetching schedules: ${e.message}")
