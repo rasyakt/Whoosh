@@ -62,7 +62,7 @@ fun SummaryScreen(
 ) {
     val schedule = viewModel.selectedSchedule!!
     val coach = viewModel.selectedCoachClass!!
-    val pricePerTicket = TicketUtils.getPricePerTicket(viewModel.ticketCount, coach)
+    val pricePerTicket = TicketUtils.getPricePerTicket(schedule.originStation, schedule.destinationStation, coach, schedule.departureTime)
     val totalPrice = pricePerTicket * viewModel.ticketCount
 
     var showDialog by remember { mutableStateOf(false) }

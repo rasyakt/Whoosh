@@ -723,7 +723,7 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
                             duration = actualDuration,
                             originStation = s.originStation,
                             destinationStation = s.destinationStation,
-                            price = TicketUtils.getPricePerTicket(1, CoachClass.EKONOMI),
+                            price = TicketUtils.getPricePerTicket(s.originStation, s.destinationStation, CoachClass.EKONOMI, s.departureTime),
                             trainCode = s.trainCode,
                             stops = TicketUtils.getStops(s.originStation, s.destinationStation),
                             stopDetails = TicketUtils.getStopDetails(s.originStation, s.destinationStation, s.departureTime)
@@ -765,7 +765,7 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
                             duration = actualDuration,
                             originStation = originStation,
                             destinationStation = destinationStation,
-                            price = TicketUtils.getPricePerTicket(1, CoachClass.EKONOMI),
+                            price = TicketUtils.getPricePerTicket(originStation, destinationStation, CoachClass.EKONOMI, time),
                             trainCode = TicketUtils.generateTrainCode(time, originStation),
                             stops = TicketUtils.getStops(originStation, destinationStation),
                             stopDetails = TicketUtils.getStopDetails(originStation, destinationStation, time)
@@ -874,7 +874,8 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun getPriceForClass(coachClass: CoachClass): Int {
-        return TicketUtils.getPricePerTicket(ticketCount, coachClass)
+        val schedule = selectedSchedule ?: return 300000
+        return TicketUtils.getPricePerTicket(schedule.originStation, schedule.destinationStation, coachClass, schedule.departureTime)
     }
 
     // ── CONFIRM BOOKING ──────────────────────────────────────────────────────
@@ -891,7 +892,7 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
         val schedule = selectedSchedule ?: return Pair(false, "Jadwal perjalanan belum dipilih.")
         val coach = selectedCoachClass ?: return Pair(false, "Kelas gerbong belum dipilih.")
         
-        val pricePerTicket = TicketUtils.getPricePerTicket(ticketCount, coach)
+        val pricePerTicket = TicketUtils.getPricePerTicket(schedule.originStation, schedule.destinationStation, coach, schedule.departureTime)
         val total = pricePerTicket * ticketCount
         val bookingCode = TicketUtils.generateBookingCode()
         val timestamp = System.currentTimeMillis()

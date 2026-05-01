@@ -40,8 +40,9 @@ fun UnpaidTicketScreen(
     val passengers = viewModel.selectedPassengers.collectAsState().value
     val selectedSeats = viewModel.selectedSeats
     
-    val pricePerTicket = TicketUtils.getTicketPrice(viewModel.ticketCount, coach)
-    val totalFare = pricePerTicket * viewModel.ticketCount
+    val bookingData = viewModel.bookingData ?: return
+    val pricePerTicket = bookingData.pricePerTicket
+    val totalFare = bookingData.totalPrice
     
     // Shared Timer from ViewModel
     val timeLeft = viewModel.paymentTimeLeft

@@ -9,47 +9,87 @@ import java.util.Locale
 object TicketUtils {
 
     /**
-     * Get price PER TICKET based on ticket count and coach class
-     * Bulk discounts apply for multiple tickets
+     * Get price PER TICKET based on route, coach class, and departure time (Dynamic Pricing)
      */
-    fun getPricePerTicket(ticketCount: Int, coachClass: CoachClass): Int {
-        return when (coachClass) {
-            CoachClass.EKONOMI -> when {
-                ticketCount in 1..2 -> 300000
-                ticketCount in 3..5 -> 285000  // 5% discount
-                ticketCount in 6..8 -> 270000  // 10% discount
-                ticketCount in 9..10 -> 250000 // 16.7% discount
-                else -> 300000
-            }
-            CoachClass.BISNIS -> when {
-                ticketCount in 1..2 -> 450000
-                ticketCount in 3..5 -> 435000  // 3.3% discount
-                ticketCount in 6..8 -> 420000  // 6.7% discount
-                ticketCount in 9..10 -> 400000 // 11.1% discount
-                else -> 450000
-            }
-            CoachClass.VIP -> when {
-                ticketCount in 1..2 -> 600000
-                ticketCount in 3..5 -> 575000  // 4.2% discount
-                ticketCount in 6..8 -> 550000  // 8.3% discount
-                ticketCount in 9..10 -> 525000 // 12.5% discount
-                else -> 600000
-            }
-        }
-    }
+    fun getPricePerTicket(origin: String, destination: String, coachClass: CoachClass, departureTime: String = ""): Int {
+        val stations = listOf("Halim", "Karawang", "Padalarang", "Tegalluar")
+        val originIdx = stations.indexOf(origin)
+        val destIdx = stations.indexOf(destination)
+        
+        if (originIdx == -1 || destIdx == -1) return 300000
 
-    /**
-     * Legacy function for backward compatibility
-     * @deprecated Use getPricePerTicket() instead for clarity
-     */
-    @Deprecated("Use getPricePerTicket() for clarity", ReplaceWith("getPricePerTicket(ticketCount, coachClass)"))
-    fun getTicketPrice(ticketCount: Int, coachClass: CoachClass): Int {
-        return getPricePerTicket(ticketCount, coachClass)
+        val distance = Math.abs(originIdx - destIdx)
+        
+        // Harga Dasar Ekonomi Premium berdasarkan Rute (Sesuai Aplikasi Resmi)
+        val baseEconomyPrice = when {
+            // Rute Terpendek (1 stasiun)
+            distance == 1 -> {
+                when {
+                    origin.contains("Halim") || destination.contains("Halim") -> 100000 // Halim - Karawang
+                    origin.contains("Tegalluar") || destination.contains("Tegalluar") -> 75000 // Padalarang - Tegalluar
+                    else -> 150000 // Karawang - Padalarang (Update: 150k)
+                }
+            }
+            // Rute Menengah (2 stasiun)
+            distance == 2 -> {
+                when {
+                    origin.contains("Tegalluar") || destination.contains("Tegalluar") -> 150000 // Tegalluar - Karawang
+                    else -> 200000 // Halim - Padalarang
+                }
+            }
+            // Rute Jauh (Halim - Tegalluar)
+            distance == 3 -> {
+                val isEastbound = destIdx > originIdx
+                val hour = departureTime.split(":")[0].toIntOrNull() ?: 12
+                
+                if (isEastbound) {
+                    // Halim -> Tegalluar: Rp 350.000 (Semua Jam di foto)
+                    350000
+                } else {
+                    // Tegalluar -> Halim: Rp 300.000 - Rp 325.000
+                    when {
+                        hour in 7..8 -> 325000 // Contoh G1010 jam 07:35
+                        else -> 300000
+                    }
+                }
+            }
+            else -> 300000
+        }
+
+        return when (coachClass) {
+            CoachClass.VIP -> 600000
+            CoachClass.BISNIS -> 450000
+            CoachClass.EKONOMI -> baseEconomyPrice
+        }
     }
 
     fun formatRupiah(amount: Int): String {
         val format = NumberFormat.getCurrencyInstance(Locale("id", "ID"))
         return format.format(amount.toLong()).replace(",00", "")
+    }
+
+    /**
+     * Get available coach classes for a specific route
+     */
+    fun getAvailableClasses(origin: String, destination: String): List<CoachClass> {
+        val stations = listOf("Halim", "Karawang", "Padalarang", "Tegalluar")
+        val originIdx = stations.indexOf(origin)
+        val destIdx = stations.indexOf(destination)
+        
+        if (originIdx == -1 || destIdx == -1) return CoachClass.values().toList()
+
+        val isHalimKarawang = (origin.contains("Halim") && destination.contains("Karawang")) || 
+                             (origin.contains("Karawang") && destination.contains("Halim"))
+        val isPadalarangTegalluar = (origin.contains("Padalarang") && destination.contains("Tegalluar")) || 
+                                   (origin.contains("Tegalluar") && destination.contains("Padalarang"))
+        
+        return if (isHalimKarawang || isPadalarangTegalluar) {
+            // Hanya rute ini yang dibatasi ke Ekonomi Premium
+            listOf(CoachClass.EKONOMI)
+        } else {
+            // Karawang-Padalarang dan rute lainnya menyediakan semua kelas
+            CoachClass.values().toList()
+        }
     }
 
     fun generateBookingCode(): String {

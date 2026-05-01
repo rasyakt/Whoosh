@@ -13,6 +13,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -159,31 +160,46 @@ fun SelectCoachScreen(
                     modifier = Modifier.padding(top = 8.dp, bottom = 12.dp)
                 )
 
+                val schedule = viewModel.selectedSchedule
+                val availableClasses = remember(schedule) {
+                    if (schedule != null) {
+                        TicketUtils.getAvailableClasses(schedule.originStation, schedule.destinationStation)
+                    } else {
+                        CoachClass.values().toList()
+                    }
+                }
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    CoachClassOption(
-                        title = "First",
-                        price = viewModel.getPriceForClass(CoachClass.VIP),
-                        isSelected = viewModel.selectedCoachClass == CoachClass.VIP,
-                        onClick = { viewModel.selectCoachClass(CoachClass.VIP) },
-                        modifier = Modifier.weight(1f)
-                    )
-                    CoachClassOption(
-                        title = "Business",
-                        price = viewModel.getPriceForClass(CoachClass.BISNIS),
-                        isSelected = viewModel.selectedCoachClass == CoachClass.BISNIS,
-                        onClick = { viewModel.selectCoachClass(CoachClass.BISNIS) },
-                        modifier = Modifier.weight(1f)
-                    )
-                    CoachClassOption(
-                        title = "Economy",
-                        price = viewModel.getPriceForClass(CoachClass.EKONOMI),
-                        isSelected = viewModel.selectedCoachClass == CoachClass.EKONOMI,
-                        onClick = { viewModel.selectCoachClass(CoachClass.EKONOMI) },
-                        modifier = Modifier.weight(1f)
-                    )
+                    if (availableClasses.contains(CoachClass.VIP)) {
+                        CoachClassOption(
+                            title = "First",
+                            price = viewModel.getPriceForClass(CoachClass.VIP),
+                            isSelected = viewModel.selectedCoachClass == CoachClass.VIP,
+                            onClick = { viewModel.selectCoachClass(CoachClass.VIP) },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                    if (availableClasses.contains(CoachClass.BISNIS)) {
+                        CoachClassOption(
+                            title = "Business",
+                            price = viewModel.getPriceForClass(CoachClass.BISNIS),
+                            isSelected = viewModel.selectedCoachClass == CoachClass.BISNIS,
+                            onClick = { viewModel.selectCoachClass(CoachClass.BISNIS) },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                    if (availableClasses.contains(CoachClass.EKONOMI)) {
+                        CoachClassOption(
+                            title = "Economy",
+                            price = viewModel.getPriceForClass(CoachClass.EKONOMI),
+                            isSelected = viewModel.selectedCoachClass == CoachClass.EKONOMI,
+                            onClick = { viewModel.selectCoachClass(CoachClass.EKONOMI) },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
                 }
             }
 

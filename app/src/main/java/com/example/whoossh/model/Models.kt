@@ -25,9 +25,9 @@ data class Schedule(
 )
 
 enum class CoachClass(val displayName: String, val description: String) {
-    EKONOMI("Ekonomi", "Kursi standar dengan AC dan colokan listrik"),
+    EKONOMI("Ekonomi Premium", "Kursi standar dengan AC dan colokan listrik"),
     BISNIS("Bisnis", "Kursi lebih lebar, sandaran kaki, snack box"),
-    VIP("VIP", "Kursi premium reclining, makanan lengkap, WiFi")
+    VIP("First Class", "Kursi premium reclining, makanan lengkap, WiFi")
 }
 
 data class BookingData(
