@@ -718,11 +718,11 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
                     val mappedSchedules = apiSchedules.map { s ->
                         Schedule(
                             departureTime = s.departureTime,
-                            arrivalTime = TicketUtils.calculateArrivalTime(s.departureTime, duration),
+                            arrivalTime = TicketUtils.calculateArrivalTimeWithDate(s.departureTime, duration).first,
                             duration = duration,
                             originStation = s.originStation,
                             destinationStation = s.destinationStation,
-                            price = TicketUtils.getTicketPrice(1, CoachClass.EKONOMI),
+                            price = TicketUtils.getPricePerTicket(1, CoachClass.EKONOMI),
                             trainCode = s.trainCode,
                             stops = TicketUtils.getStops(s.originStation, s.destinationStation),
                             stopDetails = TicketUtils.getStopDetails(s.originStation, s.destinationStation, s.departureTime)
@@ -837,19 +837,29 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun getPriceForClass(coachClass: CoachClass): Int {
-        return TicketUtils.getTicketPrice(ticketCount, coachClass)
+        return TicketUtils.getPricePerTicket(ticketCount, coachClass)
     }
 
     // ── CONFIRM BOOKING ──────────────────────────────────────────────────────
 
-    fun confirmBooking(isPaid: Boolean = false): BookingData {
-        val schedule = selectedSchedule!!
-        val coach = selectedCoachClass!!
-        val pricePerTicket = TicketUtils.getTicketPrice(ticketCount, coach)
+    /**
+     * Konfirmasi booking dan simpan ke server secara sinkron (suspend).
+     * Mengembalikan Pair(Berhasil, Pesan/Error).
+     */
+    suspend fun confirmBooking(isPaid: Boolean = false): Pair<Boolean, String> {
+        // 1. Validasi Internal
+        if (_selectedPassengers.value.size < ticketCount) {
+            return Pair(false, "Data penumpang belum lengkap. Dibutuhkan $ticketCount penumpang.")
+        }
+        val schedule = selectedSchedule ?: return Pair(false, "Jadwal perjalanan belum dipilih.")
+        val coach = selectedCoachClass ?: return Pair(false, "Kelas gerbong belum dipilih.")
+        
+        val pricePerTicket = TicketUtils.getPricePerTicket(ticketCount, coach)
         val total = pricePerTicket * ticketCount
         val bookingCode = TicketUtils.generateBookingCode()
         val timestamp = System.currentTimeMillis()
 
+        // 2. Siapkan Data Lokal
         val data = BookingData(
             userName = userName,
             originStation = schedule.originStation,
@@ -869,89 +879,64 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
             isUsed = false,
             isPaid = isPaid
         )
-        bookingData = data
 
-        // Start Both Timers
-        if (!isPaid) {
-            startSeatLockTimer()    // 10 Min lock
-            startPaymentTimer()     // 20 Min total window
-        }
-
-        // Langsung tambahkan ke daftar tiket aktif agar segera tampil di halaman Tiket
-        activeTickets = listOf(data) + activeTickets
-        Log.i("BookingViewModel", "Tiket ditambahkan ke activeTickets: ${data.bookingCode}, status paid=$isPaid")
-
-        // Simpan ke server via API
-        if (userId > 0) {
-            viewModelScope.launch {
-            try {
-                val request = CreateBookingRequest(
-                    userId = userId,
-                    bookingCode = bookingCode,
-                    originStation = schedule.originStation,
-                    destinationStation = schedule.destinationStation,
-                    departureDate = departureDate,
-                    departureTime = schedule.departureTime,
-                    arrivalTime = schedule.arrivalTime,
-                    duration = schedule.duration,
-                    coachClass = coach.name,
-                    ticketCount = ticketCount,
-                    pricePerTicket = pricePerTicket,
-                    totalPrice = total,
-                    selectedCarriage = selectedCarriage ?: 1,
-                    selectedSeats = selectedSeats.sorted().joinToString(","),
-                    bookingTimestamp = timestamp,
-                    isPaid = if (isPaid) 1 else 0,
-                    passengers = _selectedPassengers.value.mapIndexed { index, p ->
-                        p.toRequestModel(
-                            userId = userId,
-                            seatNumber = if (index < selectedSeats.size) selectedSeats[index] else ""
-                        )
-                    }
-                )
-
-                Log.d("BookingViewModel", "Sending booking request to API...")
-                val response = withContext(Dispatchers.IO) {
-                    api.createBooking(request)
+        // 3. Kirim ke Server & Tunggu Respon
+        return try {
+            val request = CreateBookingRequest(
+                userId = userId,
+                bookingCode = bookingCode,
+                originStation = schedule.originStation,
+                destinationStation = schedule.destinationStation,
+                departureDate = departureDate,
+                departureTime = schedule.departureTime,
+                arrivalTime = schedule.arrivalTime,
+                duration = schedule.duration,
+                coachClass = coach.name,
+                ticketCount = ticketCount,
+                pricePerTicket = pricePerTicket,
+                totalPrice = total,
+                selectedCarriage = selectedCarriage ?: 1,
+                selectedSeats = selectedSeats.sorted().joinToString(","),
+                bookingTimestamp = timestamp,
+                isPaid = if (isPaid) 1 else 0,
+                passengers = _selectedPassengers.value.mapIndexed { index, p ->
+                    p.toRequestModel(
+                        userId = userId,
+                        seatNumber = if (index < selectedSeats.size) selectedSeats[index] else ""
+                    )
                 }
+            )
 
-                if (response.isSuccessful && response.body()?.status == "success") {
-                    Log.i("BookingViewModel", "✅ Booking saved to server: $bookingCode")
-                    refreshTickets()
-                } else {
-                    val errorMsg = response.body()?.message ?: "Unknown error"
-                    val httpCode = response.code()
-                    Log.e("BookingViewModel", "❌ Failed to save booking: HTTP $httpCode - $errorMsg")
-                    // Coba baca error body jika response body null
-                    if (response.body() == null) {
-                        val errorBody = response.errorBody()?.string()
-                        Log.e("BookingViewModel", "Error body: $errorBody")
+            val response = withContext(Dispatchers.IO) { api.createBooking(request) }
+
+            if (response.isSuccessful && response.body()?.status == "success") {
+                // 4. Sukses: Update State Lokal
+                bookingData = data
+                activeTickets = listOf(data) + activeTickets
+                
+                if (!isPaid) {
+                    startSeatLockTimer()
+                    startPaymentTimer()
+                }
+                
+                // Kirim email di background (Opsional/Non-blocking)
+                if (isPaid && userEmail.isNotBlank()) {
+                    viewModelScope.launch(Dispatchers.IO) {
+                        EmailSender.sendETicket(userEmail, data)
                     }
                 }
-            } catch (e: java.net.ConnectException) {
-                Log.e("BookingViewModel", "❌ Tidak bisa terhubung ke server! Pastikan Laragon/Apache running dan URL benar.", e)
-            } catch (e: java.net.SocketTimeoutException) {
-                Log.e("BookingViewModel", "❌ Koneksi timeout ke server!", e)
-            } catch (e: Exception) {
-                Log.e("BookingViewModel", "❌ Create booking error: ${e.javaClass.simpleName} - ${e.message}", e)
+                
+                Log.i("BookingViewModel", "✅ Booking Success: $bookingCode")
+                Pair(true, "Booking berhasil dikonfirmasi")
+            } else {
+                val errorMsg = response.body()?.message ?: "Gagal menyimpan data ke server"
+                Log.e("BookingViewModel", "❌ API Error: $errorMsg")
+                Pair(false, errorMsg)
             }
+        } catch (e: Exception) {
+            Log.e("BookingViewModel", "❌ Network Error", e)
+            Pair(false, "Terjadi kesalahan jaringan: ${e.localizedMessage}")
         }
-    }
-
-        // Kirim e-ticket via email secara background HANYA jika status sudah bayar
-        if (isPaid && userEmail.isNotBlank()) {
-            viewModelScope.launch(Dispatchers.IO) {
-                val success = EmailSender.sendETicket(userEmail, data)
-                emailSentStatus = success
-                if (success) {
-                    Log.i("BookingViewModel", "E-ticket dikirim ke $userEmail (Immediate Pay)")
-                } else {
-                    Log.w("BookingViewModel", "Gagal mengirim e-ticket ke $userEmail")
-                }
-            }
-        }
-
-        return data
     }
 
     fun markAsPaid() {

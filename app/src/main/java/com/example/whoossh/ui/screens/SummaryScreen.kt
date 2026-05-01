@@ -16,9 +16,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowForward
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -26,13 +26,18 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import android.widget.Toast
+import kotlinx.coroutines.launch
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -57,7 +62,7 @@ fun SummaryScreen(
 ) {
     val schedule = viewModel.selectedSchedule!!
     val coach = viewModel.selectedCoachClass!!
-    val pricePerTicket = TicketUtils.getTicketPrice(viewModel.ticketCount, coach)
+    val pricePerTicket = TicketUtils.getPricePerTicket(viewModel.ticketCount, coach)
     val totalPrice = pricePerTicket * viewModel.ticketCount
 
     var showDialog by remember { mutableStateOf(false) }
@@ -103,14 +108,38 @@ fun SummaryScreen(
                 }
             },
             confirmButton = {
+                val scope = rememberCoroutineScope()
+                val context = LocalContext.current
+                var isProcessing by remember { mutableStateOf(false) }
+
                 TextButton(
                     onClick = {
-                        showDialog = false
-                        viewModel.confirmBooking()
-                        onConfirm()
-                    }
+                        if (isProcessing) return@TextButton
+                        isProcessing = true
+                        
+                        scope.launch {
+                            val (success, message) = viewModel.confirmBooking()
+                            isProcessing = false
+                            
+                            if (success) {
+                                showDialog = false
+                                onConfirm()
+                            } else {
+                                Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    },
+                    enabled = !isProcessing
                 ) {
-                    Text("Lihat E-Ticket", color = WhooshRed, fontWeight = FontWeight.Bold)
+                    if (isProcessing) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            color = WhooshRed
+                        )
+                    } else {
+                        Text("Lihat E-Ticket", color = WhooshRed, fontWeight = FontWeight.Bold)
+                    }
                 }
             },
             shape = RoundedCornerShape(24.dp)
@@ -170,7 +199,7 @@ fun SummaryScreen(
                                 fontWeight = FontWeight.Medium
                             )
                             Icon(
-                                Icons.Filled.ArrowForward,
+                                Icons.AutoMirrored.Filled.ArrowForward,
                                 contentDescription = null,
                                 tint = WhooshRed,
                                 modifier = Modifier.size(20.dp)

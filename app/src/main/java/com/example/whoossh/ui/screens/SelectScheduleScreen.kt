@@ -25,7 +25,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccessTime
-import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.Button
@@ -420,7 +420,7 @@ private fun ScheduleCard(
                     ) {
                         Box(modifier = Modifier.size(6.dp).clip(CircleShape).border(1.dp, Color.LightGray, CircleShape))
                         HorizontalDivider(modifier = Modifier.weight(1f), color = Color(0xFFE0E0E0), thickness = 1.dp)
-                        Icon(Icons.Filled.ArrowForward, null, tint = Color.LightGray, modifier = Modifier.size(12.dp))
+                        Icon(Icons.AutoMirrored.Filled.ArrowForward, null, tint = Color.LightGray, modifier = Modifier.size(12.dp))
                     }
                 }
 

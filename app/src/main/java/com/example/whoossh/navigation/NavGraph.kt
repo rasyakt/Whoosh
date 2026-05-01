@@ -1,11 +1,13 @@
 package com.example.whoossh.navigation
 
+import android.content.Intent
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -16,12 +18,23 @@ import com.example.whoossh.ui.screens.*
 import com.example.whoossh.model.Passenger
 import com.example.whoossh.model.BookingData
 import com.example.whoossh.viewmodel.BookingViewModel
+import kotlinx.coroutines.launch
 
 @Composable
 fun NavGraph(
     navController: NavHostController,
-    viewModel: BookingViewModel
+    viewModel: BookingViewModel,
+    deepLinkIntent: Intent? = null
 ) {
+    val scope = rememberCoroutineScope()
+    // Handle deep link when intent changes
+    LaunchedEffect(deepLinkIntent) {
+        deepLinkIntent?.data?.let { uri ->
+            android.util.Log.d("NavGraph", "Processing deep link: $uri")
+            // Navigation will be handled by the deep link configuration in composable
+        }
+    }
+    
     NavHost(
         navController = navController,
         startDestination = Screen.Splash.route
@@ -279,8 +292,10 @@ fun NavGraph(
             SelectSeatScreen(
                 viewModel = viewModel,
                 onSeatSelected = {
-                    viewModel.confirmBooking(isPaid = false)
-                    navController.navigate(Screen.UnpaidTicket.route)
+                    scope.launch {
+                        viewModel.confirmBooking(isPaid = false)
+                        navController.navigate(Screen.UnpaidTicket.route)
+                    }
                 },
                 onBack = { navController.popBackStack() }
             )
@@ -348,9 +363,11 @@ fun NavGraph(
             PaymentScreen(
                 viewModel = viewModel,
                 onPaymentSuccess = {
-                    viewModel.confirmBooking(isPaid = true)
-                    navController.navigate(Screen.ETicket.route) {
-                        popUpTo(Screen.Dashboard.route)
+                    scope.launch {
+                        viewModel.confirmBooking(isPaid = true)
+                        navController.navigate(Screen.ETicket.route) {
+                            popUpTo(Screen.Dashboard.route)
+                        }
                     }
                 },
                 onBack = { navController.popBackStack() }
@@ -378,9 +395,24 @@ fun NavGraph(
             }
         ) { backStackEntry ->
             val bookingCode = backStackEntry.arguments?.getString("bookingCode")
+            val isFromDeepLink = bookingCode != null
             
+            // Load ticket when deep link is opened
             LaunchedEffect(bookingCode) {
-                bookingCode?.let { viewModel.loadTicketByCode(it) }
+                bookingCode?.let { code ->
+                    android.util.Log.d("NavGraph", "Deep link opened with booking code: $code")
+                    
+                    // Refresh tickets first to ensure we have latest data
+                    if (viewModel.isLoggedIn && viewModel.userId > 0) {
+                        android.util.Log.d("NavGraph", "User logged in, refreshing tickets...")
+                        viewModel.refreshTickets()
+                        // Wait a bit for refresh to complete
+                        kotlinx.coroutines.delay(500)
+                    }
+                    
+                    // Then load the specific ticket
+                    viewModel.loadTicketByCode(code)
+                }
             }
 
             ETicketScreen(
@@ -402,7 +434,8 @@ fun NavGraph(
                 onAddInfant = {
                     // Navigate to add infant flow (future implementation)
                     // For now, handled by dialog in ETicketScreen
-                }
+                },
+                showQrOnEntry = isFromDeepLink
             )
         }
 
