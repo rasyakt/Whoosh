@@ -6,6 +6,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -29,6 +30,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.ConfirmationNumber
 import androidx.compose.material.icons.filled.Help
 import androidx.compose.material.icons.filled.History
@@ -44,7 +46,12 @@ import androidx.compose.material.icons.filled.Train
 import androidx.compose.material.icons.filled.EventSeat
 import androidx.compose.material.icons.filled.ArrowBackIosNew
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.outlined.ConfirmationNumber
+import androidx.compose.material.icons.outlined.DirectionsTransit
+import androidx.compose.material.icons.outlined.HelpOutline
+import androidx.compose.material.icons.outlined.LocalOffer
 import androidx.compose.foundation.layout.offset
+import androidx.compose.material.icons.outlined.History
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -183,7 +190,8 @@ fun DashboardScreen(
                         }
                     },
                     onNavigateToPromo = onNavigateToPromo,
-                    onNavigateToHelpCenter = onNavigateToHelpCenter
+                    onNavigateToHelpCenter = onNavigateToHelpCenter,
+                    onNavigateToHistory = onNavigateToHistory
                 )
                 1 -> TicketsScreen(
                     viewModel = viewModel,
@@ -227,7 +235,8 @@ private fun HomeContent(
     scope: kotlinx.coroutines.CoroutineScope,
     onNavigateToTab: (Int) -> Unit,
     onNavigateToPromo: () -> Unit = {},
-    onNavigateToHelpCenter: () -> Unit = {}
+    onNavigateToHelpCenter: () -> Unit = {},
+    onNavigateToHistory: () -> Unit = {}
 ) {
     val context = LocalContext.current
     var showMoreInfo by remember { mutableStateOf(false) }
@@ -250,10 +259,10 @@ private fun HomeContent(
     val stationNames = StationData.getStationNames()
 
     val quickActions = listOf(
-        QuickAction(Icons.Filled.ConfirmationNumber, "Tiket Saya") { onNavigateToTab(1) },
-        QuickAction(Icons.Filled.History, "Riwayat") { onNavigateToTab(3) },
-        QuickAction(Icons.Filled.LocalOffer, "Promo") { onNavigateToPromo() },
-        QuickAction(Icons.Filled.Help, "Bantuan") { onNavigateToHelpCenter() }
+        QuickAction(Icons.Outlined.ConfirmationNumber, "Tiket Saya") { onNavigateToTab(1) },
+        QuickAction(Icons.Outlined.History, "Riwayat") { onNavigateToHistory() },
+        QuickAction(Icons.Outlined.LocalOffer, "Promo") { onNavigateToPromo() },
+        QuickAction(Icons.Outlined.HelpOutline, "Bantuan") { onNavigateToHelpCenter() }
     )
 
     LaunchedEffect(viewModel.formError) {
@@ -480,7 +489,38 @@ private fun HomeContent(
         }
         } // Close the Hero & Booking Form overlapping Box
 
-        Spacer(modifier = Modifier.height(16.dp))
+        // ── RUNNING TEXT (MARQUEE) ───────────────────────────────────────────
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 6.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(Color(0xFFFFF5F5))
+                .padding(horizontal = 12.dp, vertical = 10.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.Campaign, 
+                    contentDescription = null, 
+                    tint = WhooshRed, 
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(10.dp))
+                Text(
+                    text = "Pengembalian Dana / Perubahan Jadwal Mohon cek kembali jadwal perjalanan Anda. Proses memberikan izin kepada pelanggan atau calon penumpang untuk masuk stasiun atau naik Kereta Cepat",
+                    fontSize = 12.sp,
+                    color = Color(0xFF333333),
+                    maxLines = 1,
+                    modifier = Modifier.basicMarquee(
+                        iterations = Int.MAX_VALUE,
+                        initialDelayMillis = 1000,
+                        velocity = 45.dp
+                    )
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
 
         // ── QUICK ACTIONS ─────────────────────────────────────────────────────
         Card(
@@ -513,11 +553,17 @@ private fun HomeContent(
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(50.dp)
-                                    .background(Color(0xFFF5F5F5), CircleShape),
+                                    .size(52.dp)
+                                    .background(Color(0xFFF9F9F9), CircleShape)
+                                    .border(1.dp, Color(0xFFEEEEEE), CircleShape),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Icon(action.icon, action.label, tint = WhooshRed, modifier = Modifier.size(24.dp))
+                                Icon(
+                                    imageVector = action.icon, 
+                                    contentDescription = action.label, 
+                                    tint = WhooshRed, 
+                                    modifier = Modifier.size(24.dp)
+                                )
                             }
                             Spacer(modifier = Modifier.height(7.dp))
                             Text(
@@ -559,16 +605,43 @@ private fun HomeContent(
         Spacer(modifier = Modifier.height(14.dp))
 
         // Cards List
+        var showKetentuanDetail by remember { mutableStateOf<Triple<String, String, (() -> Unit)?>?>(null) }
+        
+        if (showKetentuanDetail != null) {
+            KetentuanDetailDialog(
+                title = showKetentuanDetail!!.first,
+                content = showKetentuanDetail!!.second,
+                actionLabel = if (showKetentuanDetail!!.first.contains("Jadwal")) "Lihat Jadwal" else null,
+                onActionClick = showKetentuanDetail!!.third,
+                onDismiss = { showKetentuanDetail = null }
+            )
+        }
+
         val ketentuanItems = listOf(
-            Pair("Jadwal Whoosh & KA Feeder", "Jadwal perjalanan Kereta Cepat Whoosh dan Integrasinya dengan KA Feeder Kereta Cepat"),
-            Pair("Pengembalian Dana / Perubahan Jadwal", "Pengembalian Dana / Perubahan Jadwal")
+            Triple(
+                "Jadwal Whoosh & KA Feeder", 
+                "Integrasi Kereta Cepat dengan KA Feeder",
+                "• KA Feeder tersedia secara GRATIS bagi penumpang Whoosh dengan rute Padalarang - Bandung (PP).\n• Pastikan Anda memiliki waktu transit minimal 15-20 menit antara jadwal Whoosh dan KA Feeder.\n• Penumpang diwajibkan menunjukkan tiket Whoosh yang valid saat menggunakan KA Feeder."
+            ),
+            Triple(
+                "Pengembalian Dana / Perubahan Jadwal", 
+                "Aturan Pembatalan dan Reschedule",
+                "• Pengembalian Dana (Refund): Dikenakan biaya admin sebesar 25% dari harga tiket. Dilakukan maksimal 2 jam sebelum keberangkatan.\n• Perubahan Jadwal (Reschedule): Dapat dilakukan satu kali selama ketersediaan kursi masih ada. Dilakukan maksimal 2 jam sebelum keberangkatan dengan biaya administrasi 25%."
+            )
         )
         
         ketentuanItems.forEach { item ->
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 6.dp),
+                    .padding(horizontal = 16.dp, vertical = 6.dp)
+                    .clickable { 
+                        showKetentuanDetail = Triple(
+                            item.first, 
+                            item.third,
+                            if (item.first.contains("Jadwal")) { { onNavigateToTab(2) } } else null
+                        ) 
+                    },
                 shape = RoundedCornerShape(12.dp),
                 colors = CardDefaults.cardColors(containerColor = WhooshWhite),
                 elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
@@ -767,5 +840,76 @@ private fun InformasiTambahanOverlay(onDismiss: () -> Unit) {
             }
         }
     }
+
 }
 
+// ── DIALOG DETAIL KETENTUAN ──────────────────────────────────────────────────
+@Composable
+private fun KetentuanDetailDialog(
+    title: String,
+    content: String,
+    actionLabel: String? = null,
+    onActionClick: (() -> Unit)? = null,
+    onDismiss: () -> Unit
+) {
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+        androidx.compose.material3.Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp),
+            shape = RoundedCornerShape(20.dp),
+            color = WhooshWhite
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp)
+            ) {
+                Text(
+                    text = title,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF1A1A1A)
+                )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                Text(
+                    text = content,
+                    fontSize = 14.sp,
+                    color = Color(0xFF444444),
+                    lineHeight = 22.sp
+                )
+                
+                Spacer(modifier = Modifier.height(24.dp))
+
+                if (actionLabel != null && onActionClick != null) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(WhooshRed)
+                            .clickable { 
+                                onActionClick()
+                                onDismiss()
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(actionLabel, color = WhooshWhite, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                }
+                
+                androidx.compose.material3.OutlinedButton(
+                    onClick = onDismiss,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFDDDDDD))
+                ) {
+                    Text("Tutup", color = Color(0xFF666666), fontWeight = FontWeight.Medium)
+                }
+            }
+        }
+    }
+}
