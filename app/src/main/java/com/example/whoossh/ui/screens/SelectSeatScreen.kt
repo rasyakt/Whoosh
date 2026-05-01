@@ -52,9 +52,9 @@ fun SelectSeatScreen(
     val availableCarriages = viewModel.getAvailableCarriages(coachClass)
     val selectedCarriage = viewModel.selectedCarriage ?: availableCarriages.firstOrNull() ?: 1
     
-    // Start Seat Lock Timer (10 Minutes)
-    LaunchedEffect(Unit) {
-        viewModel.startSeatLockTimer()
+    // Load real occupied seats from server
+    LaunchedEffect(selectedCarriage) {
+        viewModel.loadOccupiedSeats()
     }
 
     Scaffold(
@@ -283,8 +283,7 @@ fun SelectSeatScreen(
                                 }
                             } else {
                                 val seatId = "${row}${letter}"
-                                // Dummy condition for occupied seats (e.g. random based on row/carriage to look realistic)
-                                val isOccupied = (row * 31 + letter.hashCode() + selectedCarriage * 17) % 7 == 0
+                                val isOccupied = viewModel.occupiedSeats.contains(seatId)
                                 
                                 Box(
                                     modifier = Modifier

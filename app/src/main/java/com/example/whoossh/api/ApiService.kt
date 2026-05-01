@@ -30,6 +30,15 @@ interface ApiService {
     @GET("booking/get_tickets.php")
     suspend fun getTickets(@Query("user_id") userId: Int): Response<ApiResponse<List<BookingResponse>>>
 
+    @GET("booking/get_occupied_seats.php")
+    suspend fun getOccupiedSeats(
+        @Query("origin") origin: String,
+        @Query("destination") destination: String,
+        @Query("date") date: String,
+        @Query("time") time: String,
+        @Query("carriage") carriage: Int
+    ): Response<ApiResponse<Map<String, List<String>>>>
+
     @POST("booking/update_status.php")
     suspend fun updateBookingStatus(
         @Body request: Map<String, @JvmSuppressWildcards Any>

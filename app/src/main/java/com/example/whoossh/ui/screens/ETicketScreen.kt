@@ -227,22 +227,43 @@ fun ETicketScreen(
                     
                     Spacer(modifier = Modifier.height(24.dp))
                     
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        OutlinedButton(
-                            onClick = { showRescheduleDialog = true },
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(8.dp),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE0E0E0))
-                        ) {
-                            Text("Reschedule", color = Color.Black)
+                    if (!booking.isCancelled && !booking.isUsed) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            OutlinedButton(
+                                onClick = { showRescheduleDialog = true },
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(8.dp),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE0E0E0))
+                            ) {
+                                Text("Reschedule", color = Color.Black)
+                            }
+                            OutlinedButton(
+                                onClick = { showRefundDialog = true },
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(8.dp),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE0E0E0))
+                            ) {
+                                Text("Refund", color = Color.Black)
+                            }
                         }
-                        OutlinedButton(
-                            onClick = { showRefundDialog = true },
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(8.dp),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE0E0E0))
+                    } else {
+                        // Tampilkan status jika dibatalkan atau selesai
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(
+                                    if (booking.isCancelled) Color(0xFFFFEBEE) else Color(0xFFE8F5E9),
+                                    RoundedCornerShape(8.dp)
+                                )
+                                .padding(12.dp),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Text("Refund", color = Color.Black)
+                            Text(
+                                text = if (booking.isCancelled) "TICKET CANCELLED" else "TICKET USED / COMPLETED",
+                                color = if (booking.isCancelled) Color(0xFFD32F2F) else Color(0xFF2E7D32),
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp
+                            )
                         }
                     }
                 }
@@ -307,15 +328,17 @@ fun ETicketScreen(
                         }
                     }
                     
-                    Spacer(modifier = Modifier.height(20.dp))
-                    
-                    OutlinedButton(
-                        onClick = { showAddInfantDialog = true },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(8.dp),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE0E0E0))
-                    ) {
-                        Text("Add Infant", color = Color.Black)
+                    if (!booking.isCancelled && !booking.isUsed) {
+                        Spacer(modifier = Modifier.height(20.dp))
+                        
+                        OutlinedButton(
+                            onClick = { showAddInfantDialog = true },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(8.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE0E0E0))
+                        ) {
+                            Text("Add Infant", color = Color.Black)
+                        }
                     }
                 }
             }

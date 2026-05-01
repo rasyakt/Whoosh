@@ -83,6 +83,8 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
         private set
     var selectedSeats = mutableStateListOf<String>()
         private set
+    var occupiedSeats = mutableStateListOf<String>()
+        private set
 
     // Booking Result
     var bookingData by mutableStateOf<BookingData?>(null)
@@ -733,8 +735,12 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
                     val isToday = departureDate == todayStr
 
                     schedules = if (isToday) {
-                        val currentTime = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Calendar.getInstance().time)
-                        mappedSchedules.filter { it.departureTime > currentTime }
+                        // Tambahkan buffer 30 menit dari waktu sekarang agar user punya waktu boarding
+                        val cal = Calendar.getInstance()
+                        cal.add(Calendar.MINUTE, 30)
+                        val cutoffTime = SimpleDateFormat("HH:mm", Locale.getDefault()).format(cal.time)
+                        
+                        mappedSchedules.filter { it.departureTime > cutoffTime }
                     } else {
                         mappedSchedules
                     }
@@ -763,8 +769,7 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
     fun selectCoachClass(coachClass: CoachClass) {
         if (selectedCoachClass != coachClass) {
             selectedCoachClass = coachClass
-            selectedCarriage = getAvailableCarriages(coachClass).firstOrNull()
-            selectedSeats.clear()
+            selectCarriage(getAvailableCarriages(coachClass).firstOrNull() ?: 1)
         }
     }
 
@@ -777,14 +782,44 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    fun selectCarriage(carriage: Int) {
-        if (selectedCarriage != carriage) {
-            selectedCarriage = carriage
-            selectedSeats.clear()
+    fun selectCarriage(number: Int) {
+        selectedCarriage = number
+        selectedSeats.clear() // Reset selection when switching carriages
+        loadOccupiedSeats()
+    }
+    
+    fun loadOccupiedSeats() {
+        val schedule = selectedSchedule ?: return
+        val carriage = selectedCarriage ?: 1
+        val date = departureDate
+        
+        viewModelScope.launch {
+            try {
+                val response = withContext(Dispatchers.IO) {
+                    api.getOccupiedSeats(
+                        origin = originStation,
+                        destination = destinationStation,
+                        date = date,
+                        time = schedule.departureTime,
+                        carriage = carriage
+                    )
+                }
+                
+                if (response.isSuccessful && response.body()?.status == "success") {
+                    val seats = response.body()?.data?.get("occupied_seats") ?: emptyList()
+                    occupiedSeats.clear()
+                    occupiedSeats.addAll(seats)
+                    Log.i("BookingViewModel", "Occupied seats loaded: ${seats.size} seats for Carriage $carriage")
+                }
+            } catch (e: Exception) {
+                Log.e("BookingViewModel", "Error loading occupied seats: ${e.message}")
+            }
         }
     }
 
     fun toggleSeatSelection(seatId: String) {
+        if (occupiedSeats.contains(seatId)) return // Cannot select occupied
+        
         if (selectedSeats.contains(seatId)) {
             selectedSeats.remove(seatId)
         } else {
@@ -1203,11 +1238,19 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
 
     fun addPassenger(passenger: Passenger) {
         val current = _selectedPassengers.value.toMutableList()
-        if (current.size < 15 && current.none { it.id == passenger.id }) {
+        // Check both ID and identity number to prevent duplicates
+        val isDuplicate = current.any { 
+            it.id == passenger.id || 
+            (it.identityNo.isNotBlank() && it.identityNo == passenger.identityNo) 
+        }
+        
+        if (current.size < 15 && !isDuplicate) {
             current.add(passenger)
             _selectedPassengers.value = current
             ticketCount = current.size // Sync ticketCount
             Log.i("BookingViewModel", "Passenger added: ${passenger.name}, total: ${current.size}")
+        } else if (isDuplicate) {
+            Log.w("BookingViewModel", "Prevented adding duplicate passenger: ${passenger.name}")
         }
     }
 
@@ -1243,11 +1286,21 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             try {
                 val request = passenger.toRequestModel(userId = userId)
+                
+                // Check if this identity number already exists in our saved list to avoid duplicates
+                val existingSaved = _savedPassengers.value.find { 
+                    it.identityNo.isNotBlank() && it.identityNo == passenger.identityNo 
+                }
+                
                 val response = if (passenger.id.toIntOrNull() != null) {
-                    // Update existing
+                    // Update existing by numeric ID
                     api.updatePassenger(request.copy(id = passenger.id.toInt()))
+                } else if (existingSaved != null && existingSaved.id.toIntOrNull() != null) {
+                    // It's a virtual ID but we found a real record with same identity_no
+                    Log.i("BookingViewModel", "Found existing record for ${passenger.name}, updating instead of adding.")
+                    api.updatePassenger(request.copy(id = existingSaved.id.toInt()))
                 } else {
-                    // Add new
+                    // Truly new or virtual without match
                     api.addPassenger(request)
                 }
 
@@ -1567,7 +1620,21 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
         infantDateOfBirth: String,
         onResult: (Boolean, String) -> Unit
     ) {
-        // Validate inputs
+        // 1. Validasi Status Tiket
+        if (booking.isCancelled) {
+            onResult(false, "Tidak dapat menambah infant pada tiket yang sudah dibatalkan")
+            return
+        }
+        if (booking.isUsed) {
+            onResult(false, "Tidak dapat menambah infant pada tiket yang sudah digunakan")
+            return
+        }
+        if (!booking.isPaid) {
+            onResult(false, "Harap selesaikan pembayaran tiket utama terlebih dahulu sebelum menambah infant")
+            return
+        }
+
+        // 2. Validasi data infant
         if (infantName.isBlank()) {
             onResult(false, "Nama infant tidak boleh kosong")
             return
@@ -1742,6 +1809,7 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
         selectedCoachClass = null
         selectedCarriage = null
         selectedSeats.clear()
+        occupiedSeats.clear()
         bookingData = null
         emailSentStatus = null
         clearSelectedPassengers()
