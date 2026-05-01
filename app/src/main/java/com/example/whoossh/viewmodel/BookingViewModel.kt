@@ -955,7 +955,8 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
                 val response = withContext(Dispatchers.IO) {
                     api.updateBookingStatus(mapOf(
                         "booking_code" to current.bookingCode,
-                        "is_paid" to 1
+                        "is_paid" to 1,
+                        "is_cancelled" to 0
                     ))
                 }
                 if (response.isSuccessful && response.body()?.status == "success") {
@@ -1118,6 +1119,9 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
 
     fun loadTicketByCode(code: String) {
         Log.d("BookingViewModel", "Mencoba memuat tiket: $code")
+        
+        // Save the current local status BEFORE async fetch, as viewTicket() already set the correct state
+        val preExistingBooking = bookingData
 
         viewModelScope.launch {
             try {
@@ -1127,7 +1131,26 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
 
                 if (response.isSuccessful && response.body()?.status == "success") {
                     val ticket = response.body()!!.data!!
-                    val data = ticket.toBookingData(ticket.userName.ifBlank { userName })
+                    var data = ticket.toBookingData(ticket.userName.ifBlank { userName })
+                    
+                    // Preserve status from local state (viewTicket already set correct isPaid/isCancelled)
+                    val localTicket = preExistingBooking?.takeIf { it.bookingCode.equals(code, ignoreCase = true) }
+                        ?: activeTickets.find { it.bookingCode.equals(code, ignoreCase = true) }
+                    val isPaidInCache = userPreferences.isPaidTicket(code)
+                    
+                    // If local or cache says PAID → keep paid (server might not have synced yet)
+                    if (!data.isPaid && (localTicket?.isPaid == true || isPaidInCache)) {
+                        Log.i("BookingViewModel", "Preserving isPaid=true for $code (server not synced)")
+                        data = data.copy(isPaid = true)
+                    }
+                    
+                    // If local says NOT cancelled but server says cancelled → trust local
+                    // (server might have stale is_cancelled from before payment)
+                    if (data.isCancelled && localTicket != null && !localTicket.isCancelled) {
+                        Log.i("BookingViewModel", "Preserving isCancelled=false for $code (local is authoritative)")
+                        data = data.copy(isCancelled = false)
+                    }
+                    
                     bookingData = data
                     
                     // Update passengers list in VM state
@@ -1139,6 +1162,8 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
                                 passengerType = p.passengerType,
                                 gender = "Male", // Default
                                 dateOfBirth = "",
+                                country = "Indonesia",
+                                documentType = "ID Card",
                                 expiryDate = "",
                                 whatsapp = "",
                                 email = ""
@@ -1296,6 +1321,40 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
                     val domainPassengers = apiPassengers.map { it.toDomainModel() }
                     _savedPassengers.value = domainPassengers
                     Log.i("BookingViewModel", "Saved passengers synced: ${domainPassengers.size} items")
+                    
+                    // AUTO-SELECT LOGIC: 
+                    // Jika belum ada penumpang terpilih, coba jadikan profil user login sebagai penumpang default
+                    if (_selectedPassengers.value.isEmpty()) {
+                        // Cari apakah profil user sudah ada di saved passengers (berdasarkan nama atau email)
+                        val userProfile = domainPassengers.find { 
+                            it.name.equals(userName, ignoreCase = true) || 
+                            it.email.equals(userEmail, ignoreCase = true)
+                        }
+                        
+                        if (userProfile != null) {
+                            addPassenger(userProfile)
+                            Log.i("BookingViewModel", "Auto-selected user profile from saved list: ${userProfile.name}")
+                        } else {
+                            // Jika tidak ada di server, buat data passenger virtual dari profil login
+                            val virtualPassenger = Passenger(
+                                id = "user_$userId", // Virtual ID
+                                name = userName,
+                                identityNo = "", // User must edit this if empty
+                                gender = "Male",
+                                dateOfBirth = "",
+                                passengerType = "Adult",
+                                discountType = "none",
+                                country = "Indonesia",
+                                documentType = "ID Card",
+                                expiryDate = "",
+                                whatsapp = userPhone,
+                                email = userEmail,
+                                isSaved = false
+                            )
+                            addPassenger(virtualPassenger)
+                            Log.i("BookingViewModel", "Auto-created virtual passenger from login profile: $userName")
+                        }
+                    }
                 }
             } catch (e: Exception) {
                 Log.e("BookingViewModel", "Error refreshing passengers: ${e.message}")
@@ -1367,15 +1426,22 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
         isLoading = true
         viewModelScope.launch {
             try {
-                // Update booking with new schedule
+                // Prepare update data
+                val updateData = mutableMapOf<String, @JvmSuppressWildcards Any>(
+                    "booking_code" to booking.bookingCode,
+                    "user_id" to userId,
+                    "is_paid" to 1,
+                    "departure_date" to newDate,
+                    "departure_time" to newSchedule.departureTime,
+                    "arrival_time" to newSchedule.arrivalTime
+                )
+                
+                // Note: We're temporarily removing reschedule_fee because the database 
+                // column might be missing, causing the entire update to fail.
+                // updateData["reschedule_fee"] = rescheduleFee
+
                 val response = withContext(Dispatchers.IO) {
-                    api.updateBookingStatus(mapOf(
-                        "booking_code" to booking.bookingCode,
-                        "departure_date" to newDate,
-                        "departure_time" to newSchedule.departureTime,
-                        "arrival_time" to newSchedule.arrivalTime,
-                        "reschedule_fee" to rescheduleFee
-                    ))
+                    api.updateBookingStatus(updateData)
                 }
 
                 if (response.isSuccessful && response.body()?.status == "success") {
@@ -1401,11 +1467,13 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
                     }
                     onResult(true, message)
                 } else {
-                    onResult(false, response.body()?.message ?: "Failed to reschedule ticket")
+                    val errorMsg = response.body()?.message ?: "Server error ${response.code()}"
+                    Log.e("BookingViewModel", "Reschedule failed: $errorMsg")
+                    onResult(false, "Gagal Reschedule: $errorMsg")
                 }
             } catch (e: Exception) {
-                Log.e("BookingViewModel", "Reschedule error", e)
-                onResult(false, "Failed to connect to server: ${e.localizedMessage}")
+                Log.e("BookingViewModel", "Reschedule exception", e)
+                onResult(false, "Kesalahan Koneksi: ${e.localizedMessage}")
             } finally {
                 isLoading = false
             }
@@ -1538,47 +1606,22 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
         isLoading = true
         viewModelScope.launch {
             try {
-                val infantPassenger = PassengerRequest(
-                    name = infantName.trim(),
-                    identityNo = infantIdentityNo.trim(),
-                    gender = "Male", // Can be updated with actual selection
-                    dateOfBirth = infantDateOfBirth,
-                    passengerType = "Infant",
-                    discountType = "infant",
-                    country = "Indonesia",
-                    documentType = "Birth Certificate",
-                    expiryDate = "",
-                    whatsapp = userPhone,
-                    email = userEmail,
-                    isSaved = false,
-                    userId = userId,
-                    seatNumber = null // Infants don't get seats
+                val requestBody = mapOf(
+                    "booking_code" to booking.bookingCode,
+                    "name" to infantName.trim(),
+                    "identity_no" to infantIdentityNo.trim(),
+                    "date_of_birth" to infantDateOfBirth
                 )
 
                 val response = withContext(Dispatchers.IO) {
-                    api.addPassenger(infantPassenger)
+                    api.addInfantToBooking(requestBody)
                 }
 
                 if (response.isSuccessful && response.body()?.status == "success") {
-                    // Add to local list
-                    val infant = Passenger(
-                        id = response.body()?.data?.get("id")?.toString() ?: "",
-                        name = infantName.trim(),
-                        identityNo = infantIdentityNo.trim(),
-                        gender = "Male",
-                        dateOfBirth = infantDateOfBirth,
-                        passengerType = "Infant",
-                        discountType = "infant",
-                        country = "Indonesia",
-                        documentType = "Birth Certificate",
-                        expiryDate = "",
-                        whatsapp = userPhone,
-                        email = userEmail,
-                        isSaved = false
-                    )
-                    infantPassengers.add(infant)
+                    // Update local state by reloading the ticket
+                    loadTicketByCode(booking.bookingCode)
                     
-                    onResult(true, "Infant berhasil ditambahkan (gratis)")
+                    onResult(true, "Infant berhasil ditambahkan ke tiket ini")
                 } else {
                     onResult(false, response.body()?.message ?: "Gagal menambahkan infant")
                 }

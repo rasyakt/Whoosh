@@ -32,7 +32,7 @@ interface ApiService {
 
     @POST("booking/update_status.php")
     suspend fun updateBookingStatus(
-        @Body request: Map<String, Any>
+        @Body request: Map<String, @JvmSuppressWildcards Any>
     ): Response<ApiResponse<Nothing>>
 
     // Non-generic version — avoids Gson type erasure
@@ -45,6 +45,9 @@ interface ApiService {
 
     @GET("booking/get_ticket_by_code.php")
     suspend fun getTicketByCode(@Query("booking_code") code: String): Response<ApiResponse<BookingResponse>>
+
+    @POST("booking/add_infant.php")
+    suspend fun addInfantToBooking(@Body request: Map<String, @JvmSuppressWildcards Any>): Response<ApiResponse<Nothing>>
 
     // ── STATION ──────────────────────────────────────────────────────────────
 

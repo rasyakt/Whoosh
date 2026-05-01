@@ -80,6 +80,10 @@ class UserPreferences(context: Context) {
         return prefs.getStringSet(KEY_PAID_TICKETS, emptySet()) ?: emptySet()
     }
 
+    fun isPaidTicket(bookingCode: String): Boolean {
+        return getPaidTickets().contains(bookingCode)
+    }
+
     fun removePaidTicket(bookingCode: String) {
         val paidTickets = getPaidTickets().toMutableSet()
         paidTickets.remove(bookingCode)
@@ -101,6 +105,10 @@ class UserPreferences(context: Context) {
 
     fun getCancelledTickets(): Set<String> {
         return prefs.getStringSet(KEY_CANCELLED_TICKETS, emptySet()) ?: emptySet()
+    }
+
+    fun isCancelledTicket(bookingCode: String): Boolean {
+        return getCancelledTickets().contains(bookingCode)
     }
 
     fun removeCancelledTicket(bookingCode: String) {

@@ -315,33 +315,10 @@ fun SelectCoachScreen(
             // Action Buttons
             Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                 WhooshButton(
-                    text = "Lanjut ke Kursi",
+                    text = "Lanjutkan",
                     onClick = onCoachSelected,
                     enabled = viewModel.selectedCoachClass != null && selectedPassengers.isNotEmpty()
                 )
-                
-                Spacer(modifier = Modifier.height(12.dp))
-                
-                Button(
-                    onClick = { },
-                    enabled = false,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFF5F5F5),
-                        disabledContainerColor = Color(0xFFF5F5F5)
-                    ),
-                    shape = RoundedCornerShape(12.dp),
-                    border = BorderStroke(1.dp, Color(0xFFE8E8E8))
-                ) {
-                    Text(
-                        text = "Lanjutkan",
-                        color = Color(0xFFAAAAAA),
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 14.sp
-                    )
-                }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
