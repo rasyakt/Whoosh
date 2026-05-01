@@ -68,7 +68,8 @@ fun ETicketScreen(
     onBackToDashboard: () -> Unit,
     onReschedule: () -> Unit = {},
     onRefund: () -> Unit = {},
-    onAddInfant: () -> Unit = {}
+    onAddInfant: () -> Unit = {},
+    showQrOnEntry: Boolean = false
 ) {
     val booking = viewModel.bookingData
     val context = LocalContext.current
@@ -76,6 +77,15 @@ fun ETicketScreen(
     var showRescheduleDialog by remember { mutableStateOf(false) }
     var showRefundDialog by remember { mutableStateOf(false) }
     var showAddInfantDialog by remember { mutableStateOf(false) }
+    
+    // Auto-show QR dialog when entering from deep link
+    LaunchedEffect(showQrOnEntry, booking) {
+        if (showQrOnEntry && booking != null) {
+            android.util.Log.d("ETicketScreen", "Auto-showing QR dialog from deep link")
+            kotlinx.coroutines.delay(300) // Small delay to ensure UI is ready
+            showQrDialog = true
+        }
+    }
     
     // Reschedule state
     var rescheduleDate by remember { mutableStateOf("") }
