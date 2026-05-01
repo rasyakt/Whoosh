@@ -20,7 +20,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.QrCode2
@@ -34,6 +34,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
@@ -222,8 +223,12 @@ fun ETicketScreen(
                             modifier = Modifier.weight(0.5f),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            Text("G1063", fontSize = 13.sp, color = Color.Gray)
-                            Icon(Icons.Default.ArrowForward, contentDescription = null, tint = Color.LightGray, modifier = Modifier.size(20.dp))
+                            Text(
+                                text = "G${1100 + (booking.bookingCode.hashCode() % 100).let { if (it < 0) -it else it }}", 
+                                fontSize = 13.sp, 
+                                color = Color.Gray
+                            )
+                            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = Color.LightGray, modifier = Modifier.size(20.dp))
                         }
                         
                         Column(
@@ -405,164 +410,163 @@ fun ETicketScreen(
     }
 
     // QR CODE DIALOG
-    if (showQrDialog) {
+    if (showQrDialog && booking != null) {
         androidx.compose.ui.window.Dialog(onDismissRequest = { showQrDialog = false }) {
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp),
-                shape = RoundedCornerShape(20.dp),
-                color = Color.White
+                    .padding(horizontal = 24.dp),
+                shape = RoundedCornerShape(24.dp),
+                color = Color.White,
+                shadowElevation = 8.dp
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
+                    modifier = Modifier.padding(24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // Dialog Header
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
+                    // Dialog Header with Logo & Close
+                    Box(modifier = Modifier.fillMaxWidth()) {
                         Image(
                             painter = painterResource(id = R.drawable.logo_whoosh),
                             contentDescription = null,
-                            modifier = Modifier.height(24.dp)
+                            modifier = Modifier.height(20.dp).align(Alignment.CenterStart)
                         )
                         Text(
                             "QR Code", 
                             fontSize = 18.sp, 
                             fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(start = 8.dp)
+                            modifier = Modifier.align(Alignment.Center)
                         )
-                        IconButton(onClick = { showQrDialog = false }, modifier = Modifier.size(28.dp)) {
-                            Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.LightGray)
+                        IconButton(
+                            onClick = { showQrDialog = false }, 
+                            modifier = Modifier.size(24.dp).align(Alignment.CenterEnd)
+                        ) {
+                            Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.Gray)
                         }
                     }
                     
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(20.dp))
                     
-                    // Code String
-                    Text(
-                        "62001Xz086202604199253096", 
-                        fontSize = 14.sp, 
-                        color = Color.Gray,
-                        textAlign = TextAlign.Center
-                    )
-                    
-                    Spacer(modifier = Modifier.height(12.dp))
-                    
-                    // QR Code Image
-                    if (qrBitmap != null) {
-                        Box(
-                            modifier = Modifier
-                                .size(240.dp)
-                                .padding(8.dp),
-                            contentAlignment = Alignment.Center
+                    // QR Code Card
+                    Surface(
+                        color = Color.White,
+                        shape = RoundedCornerShape(16.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFEEEEEE)),
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.padding(16.dp)
                         ) {
-                            Image(
-                                bitmap = qrBitmap,
-                                contentDescription = "QR Code",
-                                modifier = Modifier.fillMaxSize()
+                            // QR Bitmap
+                            if (qrBitmap != null) {
+                                Image(
+                                    bitmap = qrBitmap,
+                                    contentDescription = "QR Code",
+                                    modifier = Modifier.size(200.dp)
+                                )
+                            }
+                            
+                            Spacer(modifier = Modifier.height(8.dp))
+                            
+                            // Dynamic Booking Code / Hash
+                            Text(
+                                "${booking.bookingCode}", 
+                                fontSize = 12.sp, 
+                                color = Color.Gray,
+                                letterSpacing = 1.sp,
+                                fontWeight = FontWeight.Medium
                             )
                         }
                     }
                     
-                    // Refresh Link
+                    // Refresh Status
                     Row(
                         modifier = Modifier
+                            .clip(RoundedCornerShape(20.dp))
                             .clickable { /* Refresh logic */ }
-                            .padding(vertical = 4.dp),
+                            .padding(horizontal = 12.dp, vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Click to Refresh Status", color = Color(0xFF03A9F4), fontSize = 13.sp)
+                        Text("Click to Refresh Status", color = Color(0xFF0288D1), fontSize = 12.sp, fontWeight = FontWeight.Medium)
                         Spacer(modifier = Modifier.width(6.dp))
-                        Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(14.dp), tint = Color(0xFF03A9F4))
+                        Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(14.dp), tint = Color(0xFF0288D1))
                     }
                     
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(24.dp))
                     
-                    // Trip Summary (Route)
+                    // Route Visual Section
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            booking.originStation, 
-                            fontSize = 15.sp, 
-                            fontWeight = FontWeight.Bold,
-                            color = Color.Black
-                        )
+                        // Origin Station
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = booking.originStation, 
+                                fontSize = 14.sp, 
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1
+                            )
+                        }
                         
-                        Spacer(modifier = Modifier.width(10.dp))
-                        
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("G1063", fontSize = 11.sp, color = WhooshRed, fontWeight = FontWeight.Bold)
+                        // Middle Section (Train Code & Arrow)
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.padding(horizontal = 12.dp) // Auto-width based on content
+                        ) {
+                            Text(
+                                text = "G${1100 + (booking.bookingCode.hashCode() % 100).let { if (it < 0) -it else it }}", 
+                                fontSize = 10.sp, 
+                                color = WhooshRed, 
+                                fontWeight = FontWeight.ExtraBold,
+                                softWrap = false
+                            )
                             Icon(
-                                Icons.Default.ArrowForward, 
+                                Icons.AutoMirrored.Filled.ArrowForward, 
                                 contentDescription = null, 
-                                modifier = Modifier.size(16.dp), 
+                                modifier = Modifier.size(14.dp), 
                                 tint = Color.LightGray
                             )
                         }
                         
-                        Spacer(modifier = Modifier.width(10.dp))
-                        
-                        Text(
-                            booking.destinationStation, 
-                            fontSize = 15.sp, 
-                            fontWeight = FontWeight.Bold,
-                            color = Color.Black
-                        )
+                        // Destination Station
+                        Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.End) {
+                            Text(
+                                text = booking.destinationStation, 
+                                fontSize = 14.sp, 
+                                fontWeight = FontWeight.Bold,
+                                textAlign = TextAlign.End,
+                                maxLines = 1
+                            )
+                        }
                     }
                     
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(20.dp))
+                    HorizontalDivider(color = Color(0xFFF5F5F5))
+                    Spacer(modifier = Modifier.height(20.dp))
                     
-                    // Details List
+                    // Detailed Information Grid
                     Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 8.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        // Departure Time
-                        DetailItemRow("Departure Time") {
-                            Text(
-                                text = "${booking.departureTime} ${booking.departureDate}",
-                                fontSize = 14.sp,
-                                color = WhooshRed,
-                                fontWeight = FontWeight.Bold
-                            )
+                        // Time Info
+                        Row(modifier = Modifier.fillMaxWidth()) {
+                            DetailColumn(label = "Departure Time", value = "${booking.departureTime}, ${booking.departureDate}", valueColor = WhooshRed, modifier = Modifier.weight(1f))
                         }
                         
-                        // Seat Detail
-                        DetailItemRow("Seat") {
-                            Row {
-                                Text("Coach ", fontSize = 14.sp, color = Color.Black)
-                                Text(booking.selectedCarriage.toString(), fontSize = 14.sp, color = Color.Black, fontWeight = FontWeight.Bold)
-                                Text(" | ${booking.coachClass.displayName}", fontSize = 14.sp, color = Color.Black)
-                            }
+                        // Seat & Class Info
+                        Row(modifier = Modifier.fillMaxWidth()) {
+                            DetailColumn(label = "Seat Info", value = "Coach ${booking.selectedCarriage} | ${booking.selectedSeats.firstOrNull() ?: "-"}", modifier = Modifier.weight(1f))
+                            DetailColumn(label = "Class", value = booking.coachClass.displayName, modifier = Modifier.weight(1f))
                         }
                         
-                        // Class/Seat Code
-                        DetailItemRow(null) {
-                            Text(
-                                text = "Class ${booking.selectedSeats.firstOrNull() ?: "04A"}",
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.Black
-                            )
-                        }
-                        
-                        // Name
-                        DetailItemRow("Name") {
-                            Text(booking.userName, fontSize = 14.sp, color = Color.Black)
-                        }
-                        
-                        // Identity
-                        DetailItemRow("Identity No.") {
-                            Text("3206****03", fontSize = 14.sp, color = Color.Black)
+                        // Passenger Info
+                        Row(modifier = Modifier.fillMaxWidth()) {
+                            DetailColumn(label = "Name", value = booking.userName, modifier = Modifier.weight(1f))
+                            val identityMasked = "3206****" + (booking.bookingCode.hashCode().let { if (it < 0) -it else it } % 100).toString().padStart(2, '0')
+                            DetailColumn(label = "Identity No.", value = identityMasked, modifier = Modifier.weight(1f))
                         }
                     }
                     
@@ -1086,5 +1090,28 @@ private fun DetailItemRow(label: String?, content: @Composable () -> Unit) {
             Spacer(modifier = Modifier.width(0.dp)) 
         }
         content()
+    }
+}
+@Composable
+private fun DetailColumn(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier,
+    valueColor: Color = Color.Black
+) {
+    Column(modifier = modifier) {
+        Text(
+            text = label,
+            fontSize = 11.sp,
+            color = Color.Gray,
+            fontWeight = FontWeight.Normal
+        )
+        Text(
+            text = value,
+            fontSize = 14.sp,
+            color = valueColor,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1
+        )
     }
 }
