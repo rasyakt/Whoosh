@@ -121,28 +121,33 @@ fun SplashScreen(
             Text(
                 text = "TICKET",
                 style = MaterialTheme.typography.displaySmall.copy(
-                    fontWeight = FontWeight.ExtraBold,
-                    letterSpacing = 12.sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 14.sp,
                     shadow = Shadow(
-                        color = Color.Black.copy(alpha = 0.25f),
-                        offset = Offset(0f, 4f),
-                        blurRadius = 10f
+                        color = Color.Black.copy(alpha = 0.3f),
+                        offset = Offset(0f, 8f),
+                        blurRadius = 15f
+                    ),
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            WhooshWhite,
+                            WhooshWhite.copy(alpha = 0.7f)
+                        )
                     )
                 ),
-                color = WhooshWhite,
                 modifier = Modifier.alpha(textAlpha.value)
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             // Professional Footer/Company Name
             Text(
                 text = "KERETA CEPAT INDONESIA",
                 style = MaterialTheme.typography.labelLarge.copy(
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 5.sp
+                    fontWeight = FontWeight.SemiBold,
+                    letterSpacing = 6.sp
                 ),
-                color = WhooshWhite.copy(alpha = 0.8f),
+                color = WhooshWhite.copy(alpha = 0.5f),
                 modifier = Modifier.alpha(textAlpha.value)
             )
         }

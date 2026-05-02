@@ -35,250 +35,378 @@ object EmailSender {
         bookingData: BookingData
     ): Boolean = withContext(Dispatchers.IO) {
         try {
-            val props = Properties().apply {
-                put("mail.smtp.auth", "true")
-                put("mail.smtp.starttls.enable", "true")
-                put("mail.smtp.host", SMTP_HOST)
-                put("mail.smtp.port", SMTP_PORT)
-                put("mail.smtp.ssl.trust", SMTP_HOST)
-            }
-
-            val session = Session.getInstance(props, object : Authenticator() {
-                override fun getPasswordAuthentication(): PasswordAuthentication {
-                    return PasswordAuthentication(SENDER_EMAIL, SENDER_PASSWORD)
-                }
-            })
+            val props = createProperties()
+            val session = createSession(props)
 
             val message = MimeMessage(session).apply {
                 setFrom(InternetAddress(SENDER_EMAIL, "KCIC Ticketing System"))
-                setRecipients(
-                    Message.RecipientType.TO,
-                    InternetAddress.parse(recipientEmail)
-                )
-                subject = "Buy Ticket"
-                setContent(buildHtmlBody(bookingData), "text/html; charset=utf-8")
+                setRecipients(Message.RecipientType.TO, InternetAddress.parse(recipientEmail))
+                subject = "E-Ticket Purchase - Whoosh"
+                setContent(buildETicketHtml(bookingData), "text/html; charset=utf-8")
             }
 
             Transport.send(message)
-            Log.i(TAG, "E-ticket berhasil dikirim ke $recipientEmail")
+            Log.i(TAG, "E-ticket successfully sent to $recipientEmail")
             true
         } catch (e: Exception) {
-            Log.e(TAG, "Gagal mengirim e-ticket: ${e.message}", e)
+            Log.e(TAG, "Failed to send e-ticket: ${e.message}", e)
             false
         }
     }
 
     /**
+     * Mengirim notifikasi refund ke email user.
+     */
+    suspend fun sendRefundNotification(
+        recipientEmail: String,
+        bookingData: BookingData,
+        refundAmount: Int
+    ): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val props = createProperties()
+            val session = createSession(props)
+
+            val message = MimeMessage(session).apply {
+                setFrom(InternetAddress(SENDER_EMAIL, "KCIC Ticketing System"))
+                setRecipients(Message.RecipientType.TO, InternetAddress.parse(recipientEmail))
+                subject = "Ticket Refund Confirmation - Whoosh"
+                setContent(buildRefundHtml(bookingData, refundAmount), "text/html; charset=utf-8")
+            }
+
+            Transport.send(message)
+            Log.i(TAG, "Refund notification sent to $recipientEmail")
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to send refund notification: ${e.message}", e)
+            false
+        }
+    }
+
+    /**
+     * Mengirim notifikasi reschedule ke email user.
+     */
+    suspend fun sendRescheduleNotification(
+        recipientEmail: String,
+        bookingData: BookingData,
+        newDate: String,
+        newTime: String,
+        newArrivalTime: String,
+        rescheduleFee: Int
+    ): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val props = createProperties()
+            val session = createSession(props)
+
+            val message = MimeMessage(session).apply {
+                setFrom(InternetAddress(SENDER_EMAIL, "KCIC Ticketing System"))
+                setRecipients(Message.RecipientType.TO, InternetAddress.parse(recipientEmail))
+                subject = "Ticket Reschedule Confirmation - Whoosh"
+                setContent(buildRescheduleHtml(bookingData, newDate, newTime, newArrivalTime, rescheduleFee), "text/html; charset=utf-8")
+            }
+
+            Transport.send(message)
+            Log.i(TAG, "Reschedule notification sent to $recipientEmail")
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to send reschedule notification: ${e.message}", e)
+            false
+        }
+    }
+
+    private fun createProperties() = Properties().apply {
+        put("mail.smtp.auth", "true")
+        put("mail.smtp.starttls.enable", "true")
+        put("mail.smtp.host", SMTP_HOST)
+        put("mail.smtp.port", SMTP_PORT)
+        put("mail.smtp.ssl.trust", SMTP_HOST)
+    }
+
+    private fun createSession(props: Properties) = Session.getInstance(props, object : Authenticator() {
+        override fun getPasswordAuthentication(): PasswordAuthentication {
+            return PasswordAuthentication(SENDER_EMAIL, SENDER_PASSWORD)
+        }
+    })
+
+    /**
      * Membuat HTML template e-ticket yang profesional sesuai format KCIC.
      */
-    private fun buildHtmlBody(data: BookingData): String {
+    private fun buildETicketHtml(data: BookingData): String {
         val formattedPrice = TicketUtils.formatRupiah(data.totalPrice)
-        val formattedPricePerTicket = TicketUtils.formatRupiah(data.pricePerTicket)
         val seats = data.selectedSeats.sorted().joinToString(", ").ifEmpty { "-" }
-        
-        // Format tanggal dan waktu pembayaran
-        val currentDate = java.text.SimpleDateFormat("dd MMM yyyy, HH.mm", java.util.Locale("id", "ID"))
-            .format(java.util.Date())
+        val currentDate = java.text.SimpleDateFormat("dd MMM yyyy, HH.mm", java.util.Locale("id", "ID")).format(java.util.Date())
 
-        return """
-        <!DOCTYPE html>
-        <html lang="id">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Buy Ticket - Whoosh</title>
-        </head>
-        <body style="margin:0;padding:20px;background-color:#f5f5f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
-
-            <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;background:#ffffff;">
-
-                <!-- LOGO HEADER -->
-                <tr>
-                    <td style="padding:40px 40px 30px;">
-                        <svg width="120" height="40" viewBox="0 0 120 40" xmlns="http://www.w3.org/2000/svg">
-                            <text x="0" y="30" font-family="Arial, sans-serif" font-size="28" font-weight="bold" fill="#D32F2F" letter-spacing="2">whoosh</text>
-                        </svg>
-                    </td>
-                </tr>
-
-                <!-- GREETING -->
-                <tr>
-                    <td style="padding:0 40px 20px;">
-                        <p style="margin:0;font-size:16px;color:#333;line-height:1.5;">
-                            Hi, <strong>${data.userName}</strong>
-                        </p>
-                    </td>
-                </tr>
-
-                <!-- SUCCESS MESSAGE -->
-                <tr>
-                    <td style="padding:0 40px 30px;">
-                        <h2 style="margin:0;font-size:24px;color:#333;font-weight:600;line-height:1.4;">
-                            Your High Speed Train ticket order has been successfully paid
-                        </h2>
-                    </td>
-                </tr>
-
-                <!-- QR CODE INSTRUCTION -->
+        return buildBaseHtml(
+            title = "Ticket Purchase Success",
+            userName = data.userName,
+            mainMessage = "Your High Speed Train ticket order has been successfully paid",
+            content = """
                 <tr>
                     <td style="padding:0 40px 20px;">
                         <p style="margin:0;font-size:14px;color:#666;line-height:1.6;">
-                            To get a QR digital ticket (QR e-ticket) for Check-In no later than 30 minutes before the scheduled departure of the High Speed Train, at the following link:
+                            To get your QR e-ticket for Check-In, please access the following link:
                         </p>
                     </td>
                 </tr>
-
-                <!-- QR CODE LINK -->
                 <tr>
                     <td style="padding:0 40px 30px;">
                         <a href="https://whoosh.id/ticket/${data.bookingCode}" 
-                           style="display:inline-block;color:#1976D2;font-size:14px;text-decoration:underline;">
-                           Please click here for QR code
+                           style="display:inline-block;background:#D32F2F;color:#FFFFFF;padding:12px 24px;border-radius:6px;font-size:14px;text-decoration:none;font-weight:bold;">
+                           GET QR CODE
                         </a>
                     </td>
                 </tr>
-
-                <!-- ORDER DETAILS INTRO -->
                 <tr>
                     <td style="padding:0 40px 20px;">
-                        <p style="margin:0;font-size:14px;color:#333;line-height:1.6;">
-                            Following are the details order for your high speed train ticket:
-                        </p>
+                        <h3 style="margin:0;font-size:16px;color:#333;font-weight:600;border-bottom:1px solid #EEE;padding-bottom:10px;">ORDER DETAILS</h3>
                     </td>
                 </tr>
-
-                <!-- PAYMENT INFO BOX -->
                 <tr>
                     <td style="padding:0 40px 30px;">
                         <table width="100%" cellpadding="0" cellspacing="0" style="background:#F5F5F5;border-radius:8px;padding:20px;">
                             <tr>
                                 <td>
-                                    <p style="margin:0 0 8px 0;font-size:14px;color:#666;">
-                                        <strong>Total Payment:</strong> $formattedPrice
-                                    </p>
-                                    <p style="margin:0 0 8px 0;font-size:14px;color:#666;">
-                                        <strong>Booking Channel:</strong> APP
-                                    </p>
-                                    <p style="margin:0 0 8px 0;font-size:14px;color:#666;">
-                                        <strong>Payment Channel:</strong> Virtual Account
-                                    </p>
-                                    <p style="margin:0;font-size:14px;color:#666;">
-                                        <strong>Payment Date and Time:</strong> $currentDate
-                                    </p>
+                                    <p style="margin:0 0 8px 0;font-size:14px;color:#666;"><strong>Total Payment:</strong> $formattedPrice</p>
+                                    <p style="margin:0 0 8px 0;font-size:14px;color:#666;"><strong>Booking Channel:</strong> WHOOSH APP</p>
+                                    <p style="margin:0 0 8px 0;font-size:14px;color:#666;"><strong>Payment Channel:</strong> Virtual Account</p>
+                                    <p style="margin:0;font-size:14px;color:#666;"><strong>Payment Date:</strong> $currentDate</p>
                                 </td>
                             </tr>
                         </table>
                     </td>
                 </tr>
-
-                <!-- PAYMENT DETAIL HEADER -->
                 <tr>
                     <td style="padding:0 40px 20px;">
-                        <h3 style="margin:0;font-size:18px;color:#333;font-weight:600;">
-                            PAYMENT DETAIL
-                        </h3>
-                        <div style="border-bottom:2px dashed #E0E0E0;margin-top:15px;"></div>
+                        <h3 style="margin:0;font-size:16px;color:#333;font-weight:600;border-bottom:1px solid #EEE;padding-bottom:10px;">TRAVEL INFORMATION</h3>
                     </td>
                 </tr>
-
-                <!-- TRAIN INFO -->
-                <tr>
-                    <td style="padding:0 40px 20px;">
-                        <p style="margin:0 0 10px 0;font-size:16px;color:#333;font-weight:600;">
-                            KCIC ( G1063 )
-                        </p>
-                    </td>
-                </tr>
-
-                <!-- ROUTE AND TIME -->
-                <tr>
-                    <td style="padding:0 40px 10px;">
-                        <table width="100%" cellpadding="0" cellspacing="0">
-                            <tr>
-                                <td style="font-size:14px;color:#666;">
-                                    ${data.originStation} → ${data.destinationStation}
-                                </td>
-                            </tr>
-                            <tr>
-                                <td style="padding-top:5px;">
-                                    <span style="font-size:18px;color:#D32F2F;font-weight:600;">${data.departureTime}</span>
-                                    <span style="font-size:14px;color:#999;margin:0 10px;">→</span>
-                                    <span style="font-size:18px;color:#D32F2F;font-weight:600;">${data.arrivalTime}</span>
-                                </td>
-                            </tr>
-                        </table>
-                    </td>
-                </tr>
-
-                <!-- BOOKING ORDER -->
-                <tr>
-                    <td style="padding:15px 40px 10px;">
-                        <p style="margin:0;font-size:13px;color:#666;">
-                            PT Kereta Cepat Indonesia China Booking order: <strong>${data.bookingCode}</strong>
-                        </p>
-                    </td>
-                </tr>
-
-                <!-- LOGO SMALL -->
-                <tr>
-                    <td style="padding:0 40px 15px;text-align:right;">
-                        <svg width="80" height="26" viewBox="0 0 80 26" xmlns="http://www.w3.org/2000/svg">
-                            <text x="0" y="20" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="#D32F2F" letter-spacing="1.5">whoosh</text>
-                        </svg>
-                    </td>
-                </tr>
-
-                <!-- PASSENGER AND CLASS INFO -->
-                <tr>
-                    <td style="padding:0 40px 10px;">
-                        <p style="margin:0;font-size:14px;color:#333;line-height:1.6;">
-                            <strong>${data.userName}</strong> | ${data.coachClass.displayName} ${seats} <strong>$formattedPrice</strong>
-                        </p>
-                        <p style="margin:5px 0 0 0;font-size:13px;color:#666;">
-                            Tiket type: Adult ticket
-                        </p>
-                    </td>
-                </tr>
-
-                <!-- DIVIDER -->
-                <tr>
-                    <td style="padding:15px 40px;">
-                        <div style="border-bottom:1px dashed #E0E0E0;"></div>
-                    </td>
-                </tr>
-
-                <!-- TOTAL PAYMENT -->
-                <tr>
-                    <td style="padding:0 40px 20px;">
-                        <p style="margin:0;font-size:16px;color:#333;">
-                            <strong>Total Payment: $formattedPrice</strong>
-                        </p>
-                    </td>
-                </tr>
-
-                <!-- VAT INFO -->
                 <tr>
                     <td style="padding:0 40px 30px;">
-                        <p style="margin:0 0 5px 0;font-size:12px;color:#999;">
-                            VAT not included
-                        </p>
-                        <p style="margin:0;font-size:12px;color:#999;">
-                            VAT fees are waived based on article 16b of the Tax Harmonization Law
+                        <table width="100%" cellpadding="0" cellspacing="0">
+                            <tr>
+                                <td style="padding-bottom:10px;">
+                                    <p style="margin:0;font-size:15px;color:#333;font-weight:bold;">KCIC High Speed Train</p>
+                                    <p style="margin:5px 0 0;font-size:14px;color:#666;">${data.originStation} → ${data.destinationStation}</p>
+                                    <p style="margin:5px 0 0;font-size:16px;color:#D32F2F;font-weight:bold;">${data.departureTime} — ${data.arrivalTime}</p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding:15px; background:#F9F9F9; border-radius:6px; border-left:4px solid #D32F2F;">
+                                    <p style="margin:0;font-size:13px;color:#333;"><strong>Class:</strong> ${data.coachClass.displayName}</p>
+                                    <p style="margin:5px 0 0;font-size:13px;color:#333;"><strong>Seats:</strong> $seats</p>
+                                    <p style="margin:5px 0 0;font-size:13px;color:#333;"><strong>Booking Code:</strong> ${data.bookingCode}</p>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding:0 40px 30px;">
+                        <p style="margin:0;font-size:11px;color:#999;line-height:1.4;">
+                            * VAT fees are waived based on article 16b of the Tax Harmonization Law.<br>
+                            * Please arrive at the station at least 30 minutes before departure.
                         </p>
                     </td>
                 </tr>
+            """.trimIndent()
+        )
+    }
 
+    /**
+     * Membuat HTML template untuk notifikasi refund.
+     */
+    private fun buildRefundHtml(data: BookingData, refundAmount: Int): String {
+        val formattedAmount = TicketUtils.formatRupiah(refundAmount)
+        val formattedOriginalPrice = TicketUtils.formatRupiah(data.totalPrice)
+        val seats = data.selectedSeats.sorted().joinToString(", ").ifEmpty { "-" }
+        
+        return buildBaseHtml(
+            title = "Ticket Refund Confirmation",
+            userName = data.userName,
+            mainMessage = "Your ticket refund request has been processed successfully",
+            content = """
+                <tr>
+                    <td style="padding:0 40px 20px;">
+                        <p style="margin:0;font-size:14px;color:#333;line-height:1.6;">
+                            We would like to inform you that your refund for <strong>${data.originStation} → ${data.destinationStation}</strong> has been approved. 
+                        </p>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding:0 40px 20px;">
+                        <h3 style="margin:0;font-size:16px;color:#333;font-weight:600;border-bottom:1px solid #EEE;padding-bottom:10px;">REFUND SUMMARY</h3>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding:0 40px 30px;">
+                        <table width="100%" cellpadding="0" cellspacing="0" style="background:#FFF3F3;border-radius:8px;padding:20px;border:1px solid #FFCDD2;">
+                            <tr>
+                                <td>
+                                    <p style="margin:0 0 8px 0;font-size:14px;color:#333;"><strong>Booking Code:</strong> ${data.bookingCode}</p>
+                                    <p style="margin:0 0 8px 0;font-size:14px;color:#333;"><strong>Original Price:</strong> $formattedOriginalPrice</p>
+                                    <p style="margin:0 0 8px 0;font-size:14px;color:#D32F2F;font-weight:bold;"><strong>Refund Amount:</strong> $formattedAmount</p>
+                                    <p style="margin:0;font-size:12px;color:#666;">*The amount will be credited to your account within 7-14 business days.</p>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding:0 40px 20px;">
+                        <h3 style="margin:0;font-size:16px;color:#333;font-weight:600;border-bottom:1px solid #EEE;padding-bottom:10px;">ORIGINAL TICKET DETAILS</h3>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding:0 40px 30px;">
+                        <table width="100%" cellpadding="0" cellspacing="0" style="background:#F9F9F9;border-radius:8px;padding:20px;">
+                            <tr>
+                                <td>
+                                    <p style="margin:0 0 8px 0;font-size:13px;color:#666;"><strong>Route:</strong> ${data.originStation} → ${data.destinationStation}</p>
+                                    <p style="margin:0 0 8px 0;font-size:13px;color:#666;"><strong>Departure:</strong> ${data.departureDate} | ${data.departureTime}</p>
+                                    <p style="margin:0 0 8px 0;font-size:13px;color:#666;"><strong>Class:</strong> ${data.coachClass.displayName}</p>
+                                    <p style="margin:0;font-size:13px;color:#666;"><strong>Seats:</strong> $seats</p>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            """.trimIndent()
+        )
+    }
+
+    /**
+     * Membuat HTML template untuk notifikasi reschedule.
+     */
+    private fun buildRescheduleHtml(
+        data: BookingData, 
+        newDate: String, 
+        newTime: String,
+        newArrivalTime: String,
+        rescheduleFee: Int
+    ): String {
+        val formattedFee = TicketUtils.formatRupiah(rescheduleFee)
+        val seats = data.selectedSeats.sorted().joinToString(", ").ifEmpty { "-" }
+        
+        return buildBaseHtml(
+            title = "Ticket Reschedule Confirmation",
+            userName = data.userName,
+            mainMessage = "Your ticket has been rescheduled successfully",
+            content = """
+                <tr>
+                    <td style="padding:0 40px 20px;">
+                        <p style="margin:0;font-size:14px;color:#333;line-height:1.6;">
+                            Your booking <strong>${data.bookingCode}</strong> has been successfully updated. 
+                        </p>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding:0 40px 20px;">
+                        <h3 style="margin:0;font-size:16px;color:#333;font-weight:600;border-bottom:1px solid #1976D2;padding-bottom:10px;color:#1976D2;">NEW SCHEDULE</h3>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding:0 40px 30px;">
+                        <table width="100%" cellpadding="0" cellspacing="0" style="background:#E3F2FD;border-radius:8px;padding:20px;border:1px solid #BBDEFB;">
+                            <tr>
+                                <td>
+                                    <p style="margin:0 0 10px 0;font-size:14px;color:#333;"><strong>New Departure:</strong></p>
+                                    <p style="margin:0 0 5px 0;font-size:18px;color:#1976D2;font-weight:bold;">$newDate</p>
+                                    <p style="margin:0;font-size:18px;color:#D32F2F;font-weight:bold;">$newTime — $newArrivalTime</p>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding:0 40px 20px;">
+                        <h3 style="margin:0;font-size:16px;color:#333;font-weight:600;border-bottom:1px solid #EEE;padding-bottom:10px;">TRANSACTION DETAILS</h3>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding:0 40px 30px;">
+                        <table width="100%" cellpadding="0" cellspacing="0" style="background:#F9F9F9;border-radius:8px;padding:20px;">
+                            <tr>
+                                <td>
+                                    <p style="margin:0 0 8px 0;font-size:13px;color:#666;"><strong>Reschedule Fee:</strong> $formattedFee</p>
+                                    <p style="margin:0 0 8px 0;font-size:13px;color:#666;"><strong>Class:</strong> ${data.coachClass.displayName}</p>
+                                    <p style="margin:0;font-size:13px;color:#666;"><strong>Seats:</strong> $seats</p>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding:0 40px 20px;">
+                        <h3 style="margin:0;font-size:16px;color:#333;font-weight:600;border-bottom:1px solid #EEE;padding-bottom:10px;">PREVIOUS SCHEDULE</h3>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding:0 40px 30px;">
+                        <table width="100%" cellpadding="0" cellspacing="0" style="border:1px dashed #DDD;border-radius:8px;padding:15px;">
+                            <tr>
+                                <td>
+                                    <p style="margin:0 0 5px 0;font-size:13px;color:#999;"><strong>Original Route:</strong> ${data.originStation} → ${data.destinationStation}</p>
+                                    <p style="margin:0;font-size:13px;color:#999;"><strong>Original Departure:</strong> ${data.departureDate} | ${data.departureTime}</p>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding:0 40px 30px;">
+                        <p style="margin:0;font-size:13px;color:#666;line-height:1.6;">
+                            Please check your updated QR code in the Whoosh application.
+                        </p>
+                    </td>
+                </tr>
+            """.trimIndent()
+        )
+    }
+
+    /**
+     * Base HTML structure for all Whoosh emails.
+     */
+    private fun buildBaseHtml(title: String, userName: String, mainMessage: String, content: String): String {
+        return """
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>$title - Whoosh</title>
+        </head>
+        <body style="margin:0;padding:20px;background-color:#f5f5f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">
+            <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 10px rgba(0,0,0,0.05);">
+                <!-- HEADER -->
+                <tr>
+                    <td style="padding:40px 40px 20px; text-align:left;">
+                        <h1 style="margin:0;font-size:28px;color:#D32F2F;font-weight:bold;letter-spacing:2px;">whoosh</h1>
+                        <div style="height:2px; width:50px; background:#D32F2F; margin-top:10px;"></div>
+                    </td>
+                </tr>
+                <!-- GREETING -->
+                <tr>
+                    <td style="padding:20px 40px 10px;">
+                        <p style="margin:0;font-size:16px;color:#333;line-height:1.5;">Dear <strong>$userName</strong>,</p>
+                    </td>
+                </tr>
+                <!-- MAIN MESSAGE -->
+                <tr>
+                    <td style="padding:0 40px 20px;">
+                        <h2 style="margin:0;font-size:22px;color:#333;font-weight:600;line-height:1.4;">$mainMessage</h2>
+                    </td>
+                </tr>
+                $content
                 <!-- FOOTER -->
                 <tr>
-                    <td style="padding:30px 40px;background:#F9F9F9;border-top:1px solid #E0E0E0;">
+                    <td style="padding:30px 40px;background:#F9F9F9;border-top:1px solid #EEE;">
                         <p style="margin:0;font-size:12px;color:#999;line-height:1.6;">
-                            This email was generated automatically, please do not reply, if you have questions or need help please contact e-mail <a href="mailto:csrb@kcic.co.id" style="color:#1976D2;text-decoration:none;">csrb@kcic.co.id</a>
+                            This is an automated message, please do not reply. 
+                            For assistance, contact us at <a href="mailto:csrb@kcic.co.id" style="color:#1976D2;text-decoration:none;">csrb@kcic.co.id</a>
                         </p>
+                        <p style="margin:10px 0 0;font-size:12px;color:#BBB;">© ${java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)} PT Kereta Cepat Indonesia China</p>
                     </td>
                 </tr>
-
             </table>
-
         </body>
         </html>
         """.trimIndent()
