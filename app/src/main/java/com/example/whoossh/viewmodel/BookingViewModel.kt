@@ -16,6 +16,7 @@ import com.example.whoossh.model.BookingData
 import com.example.whoossh.model.CoachClass
 import com.example.whoossh.model.Passenger
 import com.example.whoossh.model.Schedule
+import com.example.whoossh.model.OrderStatus
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -85,6 +86,7 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
         private set
     var occupiedSeats = mutableStateListOf<String>()
         private set
+    private var occupiedSeatsJob: kotlinx.coroutines.Job? = null
 
     // Booking Result
     var bookingData by mutableStateOf<BookingData?>(null)
@@ -96,6 +98,14 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
     var historyTickets by mutableStateOf<List<BookingData>>(emptyList())
         private set
     var isLoadingTickets by mutableStateOf(false)
+        private set
+    
+    // Bank Account Info (Pre-filled from SharedPreferences)
+    var savedBankName by mutableStateOf(userPreferences.getBankName())
+        private set
+    var savedAccountNo by mutableStateOf(userPreferences.getAccountNo())
+        private set
+    var savedAccountHolder by mutableStateOf(userPreferences.getAccountHolder())
         private set
 
     // Timer State (Shared)
@@ -459,21 +469,22 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
     private fun applyTickets(tickets: List<BookingResponse>) {
         Log.d("BookingViewModel", "applyTickets: Processing ${tickets.size} tickets from server")
         
-        // Ambil cache booking codes yang sudah dibayar dari SharedPreferences
+        // Ambil cache booking codes dari SharedPreferences
         val paidTicketsCache = userPreferences.getPaidTickets()
-        Log.d("BookingViewModel", "applyTickets: Paid tickets cache: ${paidTicketsCache.joinToString()}")
-        
-        // Ambil cache booking codes yang sudah dibatalkan dari SharedPreferences
         val cancelledTicketsCache = userPreferences.getCancelledTickets()
-        Log.d("BookingViewModel", "applyTickets: Cancelled tickets cache: ${cancelledTicketsCache.joinToString()}")
+        val refundedTicketsCache = userPreferences.getRefundedTickets()
+        
+        Log.d("BookingViewModel", "applyTickets: Paid: ${paidTicketsCache.size}, Cancelled: ${cancelledTicketsCache.size}, Refunded: ${refundedTicketsCache.size}")
         
         val serverBookings = tickets.mapNotNull { ticket ->
             try {
                 val booking = ticket.toBookingData(userName)
                 
-                // PROTEKSI 1: Jika tiket ada di cache cancelled, SKIP (jangan tampilkan)
+                // PROTEKSI 1: Jika tiket ada di cache cancelled
                 if (cancelledTicketsCache.contains(booking.bookingCode)) {
-                    Log.w("BookingViewModel", "  ⚠️ SKIPPING ${booking.bookingCode}: cache says CANCELLED")
+                    // Jika ini adalah refund (pernah dibayar), JANGAN SKIP.
+                    // Jika ini adalah pembatalan biasa (unpaid), baru boleh di-skip jika diinginkan.
+                    // Tapi lebih aman tampilkan saja di riwayat.
                     
                     // Jika server sudah update ke cancelled, hapus dari cache
                     if (ticket.isCancelled == 1) {
@@ -481,20 +492,24 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
                         userPreferences.removeCancelledTicket(ticket.bookingCode)
                     }
                     
-                    return@mapNotNull null // Skip tiket ini
+                    // JANGAN RETURN NULL di sini jika ingin tetap muncul di riwayat
+                    // Kita biarkan mengalir ke finalBooking
                 }
                 
-                // PROTEKSI 2: Jika tiket ada di cache paid, PAKSA isPaid=true dan isCancelled=false
-                val finalBooking = if (paidTicketsCache.contains(booking.bookingCode)) {
-                    if (!booking.isPaid || booking.isCancelled) {
-                        Log.w("BookingViewModel", "  ⚠️ PROTECTING ${booking.bookingCode}: cache says PAID, forcing isPaid=true, isCancelled=false")
-                        booking.copy(isPaid = true, isCancelled = false)
-                    } else {
-                        booking
-                    }
-                } else {
-                    booking
-                }
+        val finalBooking = if (refundedTicketsCache.contains(booking.bookingCode)) {
+            // PAKSA status REFUNDED jika ada di cache refund
+            Log.w("BookingViewModel", "  ⚠️ PROTECTING ${booking.bookingCode}: cache says REFUNDED")
+            booking.copy(isPaid = true, isCancelled = true, status = OrderStatus.REFUNDED)
+        } else if (paidTicketsCache.contains(booking.bookingCode)) {
+            if (!booking.isPaid || booking.isCancelled) {
+                Log.w("BookingViewModel", "  ⚠️ PROTECTING ${booking.bookingCode}: cache says PAID, forcing isPaid=true, isCancelled=false")
+                booking.copy(isPaid = true, isCancelled = false, status = OrderStatus.PAID)
+            } else {
+                booking
+            }
+        } else {
+            booking
+        }
                 
                 Log.d("BookingViewModel", "  Server ticket: ${ticket.bookingCode} isPaid=${ticket.isPaid} isCancelled=${ticket.isCancelled} (raw) -> isPaid=${finalBooking.isPaid} isCancelled=${finalBooking.isCancelled} (final)")
                 
@@ -812,9 +827,9 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
 
     fun getAvailableCarriages(coachClass: CoachClass?): List<Int> {
         return when (coachClass) {
-            CoachClass.VIP -> listOf(1)
-            CoachClass.BISNIS -> listOf(8)
-            CoachClass.EKONOMI -> listOf(2, 3, 4, 5, 6, 7)
+            CoachClass.VIP -> listOf(1) // First Class
+            CoachClass.BISNIS -> listOf(2) // Business Class
+            CoachClass.EKONOMI -> listOf(3, 4, 5, 6, 7, 8) // Premium Economy
             null -> emptyList()
         }
     }
@@ -830,7 +845,13 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
         val carriage = selectedCarriage ?: 1
         val date = departureDate
         
-        viewModelScope.launch {
+        // Cancel previous job to prevent race conditions
+        occupiedSeatsJob?.cancel()
+        
+        // Clear current seats immediately so user doesn't see stale data from previous carriage
+        occupiedSeats.clear()
+
+        occupiedSeatsJob = viewModelScope.launch {
             try {
                 val response = withContext(Dispatchers.IO) {
                     api.getOccupiedSeats(
@@ -849,7 +870,9 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
                     Log.i("BookingViewModel", "Occupied seats loaded: ${seats.size} seats for Carriage $carriage")
                 }
             } catch (e: Exception) {
-                Log.e("BookingViewModel", "Error loading occupied seats: ${e.message}")
+                if (e !is kotlinx.coroutines.CancellationException) {
+                    Log.e("BookingViewModel", "Error loading occupied seats: ${e.message}")
+                }
             }
         }
     }
@@ -1603,12 +1626,17 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun calculateRefundAmount(originalPrice: Int): Int {
-        // 10% cancellation fee
-        val cancellationFee = (originalPrice * 0.10).toInt()
+        // 25% cancellation fee (Official KCIC Rule)
+        val cancellationFee = (originalPrice * 0.25).toInt()
         return originalPrice - cancellationFee
     }
 
-    fun refundTicket(booking: BookingData, onResult: (Boolean, String, Int) -> Unit) {
+    fun refundTicket(
+        booking: BookingData, 
+        bankName: String = "", 
+        accountNo: String = "", 
+        onResult: (Boolean, String, Int) -> Unit
+    ) {
         val (canRefund, errorMsg) = canRefund(booking)
         if (!canRefund) {
             onResult(false, errorMsg, 0)
@@ -1624,7 +1652,9 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
                     api.updateBookingStatus(mapOf(
                         "booking_code" to booking.bookingCode,
                         "is_cancelled" to 1,
-                        "refund_amount" to refundAmount
+                        "refund_amount" to refundAmount,
+                        "bank_name" to bankName,
+                        "account_no" to accountNo
                     ))
                 }
 
@@ -1632,6 +1662,16 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
                     // Update local booking data
                     val updatedBooking = booking.copy(isCancelled = true)
                     bookingData = updatedBooking
+                    
+                    // CLEAR FROM PAID CACHING (VERY IMPORTANT)
+                    // If we don't remove this, applyTickets will force isCancelled=false
+                    userPreferences.removePaidTicket(booking.bookingCode)
+                    
+                    // ADD TO REFUNDED CACHING (NEW MEMORY)
+                    userPreferences.saveRefundedTicket(booking.bookingCode)
+                    
+                    // ADD TO CANCELLED CACHING
+                    userPreferences.saveCancelledTicket(booking.bookingCode)
                     
                     // Remove from activeTickets, add to history
                     activeTickets = activeTickets.filter { it.bookingCode != booking.bookingCode }
@@ -1645,7 +1685,9 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
                             EmailSender.sendRefundNotification(
                                 recipientEmail = userEmail,
                                 bookingData = booking,
-                                refundAmount = refundAmount
+                                refundAmount = refundAmount,
+                                bankName = bankName,
+                                accountNo = accountNo
                             )
                         }
                     }
@@ -1853,6 +1895,20 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
 
     // ── RESET ────────────────────────────────────────────────────────────────
 
+    fun saveUserBankAccount(bankName: String, accountNo: String, accountHolder: String) {
+        userPreferences.saveBankAccount(bankName, accountNo, accountHolder)
+        savedBankName = bankName
+        savedAccountNo = accountNo
+        savedAccountHolder = accountHolder
+    }
+    
+    fun clearUserBankAccount() {
+        userPreferences.clearBankAccount()
+        savedBankName = ""
+        savedAccountNo = ""
+        savedAccountHolder = ""
+    }
+
     fun resetBooking() {
         originStation = ""
         destinationStation = ""
@@ -2031,7 +2087,15 @@ fun BookingResponse.toBookingData(fallbackName: String = ""): BookingData {
         bookingTimestamp = bookingTimestamp,
         isUsed = calculatedIsUsed,
         isPaid = isPaid == 1,
-        isCancelled = isCancelled == 1
+        isCancelled = isCancelled == 1,
+        refundAmount = refundAmount,
+        status = when {
+            (isCancelled == 1 && isPaid == 1) || (isCancelled == 1 && refundAmount > 0) -> OrderStatus.REFUNDED
+            isCancelled == 1 -> OrderStatus.CANCELLED
+            calculatedIsUsed -> OrderStatus.CHECKED
+            isPaid == 1 -> OrderStatus.PAID
+            else -> OrderStatus.UNPAID
+        }
     )
 }
 fun PassengerResponse.toDomainModel(): Passenger {

@@ -403,7 +403,7 @@ private fun TicketCard(
                         color = WhooshTextSecondary
                     )
                     Text(
-                        text = "${ticket.ticketCount} tiket • ${ticket.coachClass.displayName} • Grb ${ticket.selectedCarriage}",
+                        text = "${ticket.ticketCount} tiket • ${ticket.coachClass.displayName} • Gerbong ${ticket.selectedCarriage}",
                         fontSize = 11.sp,
                         color = Color.LightGray
                     )

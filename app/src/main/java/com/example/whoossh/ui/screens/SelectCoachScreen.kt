@@ -175,7 +175,7 @@ fun SelectCoachScreen(
                 ) {
                     if (availableClasses.contains(CoachClass.VIP)) {
                         CoachClassOption(
-                            title = "First",
+                            title = CoachClass.VIP.displayName,
                             price = viewModel.getPriceForClass(CoachClass.VIP),
                             isSelected = viewModel.selectedCoachClass == CoachClass.VIP,
                             onClick = { viewModel.selectCoachClass(CoachClass.VIP) },
@@ -184,7 +184,7 @@ fun SelectCoachScreen(
                     }
                     if (availableClasses.contains(CoachClass.BISNIS)) {
                         CoachClassOption(
-                            title = "Business",
+                            title = CoachClass.BISNIS.displayName,
                             price = viewModel.getPriceForClass(CoachClass.BISNIS),
                             isSelected = viewModel.selectedCoachClass == CoachClass.BISNIS,
                             onClick = { viewModel.selectCoachClass(CoachClass.BISNIS) },
@@ -193,7 +193,7 @@ fun SelectCoachScreen(
                     }
                     if (availableClasses.contains(CoachClass.EKONOMI)) {
                         CoachClassOption(
-                            title = "Economy",
+                            title = CoachClass.EKONOMI.displayName,
                             price = viewModel.getPriceForClass(CoachClass.EKONOMI),
                             isSelected = viewModel.selectedCoachClass == CoachClass.EKONOMI,
                             onClick = { viewModel.selectCoachClass(CoachClass.EKONOMI) },

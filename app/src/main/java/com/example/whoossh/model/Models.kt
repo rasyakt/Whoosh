@@ -48,7 +48,9 @@ data class BookingData(
     val bookingTimestamp: Long = System.currentTimeMillis(),
     val isUsed: Boolean = false,
     val isPaid: Boolean = false,
-    val isCancelled: Boolean = false
+    val isCancelled: Boolean = false,
+    val refundAmount: Int = 0,
+    val status: OrderStatus = OrderStatus.UNPAID
 )
 
 data class User(

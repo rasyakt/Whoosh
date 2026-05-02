@@ -39,6 +39,7 @@ import androidx.compose.material.icons.outlined.PrivacyTip
 import androidx.compose.material.icons.outlined.Security
 import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material.icons.outlined.Train
+import androidx.compose.material.icons.outlined.AccountBalance
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -52,6 +53,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -86,6 +90,12 @@ fun AccountScreen(
 ) {
     val context = LocalContext.current
     var showLogoutDialog by remember { mutableStateOf(false) }
+    var showBankDialog by remember { mutableStateOf(false) }
+    
+    // Bank dialog temporary state
+    var tempBankName by remember { mutableStateOf(viewModel.savedBankName) }
+    var tempAccountNo by remember { mutableStateOf(viewModel.savedAccountNo) }
+    var tempAccountHolder by remember { mutableStateOf(viewModel.savedAccountHolder) }
 
     if (showLogoutDialog) {
         AlertDialog(
@@ -125,6 +135,61 @@ fun AccountScreen(
             },
             containerColor = WhooshWhite,
             shape = RoundedCornerShape(24.dp)
+        )
+    }
+
+    if (showBankDialog) {
+        AlertDialog(
+            onDismissRequest = { showBankDialog = false },
+            title = { Text("Data Rekening Refund", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("Simpan data rekening Anda untuk mempercepat proses refund tiket.", fontSize = 14.sp, color = Color.Gray)
+                    
+                    OutlinedTextField(
+                        value = tempBankName,
+                        onValueChange = { tempBankName = it },
+                        label = { Text("Nama Bank") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                    
+                    OutlinedTextField(
+                        value = tempAccountNo,
+                        onValueChange = { tempAccountNo = it },
+                        label = { Text("Nomor Rekening") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                    
+                    OutlinedTextField(
+                        value = tempAccountHolder,
+                        onValueChange = { tempAccountHolder = it },
+                        label = { Text("Nama Pemilik Rekening") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.saveUserBankAccount(tempBankName, tempAccountNo, tempAccountHolder)
+                        showBankDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = WhooshRed),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text("Simpan", color = Color.White)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showBankDialog = false }) {
+                    Text("Batal", color = Color.Gray)
+                }
+            },
+            containerColor = WhooshWhite,
+            shape = RoundedCornerShape(16.dp)
         )
     }
 
@@ -225,6 +290,13 @@ fun AccountScreen(
                 MenuRow(Icons.Outlined.People, "Kelola Penumpang", onClick = onNavigateToPassengerList)
                 MenuDivider()
                 MenuRow(Icons.Outlined.History, "Riwayat Perjalanan", onClick = onNavigateToHistory)
+                MenuDivider()
+                MenuRow(Icons.Outlined.AccountBalance, "Data Rekening Refund", onClick = { 
+                    tempBankName = viewModel.savedBankName
+                    tempAccountNo = viewModel.savedAccountNo
+                    tempAccountHolder = viewModel.savedAccountHolder
+                    showBankDialog = true 
+                })
                 MenuDivider()
                 MenuRow(Icons.Outlined.LocalOffer, "Promo & Diskon", onClick = onNavigateToPromo)
             }

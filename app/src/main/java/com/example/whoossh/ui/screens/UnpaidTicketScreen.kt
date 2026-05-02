@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.whoossh.model.OrderStatus
 import com.example.whoossh.ui.theme.WhooshRed
 import com.example.whoossh.ui.theme.WhooshTextSecondary
 import com.example.whoossh.utils.TicketUtils
@@ -59,8 +60,15 @@ fun UnpaidTicketScreen(
         topBar = {
             CenterAlignedTopAppBar(
                 title = { 
+                    val status = viewModel.bookingData?.status ?: OrderStatus.UNPAID
                     Text(
-                        "Unpaid", 
+                        text = when (status) {
+                            OrderStatus.REFUNDED -> "Refunded"
+                            OrderStatus.CANCELLED -> "Cancelled"
+                            OrderStatus.PAID -> "Paid"
+                            OrderStatus.CHECKED -> "Used"
+                            else -> "Unpaid"
+                        }, 
                         color = Color.White, 
                         fontSize = 18.sp, 
                         fontWeight = FontWeight.SemiBold 
@@ -196,17 +204,28 @@ fun UnpaidTicketScreen(
             
             when {
                 isCancelled -> {
+                    val isRefund = viewModel.bookingData?.status == OrderStatus.REFUNDED
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(Color(0xFFFFF0F0))
+                            .background(if (isRefund) Color(0xFFE8F5E9) else Color(0xFFFFF0F0))
                             .padding(12.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center
                     ) {
-                        Icon(Icons.Default.Close, null, tint = WhooshRed, modifier = Modifier.size(16.dp))
+                        Icon(
+                            imageVector = if (isRefund) Icons.Default.CheckCircle else Icons.Default.Close, 
+                            contentDescription = null, 
+                            tint = if (isRefund) Color(0xFF2E7D32) else WhooshRed, 
+                            modifier = Modifier.size(16.dp)
+                        )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(text = "Tiket ini telah dibatalkan", fontSize = 12.sp, color = WhooshRed, fontWeight = FontWeight.Bold)
+                        Text(
+                            text = if (isRefund) "Pengembalian dana (Refund) telah berhasil" else "Tiket ini telah dibatalkan", 
+                            fontSize = 12.sp, 
+                            color = if (isRefund) Color(0xFF2E7D32) else WhooshRed, 
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
                 isTimerExpired -> {
@@ -412,31 +431,59 @@ fun UnpaidTicketScreen(
             
             Spacer(modifier = Modifier.height(16.dp))
             
-            // Reminder
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFF0F4F8)),
-                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFD0DCE8))
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        "Reminder", 
-                        fontSize = 14.sp, 
-                        fontWeight = FontWeight.SemiBold, 
-                        color = Color.Black
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "1. Please complete the online payment within the specified time.\n" +
-                               "2. In case of late payment, the system will cancel the transaction.\n" +
-                               "3. You will not be able to purchase additional tickets until you complete payment or cancel this order.",
-                        fontSize = 12.sp,
-                        color = WhooshTextSecondary,
-                        lineHeight = 18.sp
-                    )
+            // Reminder (Sembunyikan jika sudah refund/batal)
+            if (!isCancelled && !isTimerExpired) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFF0F4F8)),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFD0DCE8))
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            "Reminder", 
+                            fontSize = 14.sp, 
+                            fontWeight = FontWeight.SemiBold, 
+                            color = Color.Black
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "1. Please complete the online payment within the specified time.\n" +
+                                   "2. In case of late payment, the system will cancel the transaction.\n" +
+                                   "3. You will not be able to purchase additional tickets until you complete payment or cancel this order.",
+                            fontSize = 12.sp,
+                            color = WhooshTextSecondary,
+                            lineHeight = 18.sp
+                        )
+                    }
+                }
+            } else if (viewModel.bookingData?.status == OrderStatus.REFUNDED) {
+                // Info Refund
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F5E9)),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFC8E6C9))
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            "Informasi Refund", 
+                            fontSize = 14.sp, 
+                            fontWeight = FontWeight.SemiBold, 
+                            color = Color(0xFF1B5E20)
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Tiket ini telah berhasil direfund. Dana sebesar 75% dari total bayar (setelah biaya administrasi 25%) telah dikirimkan ke rekening yang Anda daftarkan.",
+                            fontSize = 12.sp,
+                            color = Color(0xFF2E7D32),
+                            lineHeight = 18.sp
+                        )
+                    }
                 }
             }
             

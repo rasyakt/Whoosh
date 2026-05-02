@@ -32,6 +32,12 @@ class UserPreferences(context: Context) {
         private const val KEY_SAVE_LOGIN = "save_login"
         private const val KEY_PAID_TICKETS = "paid_tickets_cache"
         private const val KEY_CANCELLED_TICKETS = "cancelled_tickets_cache"
+        private const val KEY_REFUNDED_TICKETS = "refunded_tickets_cache"
+        
+        // Bank Account Info
+        private const val KEY_BANK_NAME = "bank_name"
+        private const val KEY_ACCOUNT_NO = "account_no"
+        private const val KEY_ACCOUNT_HOLDER = "account_holder"
     }
 
     // ── USER SESSION CACHE ──────────────────────────────────────────────────
@@ -119,6 +125,50 @@ class UserPreferences(context: Context) {
 
     fun clearCancelledTicketsCache() {
         prefs.edit().remove(KEY_CANCELLED_TICKETS).apply()
+    }
+
+    // ── REFUNDED TICKETS CACHE ──────────────────────────────────────────────
+    
+    fun saveRefundedTicket(bookingCode: String) {
+        val refunded = getRefundedTickets().toMutableSet()
+        refunded.add(bookingCode)
+        prefs.edit().putStringSet(KEY_REFUNDED_TICKETS, refunded).apply()
+    }
+
+    fun getRefundedTickets(): Set<String> {
+        return prefs.getStringSet(KEY_REFUNDED_TICKETS, emptySet()) ?: emptySet()
+    }
+
+    fun isRefundedTicket(bookingCode: String): Boolean {
+        return getRefundedTickets().contains(bookingCode)
+    }
+
+    fun removeRefundedTicket(bookingCode: String) {
+        val refunded = getRefundedTickets().toMutableSet()
+        refunded.remove(bookingCode)
+        prefs.edit().putStringSet(KEY_REFUNDED_TICKETS, refunded).apply()
+    }
+
+    // ── BANK ACCOUNT INFO ────────────────────────────────────────────────────
+    
+    fun saveBankAccount(bankName: String, accountNo: String, accountHolder: String) {
+        prefs.edit()
+            .putString(KEY_BANK_NAME, bankName)
+            .putString(KEY_ACCOUNT_NO, accountNo)
+            .putString(KEY_ACCOUNT_HOLDER, accountHolder)
+            .apply()
+    }
+
+    fun getBankName(): String = prefs.getString(KEY_BANK_NAME, "") ?: ""
+    fun getAccountNo(): String = prefs.getString(KEY_ACCOUNT_NO, "") ?: ""
+    fun getAccountHolder(): String = prefs.getString(KEY_ACCOUNT_HOLDER, "") ?: ""
+
+    fun clearBankAccount() {
+        prefs.edit()
+            .remove(KEY_BANK_NAME)
+            .remove(KEY_ACCOUNT_NO)
+            .remove(KEY_ACCOUNT_HOLDER)
+            .apply()
     }
 
     // ── NOTIFICATION SETTINGS ────────────────────────────────────────────────

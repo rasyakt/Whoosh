@@ -53,6 +53,7 @@ data class BookingResponse(
     @SerializedName("is_used") val isUsed: Int = 0,
     @SerializedName("is_paid") val isPaid: Int = 0,
     @SerializedName("is_cancelled") val isCancelled: Int = 0,
+    @SerializedName("refund_amount") val refundAmount: Int = 0,
     @SerializedName("booking_timestamp") val bookingTimestamp: Long,
     @SerializedName("passengers") val passengers: List<PassengerInfo>? = null
 )
