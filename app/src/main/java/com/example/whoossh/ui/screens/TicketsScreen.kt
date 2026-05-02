@@ -100,7 +100,7 @@ fun TicketsScreen(
     val combinedPaidTickets = viewModel.activeTickets
         .filter { it.isPaid && !it.isUsed }
         .sortedByDescending { it.bookingTimestamp }  // ✅ Urutkan dari terbaru ke terlama
-    val combinedHistoryTickets = (viewModel.historyTickets + viewModel.activeTickets.filter { it.isCancelled })
+    val combinedHistoryTickets = viewModel.historyTickets
         .distinctBy { it.bookingCode }
         .sortedByDescending { it.bookingTimestamp }  // ✅ Urutkan dari terbaru ke terlama
 

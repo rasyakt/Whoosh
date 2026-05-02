@@ -135,19 +135,22 @@ private fun HistoryTicketCard(ticket: BookingData) {
                     fontWeight = FontWeight.Bold,
                     color = WhooshRed
                 )
+                val (statusText, statusColor, statusBg) = when {
+                    ticket.isCancelled -> Triple("Dibatalkan", Color.Red, Color(0xFFFFF0F0))
+                    ticket.isUsed -> Triple("Selesai", Color.Gray, Color(0xFFF5F5F5))
+                    else -> Triple("Aktif", WhooshGreen, WhooshGreenLight)
+                }
+
                 Box(
                     modifier = Modifier
-                        .background(
-                            if (ticket.isUsed) WhooshGreenLight else WhooshRed.copy(alpha = 0.1f),
-                            RoundedCornerShape(6.dp)
-                        )
+                        .background(statusBg, RoundedCornerShape(6.dp))
                         .padding(horizontal = 8.dp, vertical = 3.dp)
                 ) {
                     Text(
-                        text = if (ticket.isUsed) "Selesai" else "Aktif",
+                        text = statusText,
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
-                        color = if (ticket.isUsed) WhooshGreen else WhooshRed
+                        color = statusColor
                     )
                 }
             }

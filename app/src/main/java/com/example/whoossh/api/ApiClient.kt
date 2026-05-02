@@ -17,7 +17,7 @@ import java.util.concurrent.TimeUnit
 object ApiClient {
 
     // Base URL configuration - should be moved to BuildConfig in production
-    private const val BASE_URL_DEV = "http://10.205.64.16/whoossh_api/"
+    private const val BASE_URL_DEV = "http://10.205.64.17/whoossh_api/"
     private const val BASE_URL_PROD = "https://api.whoosh.id/v1/" // Example production URL
     
     private val BASE_URL = if (BuildConfig.DEBUG) BASE_URL_DEV else BASE_URL_PROD

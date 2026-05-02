@@ -573,9 +573,9 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
 
         activeTickets = updatedTickets.filter { !it.isUsed && !it.isCancelled }
 
+        // ✅ PERBAIKAN: Jangan akumulasi riwayat lama agar tidak terjadi duplikasi atau status basi
         historyTickets = (serverBookings.filter { it.isUsed || it.isCancelled } + 
-                         updatedTickets.filter { it.isUsed || it.isCancelled } + 
-                         historyTickets)
+                         updatedTickets.filter { it.isUsed || it.isCancelled })
             .distinctBy { it.bookingCode }
             .sortedByDescending { it.bookingTimestamp }  // ✅ Urutkan dari terbaru ke terlama
 
@@ -1019,8 +1019,15 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
                 }
                 if (response.isSuccessful && response.body()?.status == "success") {
                     Log.i("BookingViewModel", "✅ Server status updated to PAID: ${current.bookingCode}")
+                    
+                    // Send Email Notification
+                    if (userEmail.isNotBlank()) {
+                        viewModelScope.launch(Dispatchers.IO) {
+                            EmailSender.sendETicket(userEmail, updated)
+                        }
+                    }
+
                     // Refresh tickets setelah update berhasil untuk sinkronisasi
-                    // Cache akan dihapus otomatis di applyTickets() jika server sudah sync
                     refreshTickets()
                 } else {
                     val errorMsg = response.body()?.message ?: response.message()
@@ -1536,6 +1543,20 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
                     
                     refreshTickets()
                     
+                    // Send Email Notification
+                    if (userEmail.isNotBlank()) {
+                        viewModelScope.launch(Dispatchers.IO) {
+                            EmailSender.sendRescheduleNotification(
+                                recipientEmail = userEmail,
+                                bookingData = booking,
+                                newDate = newDate,
+                                newTime = newSchedule.departureTime,
+                                newArrivalTime = newSchedule.arrivalTime,
+                                rescheduleFee = rescheduleFee
+                            )
+                        }
+                    }
+
                     val message = if (rescheduleFee > 0) {
                         "Ticket rescheduled successfully. Fee: ${TicketUtils.formatRupiah(rescheduleFee)}"
                     } else {
@@ -1618,6 +1639,17 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
                     
                     refreshTickets()
                     
+                    // Send Email Notification
+                    if (userEmail.isNotBlank()) {
+                        viewModelScope.launch(Dispatchers.IO) {
+                            EmailSender.sendRefundNotification(
+                                recipientEmail = userEmail,
+                                bookingData = booking,
+                                refundAmount = refundAmount
+                            )
+                        }
+                    }
+
                     onResult(true, "Refund request submitted successfully", refundAmount)
                 } else {
                     onResult(false, response.body()?.message ?: "Failed to process refund", 0)
