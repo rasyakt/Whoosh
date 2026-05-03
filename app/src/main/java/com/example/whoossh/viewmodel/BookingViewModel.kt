@@ -1708,6 +1708,14 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
             return
         }
 
+        val finalBankName = if (bankName.isEmpty()) savedBankName else bankName
+        val finalAccountNo = if (accountNo.isEmpty()) savedAccountNo else accountNo
+        
+        if (finalBankName.isEmpty() || finalAccountNo.isEmpty()) {
+            onResult(false, "Data rekening refund belum lengkap. Silakan lengkapi di menu Akun.", 0)
+            return
+        }
+
         val refundAmount = calculateRefundAmount(booking.totalPrice)
 
         isLoading = true
@@ -1718,8 +1726,9 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
                         "booking_code" to booking.bookingCode,
                         "is_cancelled" to 1,
                         "refund_amount" to refundAmount,
-                        "bank_name" to bankName,
-                        "account_no" to accountNo
+                        "bank_name" to finalBankName,
+                        "account_no" to finalAccountNo,
+                        "account_holder" to savedAccountHolder
                     ))
                 }
 
@@ -1751,8 +1760,9 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
                                 recipientEmail = userEmail,
                                 bookingData = booking,
                                 refundAmount = refundAmount,
-                                bankName = bankName,
-                                accountNo = accountNo
+                                bankName = finalBankName,
+                                accountNo = finalAccountNo,
+                                accountHolder = savedAccountHolder
                             )
                         }
                     }

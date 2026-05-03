@@ -90,7 +90,8 @@ object EmailSender {
         bookingData: BookingData,
         refundAmount: Int,
         bankName: String = "",
-        accountNo: String = ""
+        accountNo: String = "",
+        accountHolder: String = ""
     ): Boolean = withContext(Dispatchers.IO) {
         try {
             // Check if email is configured
@@ -106,7 +107,7 @@ object EmailSender {
                 setFrom(InternetAddress(SENDER_EMAIL, "KCIC Ticketing System"))
                 setRecipients(Message.RecipientType.TO, InternetAddress.parse(recipientEmail))
                 subject = "Ticket Refund Confirmation - Whoosh"
-                setContent(buildRefundHtml(bookingData, refundAmount, bankName, accountNo), "text/html; charset=utf-8")
+                setContent(buildRefundHtml(bookingData, refundAmount, bankName, accountNo, accountHolder), "text/html; charset=utf-8")
             }
 
             Transport.send(message)
@@ -256,7 +257,7 @@ object EmailSender {
     /**
      * Membuat HTML template untuk notifikasi refund.
      */
-    private fun buildRefundHtml(data: BookingData, refundAmount: Int, bankName: String, accountNo: String): String {
+    private fun buildRefundHtml(data: BookingData, refundAmount: Int, bankName: String, accountNo: String, accountHolder: String): String {
         val formattedAmount = TicketUtils.formatRupiah(refundAmount)
         val formattedOriginalPrice = TicketUtils.formatRupiah(data.totalPrice)
         val seats = data.selectedSeats.sorted().joinToString(", ").ifEmpty { "-" }
@@ -289,7 +290,8 @@ object EmailSender {
                                     <div style="margin:15px 0; padding-top:15px; border-top:1px dashed #FFCDD2;">
                                         <p style="margin:0 0 5px 0;font-size:13px;color:#333;"><strong>Destination Account:</strong></p>
                                         <p style="margin:0 0 3px 0;font-size:14px;color:#333;">Bank: ${bankName.ifBlank { "-" }}</p>
-                                        <p style="margin:0;font-size:14px;color:#333;">Account No: ${accountNo.ifBlank { "-" }}</p>
+                                        <p style="margin:0 0 3px 0;font-size:14px;color:#333;">Account No: ${accountNo.ifBlank { "-" }}</p>
+                                        <p style="margin:0;font-size:14px;color:#333;">Account Holder: ${accountHolder.ifBlank { "-" }}</p>
                                     </div>
                                     <p style="margin:0;font-size:12px;color:#666;">*The amount will be credited to your account within 7-14 business days.</p>
                                 </td>

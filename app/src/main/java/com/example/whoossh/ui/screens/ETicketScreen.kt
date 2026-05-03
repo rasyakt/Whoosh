@@ -836,7 +836,7 @@ fun ETicketScreen(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
-                                    Text("Cancellation Fee (10%):".tr(), fontSize = 13.sp, color = Color.Gray)
+                                    Text("Cancellation Fee (25%):".tr(), fontSize = 13.sp, color = Color.Gray)
                                     Text(
                                         "- ${TicketUtils.formatRupiah(booking.totalPrice - refundAmount)}".tr(),
                                         fontSize = 13.sp,
@@ -861,11 +861,35 @@ fun ETicketScreen(
                             }
                         }
                         
+                        if (viewModel.savedBankName.isNotEmpty() && viewModel.savedAccountNo.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text(
+                                text = "Refund will be sent to:".tr(),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color.Black
+                            )
+                            Text(
+                                text = "${viewModel.savedBankName} - ${viewModel.savedAccountNo}\n" +
+                                       "a/n ${viewModel.savedAccountHolder}",
+                                fontSize = 12.sp,
+                                color = WhooshTextSecondary
+                            )
+                        } else {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text(
+                                text = "Warning: No refund account registered!".tr(),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = WhooshRed
+                            )
+                        }
+                        
                         Spacer(modifier = Modifier.height(12.dp))
                         
                         Text(
                             "• Refund will be processed within 3-7 business days\n".tr() +
-                            "• Amount will be returned to your original payment method\n".tr() +
+                            "• Amount will be returned to your registered refund account\n".tr() +
                             "• This action cannot be undone".tr(),
                             fontSize = 12.sp,
                             color = WhooshTextSecondary,
