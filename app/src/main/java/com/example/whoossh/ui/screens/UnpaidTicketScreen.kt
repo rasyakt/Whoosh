@@ -373,7 +373,9 @@ fun UnpaidTicketScreen(
                     Spacer(modifier = Modifier.height(12.dp))
                     
                     passengers.forEachIndexed { index, passenger ->
-                        val seat = if (index < selectedSeats.size) selectedSeats[index] else "-"
+                        val seat = passenger.seatNumber.ifBlank { 
+                            if (index < selectedSeats.size) selectedSeats[index] else "-" 
+                        }
                         
                         Row(
                             modifier = Modifier.fillMaxWidth(),

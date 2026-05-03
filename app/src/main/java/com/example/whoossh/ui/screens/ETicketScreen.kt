@@ -317,8 +317,8 @@ fun ETicketScreen(
                                 fontSize = 13.sp, 
                                 color = Color.Gray
                             )
-                            Text(
-                                "Class ${booking.selectedSeats.firstOrNull() ?: "04A"}", 
+                             Text(
+                                "Seat ${booking.selectedSeats.joinToString(", ").ifEmpty { "-" }}", 
                                 fontSize = 13.sp, 
                                 color = Color.Gray
                             )
@@ -558,7 +558,7 @@ fun ETicketScreen(
                         
                         // Seat & Class Info
                         Row(modifier = Modifier.fillMaxWidth()) {
-                            DetailColumn(label = "Seat Info", value = "Coach ${booking.selectedCarriage} | ${booking.selectedSeats.firstOrNull() ?: "-"}", modifier = Modifier.weight(1f))
+                            DetailColumn(label = "Seat Info", value = "Coach ${booking.selectedCarriage} | ${booking.selectedSeats.joinToString(", ").ifEmpty { "-" }}", modifier = Modifier.weight(1f))
                             DetailColumn(label = "Class", value = booking.coachClass.displayName, modifier = Modifier.weight(1f))
                         }
                         

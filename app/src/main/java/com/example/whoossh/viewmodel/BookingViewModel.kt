@@ -205,21 +205,26 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
                 }
 
                 if (response.isSuccessful && response.body()?.status == "success") {
-                    val user = response.body()!!.data!!
-                    userId = user.id
-                    userName = user.name
-                    userEmail = user.email
-                    userPhone = user.phone
-                    isLoggedIn = true
+                    val user = response.body()?.data
+                    if (user != null) {
+                        userId = user.id
+                        userName = user.name
+                        userEmail = user.email
+                        userPhone = user.phone
+                        isLoggedIn = true
 
-                    // Cache locally
-                    userPreferences.saveLoggedInUser(
-                        com.example.whoossh.model.User(user.name, user.email, user.phone, ""),
-                        user.id
-                    )
-                    refreshTickets()
-                    refreshSavedPassengers()
-                    onResult(true)
+                        // Cache locally
+                        userPreferences.saveLoggedInUser(
+                            com.example.whoossh.model.User(user.name, user.email, user.phone, ""),
+                            user.id
+                        )
+                        refreshTickets()
+                        refreshSavedPassengers()
+                        onResult(true)
+                    } else {
+                        loginError = "Server response invalid (missing user data)"
+                        onResult(false)
+                    }
                 } else {
                     val errorBody = response.body()?.message ?: "Email atau password salah"
                     loginError = errorBody
@@ -246,7 +251,8 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
             onResult(false)
             return
         }
-        if (!email.contains("@") || !email.contains(".")) {
+        // P2 Issue #16: Use proper email regex validation
+        if (!isValidEmail(email)) {
             registerError = "Format email tidak valid"
             onResult(false)
             return
@@ -275,20 +281,25 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
                 }
 
                 if (response.isSuccessful && response.body()?.status == "success") {
-                    val user = response.body()!!.data!!
-                    userId = user.id
-                    userName = user.name
-                    userEmail = user.email
-                    userPhone = user.phone
-                    isLoggedIn = true
+                    val user = response.body()?.data
+                    if (user != null) {
+                        userId = user.id
+                        userName = user.name
+                        userEmail = user.email
+                        userPhone = user.phone
+                        isLoggedIn = true
 
-                    // Cache locally
-                    userPreferences.saveLoggedInUser(
-                        com.example.whoossh.model.User(user.name, user.email, user.phone, ""),
-                        user.id
-                    )
-                    refreshSavedPassengers()
-                    onResult(true)
+                        // Cache locally
+                        userPreferences.saveLoggedInUser(
+                            com.example.whoossh.model.User(user.name, user.email, user.phone, ""),
+                            user.id
+                        )
+                        refreshSavedPassengers()
+                        onResult(true)
+                    } else {
+                        registerError = "Server response invalid (missing user data)"
+                        onResult(false)
+                    }
                 } else {
                     registerError = response.body()?.message ?: "Registrasi gagal"
                     onResult(false)
@@ -325,7 +336,8 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
             onResult(false)
             return
         }
-        if (!email.contains("@") || !email.contains(".")) {
+        // P2 Issue #16: Use proper email validation
+        if (!isValidEmail(email)) {
             onResult(false)
             return
         }
@@ -338,17 +350,21 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
                 }
 
                 if (response.isSuccessful && response.body()?.status == "success") {
-                    val user = response.body()!!.data!!
-                    userName = user.name
-                    userEmail = user.email
-                    userPhone = user.phone
+                    val user = response.body()?.data
+                    if (user != null) {
+                        userName = user.name
+                        userEmail = user.email
+                        userPhone = user.phone
 
-                    // Update cache
-                    userPreferences.saveLoggedInUser(
-                        com.example.whoossh.model.User(user.name, user.email, user.phone, ""),
-                        user.id
-                    )
-                    onResult(true)
+                        // Update cache
+                        userPreferences.saveLoggedInUser(
+                            com.example.whoossh.model.User(user.name, user.email, user.phone, ""),
+                            user.id
+                        )
+                        onResult(true)
+                    } else {
+                        onResult(false)
+                    }
                 } else {
                     onResult(false)
                 }
@@ -424,7 +440,7 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
                 Log.d("BookingViewModel", "refreshTickets: HTTP ${response.code()}")
 
                 if (response.isSuccessful && response.body()?.status == "success") {
-                    val tickets = response.body()!!.data ?: emptyList()
+                    val tickets = response.body()?.data ?: emptyList()
                     Log.i("BookingViewModel", "refreshTickets: received ${tickets.size} tickets from server")
                     applyTickets(tickets)
                     isLoadingTickets = false
@@ -1334,13 +1350,16 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
             (it.identityNo.isNotBlank() && it.identityNo == passenger.identityNo) 
         }
         
-        if (current.size < 15 && !isDuplicate) {
+        // P3 Issue #9: Max 10 tickets (not 15 - must match ticketCount UI limit of 10)
+        if (current.size < 10 && !isDuplicate) {
             current.add(passenger)
             _selectedPassengers.value = current
             ticketCount = current.size // Sync ticketCount
             Log.i("BookingViewModel", "Passenger added: ${passenger.name}, total: ${current.size}")
         } else if (isDuplicate) {
             Log.w("BookingViewModel", "Prevented adding duplicate passenger: ${passenger.name}")
+        } else {
+            Log.w("BookingViewModel", "Maximum passenger limit (10) reached")
         }
     }
 
@@ -2002,9 +2021,13 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
                 
                 timerJob = viewModelScope.launch {
                     try {
-                        while (true) {
+                        var iterations = 0
+                        val maxIterations = 25 * 60  // Max 25 minutes - prevent infinite loop (P1 Issue #2)
+
+                        while (iterations < maxIterations) {
                             kotlinx.coroutines.delay(1000)
-                            
+                            iterations++
+
                             // Jangan countdown jika sudah dibayar
                             val currentBooking = bookingData
                             if (currentBooking?.isPaid == true) {
@@ -2032,7 +2055,11 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
                             if (seatLockTimeLeft == 0 && paymentTimeLeft == 0) break
                         }
                     } catch (e: Exception) {
-                        Log.e("BookingViewModel", "Timer error: ${e.message}", e)
+                        if (e !is kotlinx.coroutines.CancellationException) {
+                            Log.e("BookingViewModel", "Timer error: ${e.message}", e)
+                        }
+                    } finally {
+                        timerJob = null  // Cleanup to prevent memory leak (P1 Issue #2)
                     }
                 }
             }
@@ -2073,9 +2100,19 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
     fun clearLoginError() { loginError = null }
     fun clearRegisterError() { registerError = null }
     fun clearFormError() { formError = null }
+
+    /**
+     * Proper email validation with regex (P2 Issue #16)
+     */
+    private fun isValidEmail(email: String): Boolean {
+        val emailPattern = Regex(
+            "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Z|a-z]{2,}$"
+        )
+        return emailPattern.matches(email) && email.length <= 254
+    }
 }
 
-// ── Extension: Convert API response to domain model ──────────────────────────
+// ...existing extension functions...
 
 fun BookingResponse.toBookingData(fallbackName: String = ""): BookingData {
     var calculatedIsUsed = isUsed == 1
@@ -2129,7 +2166,11 @@ fun BookingResponse.toBookingData(fallbackName: String = ""): BookingData {
         totalPrice = totalPrice,
         bookingCode = bookingCode,
         selectedCarriage = selectedCarriage,
-        selectedSeats = if (selectedSeats.isBlank()) emptyList() else selectedSeats.split(","),
+        selectedSeats = if (selectedSeats.isBlank()) {
+            passengers?.map { it.seatNumber }?.filter { it.isNotBlank() } ?: emptyList()
+        } else {
+            selectedSeats.split(",")
+        },
         passengers = passengers?.map { 
             com.example.whoossh.model.PassengerInfo(
                 name = it.name,

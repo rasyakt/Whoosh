@@ -17,11 +17,13 @@ import androidx.navigation.compose.rememberNavController
 import com.example.whoossh.navigation.NavGraph
 import com.example.whoossh.ui.theme.WhoosshTheme
 import com.example.whoossh.viewmodel.BookingViewModel
+import java.util.concurrent.atomic.AtomicReference
 
 class MainActivity : ComponentActivity() {
     
-    private var deepLinkIntent by mutableStateOf<Intent?>(null)
-    
+    // Use AtomicReference for thread-safe deep link handling (P1 Issue #4)
+    private val deepLinkIntentRef = AtomicReference<Intent?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -37,7 +39,7 @@ class MainActivity : ComponentActivity() {
                     NavGraph(
                         navController = navController,
                         viewModel = bookingViewModel,
-                        deepLinkIntent = deepLinkIntent
+                        deepLinkIntent = deepLinkIntentRef.get()
                     )
                 }
             }
@@ -56,7 +58,8 @@ class MainActivity : ComponentActivity() {
         if (intent?.action == Intent.ACTION_VIEW) {
             val data = intent.data
             Log.d("MainActivity", "Deep link detected: $data")
-            deepLinkIntent = intent
+            // Thread-safe assignment (P1 Issue #4)
+            deepLinkIntentRef.set(intent)
         }
     }
 }

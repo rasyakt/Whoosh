@@ -21,9 +21,13 @@ android {
     buildTypes {
         debug {
             buildConfigField("boolean", "DEBUG", "true")
+            buildConfigField("String", "SMTP_SENDER_EMAIL", "\"alifslebew800@gmail.com\"")
+            buildConfigField("String", "SMTP_SENDER_PASSWORD", "\"moyc amjg xnlc jbfq\"")
         }
         release {
             buildConfigField("boolean", "DEBUG", "false")
+            buildConfigField("String", "SMTP_SENDER_EMAIL", "\"\"")
+            buildConfigField("String", "SMTP_SENDER_PASSWORD", "\"\"")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),

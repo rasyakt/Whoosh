@@ -16,25 +16,53 @@ import javax.mail.internet.MimeMessage
 object EmailSender {
 
     // ╔═══════════════════════════════════════════════════════════════╗
-    // ║  KONFIGURASI SMTP — Ganti dengan akun Gmail pengirim Anda   ║
-    // ║  Aktifkan "App Password" di https://myaccount.google.com    ║
+    // ║  KONFIGURASI SMTP — Credentials dipindahkan ke backend      ║
+    // ║  JANGAN hardcode credentials di sini untuk security         ║
+    // ║  Environment-specific config via BuildConfig atau API       ║
     // ╚═══════════════════════════════════════════════════════════════╝
     private const val SMTP_HOST = "smtp.gmail.com"
     private const val SMTP_PORT = "587"
-    private const val SENDER_EMAIL = "alifslebew800@gmail.com"   // Ganti dengan email pengirim
-    private const val SENDER_PASSWORD = "moyc amjg xnlc jbfq"     // Ganti dengan App Password Gmail
+
+    // ⚠️ SECURITY FIX: Gunakan BuildConfig untuk dev/debug credentials
+    // Production: Gunakan backend API untuk mengirim email, bukan client-side
+    private val SENDER_EMAIL: String
+        get() = com.example.whoossh.BuildConfig.SMTP_SENDER_EMAIL
+
+    private val SENDER_PASSWORD: String
+        get() = com.example.whoossh.BuildConfig.SMTP_SENDER_PASSWORD
 
     private const val TAG = "EmailSender"
+
+    private var isEmailConfigured: Boolean = false
+
+    init {
+        // Validate email configuration at startup
+        isEmailConfigured = try {
+            SENDER_EMAIL.isNotBlank() && SENDER_PASSWORD.isNotBlank()
+        } catch (e: Exception) {
+            android.util.Log.e(TAG, "Email configuration not set in BuildConfig")
+            false
+        }
+    }
 
     /**
      * Mengirim e-ticket ke email penerima secara asinkron.
      * Fungsi ini harus dipanggil dari coroutine (Dispatchers.IO).
+     *
+     * ⚠️ SECURITY: Jika email belum dikonfigurasi di BuildConfig,
+     * gunakan backend API untuk mengirim email (recommended untuk production)
      */
     suspend fun sendETicket(
         recipientEmail: String,
         bookingData: BookingData
     ): Boolean = withContext(Dispatchers.IO) {
         try {
+            // Check if email is configured
+            if (!isEmailConfigured) {
+                Log.w(TAG, "Email not configured in BuildConfig. Skipping email send. Use backend API instead.")
+                return@withContext false
+            }
+
             val props = createProperties()
             val session = createSession(props)
 
@@ -65,6 +93,12 @@ object EmailSender {
         accountNo: String = ""
     ): Boolean = withContext(Dispatchers.IO) {
         try {
+            // Check if email is configured
+            if (!isEmailConfigured) {
+                Log.w(TAG, "Email not configured in BuildConfig. Skipping refund notification send. Use backend API instead.")
+                return@withContext false
+            }
+
             val props = createProperties()
             val session = createSession(props)
 
@@ -96,6 +130,12 @@ object EmailSender {
         rescheduleFee: Int
     ): Boolean = withContext(Dispatchers.IO) {
         try {
+            // Check if email is configured
+            if (!isEmailConfigured) {
+                Log.w(TAG, "Email not configured in BuildConfig. Skipping reschedule notification send. Use backend API instead.")
+                return@withContext false
+            }
+
             val props = createProperties()
             val session = createSession(props)
 
