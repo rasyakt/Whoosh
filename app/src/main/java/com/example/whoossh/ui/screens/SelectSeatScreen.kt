@@ -21,6 +21,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -285,6 +289,14 @@ fun SelectSeatScreen(
                                 val seatId = "${row}${letter}"
                                 val isOccupied = viewModel.occupiedSeats.contains(seatId)
                                 
+                                val selectedSeats = viewModel.selectedSeats
+                                val isSelected = selectedSeats.contains(seatId)
+                                val seatIndex = if (isSelected) selectedSeats.indexOf(seatId) else -1
+                                val passengers = viewModel.selectedPassengers.collectAsState().value
+                                val passengerLabel = if (seatIndex != -1 && seatIndex < passengers.size) {
+                                    passengers[seatIndex].name.take(1).uppercase()
+                                } else null
+
                                 Box(
                                     modifier = Modifier
                                         .width(46.dp)
@@ -292,8 +304,9 @@ fun SelectSeatScreen(
                                 ) {
                                     SeatItem(
                                         seatId = seatId,
-                                        isSelected = viewModel.selectedSeats.contains(seatId),
+                                        isSelected = isSelected,
                                         isOccupied = isOccupied,
+                                        passengerLabel = passengerLabel,
                                         onClick = {
                                             if (!isOccupied) {
                                                 viewModel.toggleSeatSelection(seatId)
@@ -358,57 +371,123 @@ private fun SeatItem(
     seatId: String,
     isSelected: Boolean,
     isOccupied: Boolean,
+    passengerLabel: String?,
     onClick: () -> Unit
 ) {
-    val bgColor = when {
-        isOccupied -> Color(0xFFEEEEEE)
-        isSelected -> WhooshRed
-        else -> Color.White
+    val textColor = when {
+        isOccupied -> Color.Transparent 
+        isSelected -> Color.White
+        else -> WhooshRed
     }
+
     val borderColor = when {
         isOccupied -> Color(0xFFDDDDDD)
         isSelected -> WhooshRed
-        else -> Color.LightGray
+        else -> WhooshRed.copy(alpha = 0.3f)
     }
 
     Box(
         modifier = Modifier
-            .height(46.dp)
+            .height(52.dp)
             .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .background(bgColor)
-            .border(1.5.dp, borderColor, RoundedCornerShape(8.dp))
             .clickable(enabled = !isOccupied, onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        // We don't render seat ID text inside to keep it looking clean and realistic like an airplane/train seat block.
-        // It has a small armrest indicator for realism.
+        // Seat Base Shape (Backrest + Seat)
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
             modifier = Modifier.fillMaxSize()
         ) {
-             Box(
-                 modifier = Modifier
-                     .fillMaxWidth()
-                     .height(8.dp)
-                     .padding(horizontal = 4.dp, vertical = 1.dp)
-                     .background(
-                         if (isSelected) Color.White.copy(0.3f) else if (isOccupied) Color.White.copy(0.5f) else Color.LightGray.copy(0.3f),
-                         RoundedCornerShape(2.dp)
-                     )
-             )
-             Spacer(modifier = Modifier.height(2.dp))
-             Box(
-                 modifier = Modifier
-                     .fillMaxWidth()
-                     .weight(1f)
-                     .padding(start = 4.dp, end = 4.dp, bottom = 4.dp)
-                     .background(
-                         if (isSelected) Color.White.copy(0.3f) else if (isOccupied) Color.White.copy(0.5f) else Color.LightGray.copy(0.3f),
-                         RoundedCornerShape(2.dp)
-                     )
-             )
+            // Backrest
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(0.85f)
+                    .height(38.dp)
+                    .clip(RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp, bottomStart = 4.dp, bottomEnd = 4.dp))
+                    .background(
+                        if (isSelected) Brush.verticalGradient(
+                            colors = listOf(WhooshRedLight, WhooshRed)
+                        ) else if (isOccupied) Brush.verticalGradient(
+                            colors = listOf(Color(0xFFF5F5F5), Color(0xFFE0E0E0))
+                        ) else Brush.verticalGradient(
+                            colors = listOf(Color.White, Color.White)
+                        )
+                    )
+                    .border(
+                        1.dp, 
+                        borderColor, 
+                        RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp, bottomStart = 4.dp, bottomEnd = 4.dp)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                if (isOccupied) {
+                    Icon(
+                        imageVector = Icons.Default.Block,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = Color.LightGray.copy(alpha = 0.6f)
+                    )
+                } else {
+                    Text(
+                        text = seatId,
+                        color = textColor,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(2.dp))
+            
+            // Seat Cushion / Armrests Area
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(10.dp),
+                horizontalArrangement = Arrangement.Center
+            ) {
+                // Left Armrest
+                Box(
+                    modifier = Modifier
+                        .width(8.dp)
+                        .fillMaxHeight()
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(if (isSelected) WhooshRed else if (isOccupied) Color(0xFFDDDDDD) else Color.White)
+                        .border(1.dp, borderColor, RoundedCornerShape(2.dp))
+                )
+                Spacer(modifier = Modifier.width(26.dp))
+                // Right Armrest
+                Box(
+                    modifier = Modifier
+                        .width(8.dp)
+                        .fillMaxHeight()
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(if (isSelected) WhooshRed else if (isOccupied) Color(0xFFDDDDDD) else Color.White)
+                        .border(1.dp, borderColor, RoundedCornerShape(2.dp))
+                )
+            }
+        }
+
+        // Passenger Badge
+        if (passengerLabel != null) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .offset(x = 4.dp, y = 4.dp)
+                    .size(20.dp)
+                    .clip(CircleShape)
+                    .background(Color.White)
+                    .border(1.5.dp, WhooshRed, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = passengerLabel,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = WhooshRed
+                )
+            }
         }
     }
 }

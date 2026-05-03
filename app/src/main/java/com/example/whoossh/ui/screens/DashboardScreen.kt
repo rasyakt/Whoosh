@@ -723,11 +723,47 @@ private fun StationSelector(
             )
             Icon(Icons.Filled.KeyboardArrowDown, null, tint = Color(0xFFAAAAAA), modifier = Modifier.size(16.dp))
         }
-        androidx.compose.material3.DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+        
+        // Clean dropdown menu with subtle rounded corners
+        androidx.compose.material3.DropdownMenu(
+            expanded = expanded, 
+            onDismissRequest = { expanded = false },
+            modifier = Modifier
+                .background(
+                    WhooshWhite,
+                    RoundedCornerShape(8.dp)
+                )
+                .border(
+                    1.dp,
+                    Color(0xFFE0E0E0),
+                    RoundedCornerShape(8.dp)
+                )
+        ) {
             options.forEach { option ->
                 androidx.compose.material3.DropdownMenuItem(
-                    text = { Text(option, fontSize = 13.sp) },
-                    onClick = { onSelect(option); expanded = false }
+                    text = { 
+                        Text(
+                            text = option,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = Color(0xFF1F1F1F),
+                            letterSpacing = 0.2.sp,
+                            lineHeight = 20.sp
+                        )
+                    },
+                    onClick = { 
+                        onSelect(option)
+                        expanded = false 
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = androidx.compose.material3.MenuDefaults.itemColors(
+                        textColor = Color(0xFF1F1F1F),
+                        disabledTextColor = Color(0xFFBBBBBB)
+                    ),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                        horizontal = 16.dp,
+                        vertical = 12.dp
+                    )
                 )
             }
         }

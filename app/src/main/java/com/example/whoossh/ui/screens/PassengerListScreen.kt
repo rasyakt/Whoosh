@@ -186,6 +186,7 @@ private fun PassengerCard(
     var showMenu by remember { mutableStateOf(false) }
 
     Card(
+        onClick = onToggleSelect,
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
@@ -212,8 +213,7 @@ private fun PassengerCard(
                         color = if (isSelected) WhooshRed else Color(0xFFCCCCCC),
                         shape = RoundedCornerShape(4.dp)
                     )
-                    .background(if (isSelected) WhooshRed else Color.Transparent)
-                    .clickable { onToggleSelect() },
+                    .background(if (isSelected) WhooshRed else Color.Transparent),
                 contentAlignment = Alignment.Center
             ) {
                 if (isSelected) {
