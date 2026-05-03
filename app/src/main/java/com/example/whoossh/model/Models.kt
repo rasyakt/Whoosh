@@ -45,12 +45,20 @@ data class BookingData(
     val bookingCode: String = "",
     val selectedCarriage: Int = 1,
     val selectedSeats: List<String> = emptyList(),
+    val passengers: List<PassengerInfo> = emptyList(),
     val bookingTimestamp: Long = System.currentTimeMillis(),
     val isUsed: Boolean = false,
     val isPaid: Boolean = false,
     val isCancelled: Boolean = false,
     val refundAmount: Int = 0,
     val status: OrderStatus = OrderStatus.UNPAID
+)
+
+data class PassengerInfo(
+    val name: String,
+    val identityNo: String,
+    val passengerType: String,
+    val seatNumber: String = ""
 )
 
 data class User(

@@ -36,12 +36,10 @@ fun UnpaidTicketScreen(
     onBack: () -> Unit,
     onReturnTrip: () -> Unit = {}
 ) {
-    val schedule = viewModel.selectedSchedule ?: return
-    val coach = viewModel.selectedCoachClass ?: return
-    val passengers = viewModel.selectedPassengers.collectAsState().value
-    val selectedSeats = viewModel.selectedSeats
-    
     val bookingData = viewModel.bookingData ?: return
+    val passengers = bookingData.passengers
+    val selectedSeats = bookingData.selectedSeats
+    
     val pricePerTicket = bookingData.pricePerTicket
     val totalFare = bookingData.totalPrice
     
@@ -296,7 +294,7 @@ fun UnpaidTicketScreen(
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
-                                text = "${schedule.duration} m", 
+                                text = "${bookingData.duration} m", 
                                 fontSize = 13.sp, 
                                 color = WhooshTextSecondary
                             )
@@ -312,12 +310,12 @@ fun UnpaidTicketScreen(
                     ) {
                         Column {
                             Text(
-                                text = schedule.departureTime, 
+                                text = bookingData.departureTime, 
                                 fontSize = 22.sp, 
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                text = schedule.originStation, 
+                                text = bookingData.originStation, 
                                 fontSize = 14.sp, 
                                 color = WhooshTextSecondary
                             )
@@ -325,7 +323,7 @@ fun UnpaidTicketScreen(
                         
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
-                                text = schedule.trainCode, 
+                                text = "G${1100 + (bookingData.bookingCode.hashCode() % 100).let { if (it < 0) -it else it }}", 
                                 fontSize = 12.sp, 
                                 color = WhooshTextSecondary
                             )
@@ -338,12 +336,12 @@ fun UnpaidTicketScreen(
                         
                         Column(horizontalAlignment = Alignment.End) {
                             Text(
-                                text = schedule.arrivalTime, 
+                                text = bookingData.arrivalTime, 
                                 fontSize = 22.sp, 
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                text = schedule.destinationStation, 
+                                text = bookingData.destinationStation, 
                                 fontSize = 14.sp, 
                                 color = WhooshTextSecondary,
                                 textAlign = androidx.compose.ui.text.style.TextAlign.End
@@ -407,8 +405,8 @@ fun UnpaidTicketScreen(
                                     color = WhooshTextSecondary,
                                     modifier = Modifier.padding(vertical = 4.dp)
                                 )
-                                Text(
-                                    text = "Coach ${viewModel.selectedCarriage ?: 1} | ${coach.displayName} $seat",
+                                 Text(
+                                    text = "Coach ${bookingData.selectedCarriage} | ${bookingData.coachClass.displayName} $seat",
                                     fontSize = 13.sp,
                                     color = WhooshTextSecondary
                                 )

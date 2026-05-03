@@ -220,106 +220,115 @@ fun SelectSeatScreen(
             }
 
             // Seat Grid
-            Column(
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f)
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 20.dp, vertical = 10.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .weight(1f),
+                contentAlignment = Alignment.Center
             ) {
-                val rows = 15 // Assuming 15 rows per carriage for demo
-                val layout = when (coachClass) {
-                    CoachClass.EKONOMI -> listOf("A", "B", "C", "", "D", "F")
-                    CoachClass.BISNIS -> listOf("A", "C", "", "D", "F")
-                    CoachClass.VIP -> listOf("A", "", "C", "D")
-                }
-
-                // Row Headers
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    layout.forEach { letter ->
-                        if (letter.isEmpty()) {
-                            Spacer(modifier = Modifier.width(36.dp))
-                        } else {
-                            Box(
-                                modifier = Modifier
-                                    .width(46.dp)
-                                    .padding(horizontal = 4.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = letter,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 16.sp,
-                                    color = Color.Gray
-                                )
-                            }
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                for (row in 1..rows) {
-                    Row(
+                if (viewModel.isOccupiedSeatsLoading) {
+                    CircularProgressIndicator(color = WhooshRed)
+                } else {
+                    Column(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 6.dp),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
+                            .fillMaxSize()
+                            .verticalScroll(rememberScrollState())
+                            .padding(horizontal = 20.dp, vertical = 10.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        layout.forEach { letter ->
-                            if (letter.isEmpty()) {
-                                // Aisle with Row Number
-                                Box(
-                                    modifier = Modifier.width(36.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = row.toString(),
-                                        color = Color.LightGray,
-                                        fontSize = 14.sp,
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                }
-                            } else {
-                                val seatId = "${row}${letter}"
-                                val isOccupied = viewModel.occupiedSeats.contains(seatId)
-                                
-                                val selectedSeats = viewModel.selectedSeats
-                                val isSelected = selectedSeats.contains(seatId)
-                                val seatIndex = if (isSelected) selectedSeats.indexOf(seatId) else -1
-                                val passengers = viewModel.selectedPassengers.collectAsState().value
-                                val passengerLabel = if (seatIndex != -1 && seatIndex < passengers.size) {
-                                    passengers[seatIndex].name.take(1).uppercase()
-                                } else null
+                        val rows = 15 // Assuming 15 rows per carriage for demo
+                        val layout = when (coachClass) {
+                            CoachClass.EKONOMI -> listOf("A", "B", "C", "", "D", "F")
+                            CoachClass.BISNIS -> listOf("A", "C", "", "D", "F")
+                            CoachClass.VIP -> listOf("A", "", "C", "D")
+                        }
 
-                                Box(
-                                    modifier = Modifier
-                                        .width(46.dp)
-                                        .padding(horizontal = 4.dp)
-                                ) {
-                                    SeatItem(
-                                        seatId = seatId,
-                                        isSelected = isSelected,
-                                        isOccupied = isOccupied,
-                                        passengerLabel = passengerLabel,
-                                        onClick = {
-                                            if (!isOccupied) {
-                                                viewModel.toggleSeatSelection(seatId)
-                                            }
-                                        }
-                                    )
+                        // Row Headers
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            layout.forEach { letter ->
+                                if (letter.isEmpty()) {
+                                    Spacer(modifier = Modifier.width(36.dp))
+                                } else {
+                                    Box(
+                                        modifier = Modifier
+                                            .width(46.dp)
+                                            .padding(horizontal = 4.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = letter,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 16.sp,
+                                            color = Color.Gray
+                                        )
+                                    }
                                 }
                             }
                         }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        for (row in 1..rows) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 6.dp),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                layout.forEach { letter ->
+                                    if (letter.isEmpty()) {
+                                        // Aisle with Row Number
+                                        Box(
+                                            modifier = Modifier.width(36.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                text = row.toString(),
+                                                color = Color.LightGray,
+                                                fontSize = 14.sp,
+                                                fontWeight = FontWeight.Medium
+                                            )
+                                        }
+                                    } else {
+                                        val seatId = "${row}${letter}"
+                                        val isOccupied = viewModel.occupiedSeats.contains(seatId)
+                                        
+                                        val selectedSeats = viewModel.selectedSeats
+                                        val isSelected = selectedSeats.contains(seatId)
+                                        val seatIndex = if (isSelected) selectedSeats.indexOf(seatId) else -1
+                                        val passengerLabel = if (seatIndex != -1 && seatIndex < selectedPassengers.size) {
+                                            selectedPassengers[seatIndex].name.take(1).uppercase()
+                                        } else null
+
+                                        Box(
+                                            modifier = Modifier
+                                                .width(46.dp)
+                                                .padding(horizontal = 4.dp)
+                                        ) {
+                                            SeatItem(
+                                                seatId = seatId,
+                                                isSelected = isSelected,
+                                                isOccupied = isOccupied,
+                                                passengerLabel = passengerLabel,
+                                                onClick = {
+                                                    if (!isOccupied) {
+                                                        viewModel.toggleSeatSelection(seatId)
+                                                    }
+                                                }
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        
+                        Spacer(modifier = Modifier.height(20.dp))
                     }
                 }
-                
-                Spacer(modifier = Modifier.height(20.dp))
             }
         }
     }
@@ -405,10 +414,10 @@ private fun SeatItem(
                     .height(38.dp)
                     .clip(RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp, bottomStart = 4.dp, bottomEnd = 4.dp))
                     .background(
-                        if (isSelected) Brush.verticalGradient(
-                            colors = listOf(WhooshRedLight, WhooshRed)
-                        ) else if (isOccupied) Brush.verticalGradient(
+                        if (isOccupied) Brush.verticalGradient(
                             colors = listOf(Color(0xFFF5F5F5), Color(0xFFE0E0E0))
+                        ) else if (isSelected) Brush.verticalGradient(
+                            colors = listOf(WhooshRedLight, WhooshRed)
                         ) else Brush.verticalGradient(
                             colors = listOf(Color.White, Color.White)
                         )

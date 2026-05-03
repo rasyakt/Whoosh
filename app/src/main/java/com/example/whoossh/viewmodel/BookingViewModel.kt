@@ -86,6 +86,8 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
         private set
     var occupiedSeats = mutableStateListOf<String>()
         private set
+    var isOccupiedSeatsLoading by mutableStateOf(false)
+        private set
     private var occupiedSeatsJob: kotlinx.coroutines.Job? = null
 
     // Booking Result
@@ -710,6 +712,12 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
             return false
         }
 
+        // Clear selection state when starting a new search to prevent state leakage
+        selectedSchedule = null
+        selectedCoachClass = null
+        selectedCarriage = null
+        selectedSeats.clear()
+        
         // Jalankan fetch dari API di background
         fetchSchedulesFromApi()
         
@@ -813,7 +821,17 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
     // ── SELECT SCHEDULE ──────────────────────────────────────────────────────
 
     fun selectSchedule(schedule: Schedule) {
-        selectedSchedule = schedule
+        if (selectedSchedule?.departureTime != schedule.departureTime || 
+            selectedSchedule?.originStation != schedule.originStation) {
+            selectedSchedule = schedule
+            selectedCoachClass = null
+            selectedCarriage = null
+            selectedSeats.clear()
+            clearSelectedPassengers()
+            Log.d("BookingViewModel", "New schedule selected, selection state reset")
+        } else {
+            selectedSchedule = schedule
+        }
     }
 
     // ── COACH CLASS & SEATS ──────────────────────────────────────────────────
@@ -852,6 +870,7 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
         occupiedSeats.clear()
 
         occupiedSeatsJob = viewModelScope.launch {
+            isOccupiedSeatsLoading = true
             try {
                 val response = withContext(Dispatchers.IO) {
                     api.getOccupiedSeats(
@@ -867,12 +886,22 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
                     val seats = response.body()?.data?.get("occupied_seats") ?: emptyList()
                     occupiedSeats.clear()
                     occupiedSeats.addAll(seats)
+                    
+                    // Auto-remove seats that are now occupied from the selected list
+                    val removedCount = selectedSeats.count { seats.contains(it) }
+                    if (removedCount > 0) {
+                        selectedSeats.removeAll { seats.contains(it) }
+                        Log.w("BookingViewModel", "$removedCount selected seats were removed because they are now occupied")
+                    }
+                    
                     Log.i("BookingViewModel", "Occupied seats loaded: ${seats.size} seats for Carriage $carriage")
                 }
             } catch (e: Exception) {
                 if (e !is kotlinx.coroutines.CancellationException) {
                     Log.e("BookingViewModel", "Error loading occupied seats: ${e.message}")
                 }
+            } finally {
+                isOccupiedSeatsLoading = false
             }
         }
     }
@@ -936,6 +965,14 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
             bookingCode = bookingCode,
             selectedCarriage = selectedCarriage ?: 1,
             selectedSeats = selectedSeats.toList(),
+            passengers = _selectedPassengers.value.mapIndexed { index, p ->
+                com.example.whoossh.model.PassengerInfo(
+                    name = p.name,
+                    identityNo = p.identityNo,
+                    passengerType = p.passengerType,
+                    seatNumber = if (index < selectedSeats.size) selectedSeats[index] else ""
+                )
+            },
             bookingTimestamp = timestamp,
             isUsed = false,
             isPaid = isPaid
@@ -1311,8 +1348,15 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
         val current = _selectedPassengers.value.toMutableList()
         current.removeAll { it.id == passenger.id }
         _selectedPassengers.value = current
-        ticketCount = if (current.isEmpty()) 1 else current.size // Sync ticketCount
-        Log.i("BookingViewModel", "Passenger removed: ${passenger.name}, remaining: ${current.size}")
+        val newSize = current.size
+        ticketCount = if (newSize == 0) 1 else newSize // Sync ticketCount
+        
+        // Trim selectedSeats if it exceeds new passenger count
+        while (selectedSeats.size > newSize && selectedSeats.isNotEmpty()) {
+            selectedSeats.removeAt(selectedSeats.size - 1)
+        }
+        
+        Log.i("BookingViewModel", "Passenger removed: ${passenger.name}, remaining: $newSize")
     }
 
     fun updatePassenger(passenger: Passenger) {
@@ -1470,6 +1514,8 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
 
     fun clearSelectedPassengers() {
         _selectedPassengers.value = emptyList()
+        selectedSeats.clear()
+        ticketCount = 1
     }
 
     fun getSavedPassengerById(id: String): Passenger? {
@@ -2084,6 +2130,14 @@ fun BookingResponse.toBookingData(fallbackName: String = ""): BookingData {
         bookingCode = bookingCode,
         selectedCarriage = selectedCarriage,
         selectedSeats = if (selectedSeats.isBlank()) emptyList() else selectedSeats.split(","),
+        passengers = passengers?.map { 
+            com.example.whoossh.model.PassengerInfo(
+                name = it.name,
+                identityNo = it.identityNo,
+                passengerType = it.passengerType,
+                seatNumber = it.seatNumber
+            )
+        } ?: emptyList(),
         bookingTimestamp = bookingTimestamp,
         isUsed = calculatedIsUsed,
         isPaid = isPaid == 1,

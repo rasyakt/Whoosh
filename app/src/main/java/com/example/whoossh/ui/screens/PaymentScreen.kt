@@ -41,12 +41,12 @@ fun PaymentScreen(
     onPaymentSuccess: () -> Unit,
     onBack: () -> Unit
 ) {
-    val coach = viewModel.selectedCoachClass ?: return
     val bookingData = viewModel.bookingData ?: return
+    val coach = bookingData.coachClass
     val pricePerTicket = bookingData.pricePerTicket
     val totalFare = bookingData.totalPrice
     val bookingCode = bookingData.bookingCode
-    val primaryPassenger = viewModel.selectedPassengers.collectAsState().value.firstOrNull()?.name ?: "User"
+    val primaryPassenger = bookingData.userName.ifBlank { "User" }
 
     var selectedBankName by remember { mutableStateOf<String?>(null) }
     var selectedBankId by remember { mutableStateOf<String?>(null) }
