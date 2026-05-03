@@ -99,7 +99,7 @@ fun SelectSeatScreen(
                     if (viewModel.selectedSeats.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Gerbong $selectedCarriage: ${viewModel.selectedSeats.sorted().joinToString(".tr(), ")}",
+                            text = "${"Gerbong".tr()} $selectedCarriage: ${viewModel.selectedSeats.sorted().joinToString(", ")}",
                             fontWeight = FontWeight.SemiBold,
                             fontSize = 14.sp,
                             color = WhooshRed

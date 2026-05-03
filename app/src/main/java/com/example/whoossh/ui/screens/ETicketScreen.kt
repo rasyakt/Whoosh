@@ -900,7 +900,13 @@ fun ETicketScreen(
                 confirmButton = {
                     Button(
                         onClick = {
-                            viewModel.refundTicket(booking) { success, message, amount ->
+                            // ✅ FIX: Pass semua data bank secara eksplisit termasuk accountHolder
+                            viewModel.refundTicket(
+                                booking = booking,
+                                bankName = viewModel.savedBankName,
+                                accountNo = viewModel.savedAccountNo,
+                                accountHolder = viewModel.savedAccountHolder
+                            ) { success, message, amount ->
                                 if (success) {
                                     Toast.makeText(
                                         context,

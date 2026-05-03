@@ -172,11 +172,63 @@ object EmailSender {
 
     /**
      * Membuat HTML template e-ticket yang profesional sesuai format KCIC.
+     * ✅ FIX: Menampilkan semua penumpang, bukan hanya 1
      */
     private fun buildETicketHtml(data: BookingData): String {
         val formattedPrice = TicketUtils.formatRupiah(data.totalPrice)
         val seats = data.selectedSeats.sorted().joinToString(", ").ifEmpty { "-" }
         val currentDate = java.text.SimpleDateFormat("dd MMM yyyy, HH.mm", java.util.Locale("id", "ID")).format(java.util.Date())
+
+        // ✅ FIX: Build passenger list HTML untuk menampilkan semua penumpang
+        val passengerListHtml = if (data.passengers.isNotEmpty()) {
+            val passengerRows = data.passengers.mapIndexed { index, passenger ->
+                """
+                <tr>
+                    <td style="padding:12px 15px; background:${if (index % 2 == 0) "#FAFAFA" else "#FFFFFF"}; border-bottom:1px solid #EEEEEE;">
+                        <p style="margin:0;font-size:14px;color:#333;"><strong>${index + 1}. ${passenger.name}</strong></p>
+                        <p style="margin:4px 0 0;font-size:12px;color:#666;">ID: ${passenger.identityNo.take(4)}****${passenger.identityNo.takeLast(2)}</p>
+                        <p style="margin:3px 0 0;font-size:12px;color:#666;">Seat: ${passenger.seatNumber.ifBlank { "-" }} | ${passenger.passengerType}</p>
+                    </td>
+                </tr>
+                """.trimIndent()
+            }.joinToString("\n")
+            
+            """
+            <tr>
+                <td style="padding:0 40px 20px;">
+                    <h3 style="margin:0;font-size:16px;color:#333;font-weight:600;border-bottom:1px solid #EEE;padding-bottom:10px;">PASSENGER DETAILS (${data.passengers.size} Passenger${if (data.passengers.size > 1) "s" else ""})</h3>
+                </td>
+            </tr>
+            <tr>
+                <td style="padding:0 40px 30px;">
+                    <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #EEEEEE;border-radius:8px;overflow:hidden;">
+                        $passengerRows
+                    </table>
+                </td>
+            </tr>
+            """.trimIndent()
+        } else {
+            // Fallback jika passengers kosong
+            """
+            <tr>
+                <td style="padding:0 40px 20px;">
+                    <h3 style="margin:0;font-size:16px;color:#333;font-weight:600;border-bottom:1px solid #EEE;padding-bottom:10px;">PASSENGER</h3>
+                </td>
+            </tr>
+            <tr>
+                <td style="padding:0 40px 30px;">
+                    <table width="100%" cellpadding="0" cellspacing="0" style="background:#F9F9F9;border-radius:8px;padding:15px;">
+                        <tr>
+                            <td>
+                                <p style="margin:0;font-size:14px;color:#333;"><strong>${data.userName}</strong></p>
+                                <p style="margin:5px 0 0;font-size:13px;color:#666;">${data.ticketCount} Ticket(s)</p>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+            """.trimIndent()
+        }
 
         return buildBaseHtml(
             title = "Ticket Purchase Success",
@@ -235,6 +287,7 @@ object EmailSender {
                             <tr>
                                 <td style="padding:15px; background:#F9F9F9; border-radius:6px; border-left:4px solid #D32F2F;">
                                     <p style="margin:0;font-size:13px;color:#333;"><strong>Class:</strong> ${data.coachClass.displayName}</p>
+                                    <p style="margin:5px 0 0;font-size:13px;color:#333;"><strong>Coach:</strong> ${data.selectedCarriage}</p>
                                     <p style="margin:5px 0 0;font-size:13px;color:#333;"><strong>Seats:</strong> $seats</p>
                                     <p style="margin:5px 0 0;font-size:13px;color:#333;"><strong>Booking Code:</strong> ${data.bookingCode}</p>
                                 </td>
@@ -242,6 +295,7 @@ object EmailSender {
                         </table>
                     </td>
                 </tr>
+                $passengerListHtml
                 <tr>
                     <td style="padding:0 40px 30px;">
                         <p style="margin:0;font-size:11px;color:#999;line-height:1.4;">

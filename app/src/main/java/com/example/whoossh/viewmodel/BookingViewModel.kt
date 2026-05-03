@@ -498,43 +498,57 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
             try {
                 val booking = ticket.toBookingData(userName)
                 
-                // PROTEKSI 1: Jika tiket ada di cache cancelled
-                if (cancelledTicketsCache.contains(booking.bookingCode)) {
-                    // Jika ini adalah refund (pernah dibayar), JANGAN SKIP.
-                    // Jika ini adalah pembatalan biasa (unpaid), baru boleh di-skip jika diinginkan.
-                    // Tapi lebih aman tampilkan saja di riwayat.
-                    
-                    // Jika server sudah update ke cancelled, hapus dari cache
-                    if (ticket.isCancelled == 1) {
-                        Log.i("BookingViewModel", "  ✅ Server synced for ${booking.bookingCode}, removing from cancelled cache")
-                        userPreferences.removeCancelledTicket(ticket.bookingCode)
+                // ✅ FIX: PRIORITY ORDER untuk mencegah dual status
+                // Refunded > Cancelled (unpaid) > Paid > Unpaid
+                val finalBooking = when {
+                    refundedTicketsCache.contains(booking.bookingCode) -> {
+                        // REFUNDED: isPaid=true, isCancelled=true, status=REFUNDED
+                        Log.w("BookingViewModel", "  ⚠️ PROTECTING ${booking.bookingCode}: cache says REFUNDED")
+                        booking.copy(
+                            isPaid = true,
+                            isCancelled = true,
+                            status = OrderStatus.REFUNDED
+                        )
                     }
-                    
-                    // JANGAN RETURN NULL di sini jika ingin tetap muncul di riwayat
-                    // Kita biarkan mengalir ke finalBooking
+                    cancelledTicketsCache.contains(booking.bookingCode) && !paidTicketsCache.contains(booking.bookingCode) -> {
+                        // CANCELLED (unpaid): isPaid=false, isCancelled=true
+                        Log.w("BookingViewModel", "  ⚠️ PROTECTING ${booking.bookingCode}: cache says CANCELLED (unpaid)")
+                        booking.copy(
+                            isPaid = false,
+                            isCancelled = true,
+                            status = OrderStatus.CANCELLED
+                        )
+                    }
+                    paidTicketsCache.contains(booking.bookingCode) -> {
+                        // PAID: isPaid=true, isCancelled=false (kecuali sudah refund)
+                        if (!booking.isPaid || (booking.isCancelled && !refundedTicketsCache.contains(booking.bookingCode))) {
+                            Log.w("BookingViewModel", "  ⚠️ PROTECTING ${booking.bookingCode}: cache says PAID, forcing isPaid=true, isCancelled=false")
+                            booking.copy(
+                                isPaid = true,
+                                isCancelled = false,
+                                status = OrderStatus.PAID
+                            )
+                        } else {
+                            booking
+                        }
+                    }
+                    else -> {
+                        // Default: gunakan data dari server
+                        booking
+                    }
                 }
                 
-        val finalBooking = if (refundedTicketsCache.contains(booking.bookingCode)) {
-            // PAKSA status REFUNDED jika ada di cache refund
-            Log.w("BookingViewModel", "  ⚠️ PROTECTING ${booking.bookingCode}: cache says REFUNDED")
-            booking.copy(isPaid = true, isCancelled = true, status = OrderStatus.REFUNDED)
-        } else if (paidTicketsCache.contains(booking.bookingCode)) {
-            if (!booking.isPaid || booking.isCancelled) {
-                Log.w("BookingViewModel", "  ⚠️ PROTECTING ${booking.bookingCode}: cache says PAID, forcing isPaid=true, isCancelled=false")
-                booking.copy(isPaid = true, isCancelled = false, status = OrderStatus.PAID)
-            } else {
-                booking
-            }
-        } else {
-            booking
-        }
+                Log.d("BookingViewModel", "  Server ticket: ${ticket.bookingCode} isPaid=${ticket.isPaid} isCancelled=${ticket.isCancelled} (raw) -> isPaid=${finalBooking.isPaid} isCancelled=${finalBooking.isCancelled} status=${finalBooking.status} (final)")
                 
-                Log.d("BookingViewModel", "  Server ticket: ${ticket.bookingCode} isPaid=${ticket.isPaid} isCancelled=${ticket.isCancelled} (raw) -> isPaid=${finalBooking.isPaid} isCancelled=${finalBooking.isCancelled} (final)")
-                
-                // Jika server sudah update ke paid, hapus dari cache
-                if (ticket.isPaid == 1 && paidTicketsCache.contains(ticket.bookingCode)) {
-                    Log.i("BookingViewModel", "  ✅ Server synced for ${ticket.bookingCode}, removing from paid cache")
+                // ✅ FIX: Cleanup cache jika server sudah sync
+                if (ticket.isPaid == 1 && paidTicketsCache.contains(ticket.bookingCode) && ticket.isCancelled == 0) {
+                    Log.i("BookingViewModel", "  ✅ Server synced PAID for ${ticket.bookingCode}, removing from paid cache")
                     userPreferences.removePaidTicket(ticket.bookingCode)
+                }
+                
+                if (ticket.isCancelled == 1 && cancelledTicketsCache.contains(ticket.bookingCode)) {
+                    Log.i("BookingViewModel", "  ✅ Server synced CANCELLED for ${ticket.bookingCode}, removing from cancelled cache")
+                    userPreferences.removeCancelledTicket(ticket.bookingCode)
                 }
                 
                 finalBooking
@@ -566,8 +580,8 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
         for (ticket in activeTickets) {
             val server = mergedMap[ticket.bookingCode]
             if (server != null) {
-                // PROTEKSI: Jika lokal sudah paid, JANGAN PERNAH ubah jadi cancelled
-                if (ticket.isPaid) {
+                // ✅ FIX: PROTEKSI - Jika lokal sudah paid, JANGAN PERNAH ubah jadi cancelled
+                if (ticket.isPaid && !refundedTicketsCache.contains(ticket.bookingCode)) {
                     if (!server.isPaid || server.isCancelled) {
                         Log.w("BookingViewModel", "⚠️ PRESERVING local paid status for ${ticket.bookingCode} (local=paid, server=unpaid/cancelled)")
                         mergedMap[ticket.bookingCode] = ticket.copy(isCancelled = false)
@@ -837,16 +851,23 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
     // ── SELECT SCHEDULE ──────────────────────────────────────────────────────
 
     fun selectSchedule(schedule: Schedule) {
-        if (selectedSchedule?.departureTime != schedule.departureTime || 
-            selectedSchedule?.originStation != schedule.originStation) {
-            selectedSchedule = schedule
+        // ✅ FIX: Hanya reset jika BENAR-BENAR ganti jadwal (bukan back navigation)
+        val isDifferentSchedule = selectedSchedule?.departureTime != schedule.departureTime || 
+                                  selectedSchedule?.originStation != schedule.originStation ||
+                                  selectedSchedule?.destinationStation != schedule.destinationStation
+        
+        selectedSchedule = schedule
+        
+        if (isDifferentSchedule) {
+            // Reset hanya jika jadwal berbeda
             selectedCoachClass = null
             selectedCarriage = null
             selectedSeats.clear()
             clearSelectedPassengers()
             Log.d("BookingViewModel", "New schedule selected, selection state reset")
         } else {
-            selectedSchedule = schedule
+            // Jadwal sama, JANGAN reset (back navigation case)
+            Log.d("BookingViewModel", "Same schedule re-selected, preserving seat selection (${selectedSeats.size} seats)")
         }
     }
 
@@ -855,7 +876,20 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
     fun selectCoachClass(coachClass: CoachClass) {
         if (selectedCoachClass != coachClass) {
             selectedCoachClass = coachClass
-            selectCarriage(getAvailableCarriages(coachClass).firstOrNull() ?: 1)
+            
+            // ✅ FIX: Hanya reset carriage jika tidak valid, JANGAN reset seats
+            val availableCarriages = getAvailableCarriages(coachClass)
+            val currentCarriage = selectedCarriage
+            
+            if (currentCarriage == null || !availableCarriages.contains(currentCarriage)) {
+                // Carriage tidak valid untuk class baru, pilih yang pertama
+                selectCarriage(availableCarriages.firstOrNull() ?: 1)
+                Log.d("BookingViewModel", "Coach class changed, carriage reset to ${availableCarriages.firstOrNull() ?: 1}")
+            } else {
+                // Carriage masih valid, load occupied seats untuk validasi
+                loadOccupiedSeats()
+                Log.d("BookingViewModel", "Coach class changed, carriage $currentCarriage still valid, preserving ${selectedSeats.size} seats")
+            }
         }
     }
 
@@ -869,8 +903,15 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun selectCarriage(number: Int) {
+        val previousCarriage = selectedCarriage
         selectedCarriage = number
-        selectedSeats.clear() // Reset selection when switching carriages
+        
+        // ✅ FIX: Hanya clear seats jika benar-benar ganti carriage
+        if (previousCarriage != number) {
+            selectedSeats.clear() // Reset selection when switching carriages
+            Log.d("BookingViewModel", "Carriage changed from $previousCarriage to $number, seats cleared")
+        }
+        
         loadOccupiedSeats()
     }
     
@@ -882,8 +923,8 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
         // Cancel previous job to prevent race conditions
         occupiedSeatsJob?.cancel()
         
-        // Clear current seats immediately so user doesn't see stale data from previous carriage
-        occupiedSeats.clear()
+        // ✅ FIX: JANGAN clear dulu, biarkan data lama sampai data baru datang
+        // Ini mencegah window of vulnerability dimana user bisa pilih kursi yang sebenarnya terisi
 
         occupiedSeatsJob = viewModelScope.launch {
             isOccupiedSeatsLoading = true
@@ -900,14 +941,16 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
                 
                 if (response.isSuccessful && response.body()?.status == "success") {
                     val seats = response.body()?.data?.get("occupied_seats") ?: emptyList()
+                    
+                    // ✅ FIX: Clear dan update atomically (sekaligus)
                     occupiedSeats.clear()
                     occupiedSeats.addAll(seats)
                     
-                    // Auto-remove seats that are now occupied from the selected list
-                    val removedCount = selectedSeats.count { seats.contains(it) }
-                    if (removedCount > 0) {
-                        selectedSeats.removeAll { seats.contains(it) }
-                        Log.w("BookingViewModel", "$removedCount selected seats were removed because they are now occupied")
+                    // ✅ CRITICAL: Validasi ulang selectedSeats untuk mencegah double booking
+                    val invalidSeats = selectedSeats.filter { seats.contains(it) }
+                    if (invalidSeats.isNotEmpty()) {
+                        selectedSeats.removeAll(invalidSeats)
+                        Log.w("BookingViewModel", "⚠️ SECURITY: Removed ${invalidSeats.size} seats that became occupied: $invalidSeats")
                     }
                     
                     Log.i("BookingViewModel", "Occupied seats loaded: ${seats.size} seats for Carriage $carriage")
@@ -1057,6 +1100,10 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
         val current = bookingData ?: return
         Log.i("BookingViewModel", "markAsPaid: Marking ${current.bookingCode} as PAID")
         
+        // ✅ FIX: STOP TIMER IMMEDIATELY sebelum update state
+        // Ini mencegah race condition dimana timer habis tepat saat user bayar
+        stopTimer()
+        
         val updated = current.copy(isPaid = true)
         bookingData = updated
         
@@ -1078,9 +1125,6 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
         activeTickets.forEach { ticket ->
             Log.d("BookingViewModel", "  activeTicket: ${ticket.bookingCode} isPaid=${ticket.isPaid}")
         }
-        
-        // Stop all timers when paid
-        stopTimer()
 
         // Update status ke server
         viewModelScope.launch {
@@ -1699,7 +1743,8 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
     fun refundTicket(
         booking: BookingData, 
         bankName: String = "", 
-        accountNo: String = "", 
+        accountNo: String = "",
+        accountHolder: String = "", // ✅ FIX: Tambah parameter untuk nama pemilik rekening
         onResult: (Boolean, String, Int) -> Unit
     ) {
         val (canRefund, errorMsg) = canRefund(booking)
@@ -1710,6 +1755,13 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
 
         val finalBankName = if (bankName.isEmpty()) savedBankName else bankName
         val finalAccountNo = if (accountNo.isEmpty()) savedAccountNo else accountNo
+        val finalAccountHolder = if (accountHolder.isEmpty()) savedAccountHolder else accountHolder
+        
+        // ✅ FIX: Validasi nama pemilik rekening
+        if (finalAccountHolder.isEmpty()) {
+            onResult(false, "Nama pemilik rekening belum diisi. Silakan lengkapi di menu Akun.", 0)
+            return
+        }
         
         if (finalBankName.isEmpty() || finalAccountNo.isEmpty()) {
             onResult(false, "Data rekening refund belum lengkap. Silakan lengkapi di menu Akun.", 0)
@@ -1728,7 +1780,7 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
                         "refund_amount" to refundAmount,
                         "bank_name" to finalBankName,
                         "account_no" to finalAccountNo,
-                        "account_holder" to savedAccountHolder
+                        "account_holder" to finalAccountHolder // ✅ FIX: Gunakan parameter yang benar
                     ))
                 }
 
@@ -1753,7 +1805,7 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
                     
                     refreshTickets()
                     
-                    // Send Email Notification
+                    // ✅ FIX: Send Email dengan data bank yang benar
                     if (userEmail.isNotBlank()) {
                         viewModelScope.launch(Dispatchers.IO) {
                             EmailSender.sendRefundNotification(
@@ -1762,7 +1814,7 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
                                 refundAmount = refundAmount,
                                 bankName = finalBankName,
                                 accountNo = finalAccountNo,
-                                accountHolder = savedAccountHolder
+                                accountHolder = finalAccountHolder // ✅ FIX: Pass parameter yang benar
                             )
                         }
                     }
@@ -2086,8 +2138,10 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
 
     private fun stopTimer() {
         timerJob?.cancel()
+        timerJob = null // ✅ FIX: Set null untuk cleanup dan prevent memory leak
         seatLockTimeLeft = 0
         paymentTimeLeft = 0
+        Log.i("BookingViewModel", "Timer stopped and cleaned up")
     }
 
     // ── SETTINGS ─────────────────────────────────────────────────────────────
