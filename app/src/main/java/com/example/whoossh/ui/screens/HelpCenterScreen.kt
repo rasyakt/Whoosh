@@ -56,6 +56,7 @@ import com.example.whoossh.ui.theme.WhooshGreen
 import com.example.whoossh.ui.theme.WhooshRed
 import com.example.whoossh.ui.theme.WhooshTextSecondary
 import com.example.whoossh.ui.theme.WhooshWhite
+import com.example.whoossh.utils.tr
 
 @Composable
 fun HelpCenterScreen(
@@ -76,7 +77,7 @@ fun HelpCenterScreen(
 
     Scaffold(
         topBar = {
-            WhooshTopBar(title = "Pusat Bantuan", onBack = onBack)
+            WhooshTopBar(title = "Pusat Bantuan".tr(), onBack = onBack)
         }
     ) { paddingValues ->
         Column(
@@ -106,13 +107,13 @@ fun HelpCenterScreen(
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        text = "Ada yang bisa kami bantu?",
+                        text = "Ada yang bisa kami bantu?".tr(),
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
                         color = WhooshWhite
                     )
                     Text(
-                        text = "Temukan jawaban dari pertanyaan yang sering diajukan atau hubungi tim kami",
+                        text = "Temukan jawaban dari pertanyaan yang sering diajukan atau hubungi tim kami".tr(),
                         fontSize = 13.sp,
                         color = WhooshWhite.copy(0.85f),
                         lineHeight = 20.sp,
@@ -123,7 +124,7 @@ fun HelpCenterScreen(
 
             // FAQ Section
             Text(
-                text = "Pertanyaan Umum (FAQ)",
+                text = "Pertanyaan Umum (FAQ)".tr(),
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
@@ -151,7 +152,7 @@ fun HelpCenterScreen(
 
             // Contact Section
             Text(
-                text = "Hubungi Kami",
+                text = "Hubungi Kami".tr(),
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
@@ -200,7 +201,7 @@ fun HelpCenterScreen(
             // CS Button
             Box(modifier = Modifier.padding(horizontal = 16.dp)) {
                 WhooshButton(
-                    text = "Chat dengan Customer Service",
+                    text = "Chat dengan Customer Service".tr(),
                     onClick = {
                         val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/6281234567890"))
                         context.startActivity(intent)
@@ -227,8 +228,7 @@ private fun FaqItem(question: String, answer: String) {
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = question,
+            Text(text = question.tr(),
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium,
                 modifier = Modifier.weight(1f)
@@ -241,8 +241,7 @@ private fun FaqItem(question: String, answer: String) {
             )
         }
         AnimatedVisibility(visible = expanded) {
-            Text(
-                text = answer,
+            Text(text = answer.tr(),
                 fontSize = 13.sp,
                 color = WhooshTextSecondary,
                 lineHeight = 20.sp,
@@ -283,9 +282,9 @@ private fun ContactCard(
             }
             Spacer(modifier = Modifier.width(12.dp))
             Column {
-                Text(text = title, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                Text(text = title.tr(), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                 Text(text = value, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = color)
-                Text(text = subtitle, fontSize = 11.sp, color = Color.LightGray)
+                Text(text = subtitle.tr(), fontSize = 11.sp, color = Color.LightGray)
             }
         }
     }

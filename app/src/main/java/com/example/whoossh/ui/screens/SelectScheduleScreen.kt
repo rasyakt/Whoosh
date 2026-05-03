@@ -70,6 +70,7 @@ import androidx.compose.material.icons.outlined.ArrowCircleRight
 import androidx.compose.material.icons.filled.Train
 
 import androidx.compose.foundation.layout.statusBarsPadding
+import com.example.whoossh.utils.tr
 
 @Composable
 fun SelectScheduleScreen(
@@ -227,7 +228,7 @@ fun SelectScheduleScreen(
                         val color = if (canGoPrev) Color(0xFF1A1A1A) else Color(0xFFCCCCCC)
                         Icon(Icons.Outlined.ArrowCircleLeft, null, tint = color, modifier = Modifier.size(22.dp))
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("Sebelumnya", fontSize = 12.sp, color = color)
+                        Text("Sebelumnya".tr(), fontSize = 12.sp, color = color)
                     }
 
                     // Selector
@@ -259,7 +260,7 @@ fun SelectScheduleScreen(
                         }
                     ) {
                         val color = if (canGoNext) Color(0xFF1A1A1A) else Color(0xFFCCCCCC)
-                        Text("Selanjutnya", fontSize = 12.sp, color = color)
+                        Text("Selanjutnya".tr(), fontSize = 12.sp, color = color)
                         Spacer(modifier = Modifier.width(6.dp))
                         Icon(Icons.Outlined.ArrowCircleRight, null, tint = color, modifier = Modifier.size(22.dp))
                     }
@@ -295,7 +296,7 @@ fun SelectScheduleScreen(
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            text = "Tidak ada jadwal tersedia",
+                            text = "Tidak ada jadwal tersedia".tr(),
                             color = WhooshTextSecondary,
                             fontSize = 16.sp
                         )
@@ -303,7 +304,7 @@ fun SelectScheduleScreen(
                 }
             } else {
                 Text(
-                    text = "${viewModel.schedules.size} jadwal tersedia",
+                    text = "${viewModel.schedules.size} jadwal tersedia".tr(),
                     style = MaterialTheme.typography.bodySmall,
                     color = WhooshTextSecondary,
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)
@@ -387,7 +388,7 @@ private fun ScheduleCard(
                         )
                         Spacer(modifier = Modifier.width(2.dp))
                         Text(
-                            text = "WIB",
+                            text = "WIB".tr(),
                             fontSize = 9.sp,
                             color = Color.Gray,
                             modifier = Modifier.padding(top = 2.dp)
@@ -409,7 +410,7 @@ private fun ScheduleCard(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = "${schedule.duration} mnt",
+                        text = "${schedule.duration} mnt".tr(),
                         fontSize = 10.sp,
                         color = Color.Gray,
                         fontWeight = FontWeight.Medium
@@ -435,7 +436,7 @@ private fun ScheduleCard(
                         )
                         Spacer(modifier = Modifier.width(2.dp))
                         Text(
-                            text = "WIB",
+                            text = "WIB".tr(),
                             fontSize = 9.sp,
                             color = Color.Gray,
                             modifier = Modifier.padding(top = 2.dp)
@@ -462,7 +463,7 @@ private fun ScheduleCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Stasiun Pemberhentian", 
+                    text = "Stasiun Pemberhentian".tr(), 
                     fontSize = 10.sp, 
                     color = WhooshRed, 
                     fontWeight = FontWeight.SemiBold
@@ -485,10 +486,10 @@ private fun ScheduleCard(
                         .padding(10.dp)
                 ) {
                     Row(modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp)) {
-                        Text("Stasiun", fontSize = 9.sp, color = Color.Gray, modifier = Modifier.weight(2f))
-                        Text("Tiba", fontSize = 9.sp, color = Color.Gray, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
-                        Text("Keluar", fontSize = 9.sp, color = Color.Gray, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
-                        Text("Berhenti", fontSize = 9.sp, color = Color.Gray, modifier = Modifier.weight(1f), textAlign = TextAlign.End)
+                        Text("Stasiun".tr(), fontSize = 9.sp, color = Color.Gray, modifier = Modifier.weight(2f))
+                        Text("Tiba".tr(), fontSize = 9.sp, color = Color.Gray, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
+                        Text("Berangkat".tr(), fontSize = 9.sp, color = Color.Gray, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
+                        Text("Berhenti".tr(), fontSize = 9.sp, color = Color.Gray, modifier = Modifier.weight(1f), textAlign = TextAlign.End)
                     }
                     HorizontalDivider(color = WhooshRed.copy(0.08f))
                     
@@ -516,7 +517,7 @@ private fun ScheduleCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text(text = "Mulai dari", fontSize = 10.sp, color = WhooshTextSecondary)
+                    Text(text = "Mulai dari".tr(), fontSize = 10.sp, color = WhooshTextSecondary)
                     Text(
                         text = com.example.whoossh.utils.TicketUtils.formatRupiah(schedule.price),
                         fontSize = 16.sp,
@@ -532,7 +533,7 @@ private fun ScheduleCard(
                     colors = ButtonDefaults.buttonColors(containerColor = WhooshRed),
                     contentPadding = PaddingValues(0.dp)
                 ) {
-                    Text(text = "Pilih", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Text(text = "Pilih".tr(), fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 }
             }
         }

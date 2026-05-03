@@ -36,6 +36,7 @@ import com.example.whoossh.ui.theme.WhooshGradientEnd
 import com.example.whoossh.ui.theme.WhooshGradientStart
 import com.example.whoossh.ui.theme.WhooshWhite
 import kotlinx.coroutines.delay
+import com.example.whoossh.utils.tr
 
 @Composable
 fun SplashScreen(
@@ -119,7 +120,7 @@ fun SplashScreen(
 
             // Professional Branding Hierarchy
             Text(
-                text = "TICKET",
+                text = "TICKET".tr(),
                 style = MaterialTheme.typography.displaySmall.copy(
                     fontWeight = FontWeight.Black,
                     letterSpacing = 14.sp,
@@ -142,7 +143,7 @@ fun SplashScreen(
 
             // Professional Footer/Company Name
             Text(
-                text = "KERETA CEPAT INDONESIA",
+                text = "KERETA CEPAT INDONESIA".tr(),
                 style = MaterialTheme.typography.labelLarge.copy(
                     fontWeight = FontWeight.SemiBold,
                     letterSpacing = 6.sp

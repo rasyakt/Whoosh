@@ -26,6 +26,7 @@ import com.example.whoossh.ui.components.WhooshTopBar
 import com.example.whoossh.ui.theme.WhooshRed
 import com.example.whoossh.ui.theme.WhooshTextSecondary
 import com.example.whoossh.viewmodel.BookingViewModel
+import com.example.whoossh.utils.tr
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -110,13 +111,13 @@ fun AddEditPassengerScreen(
                         Spacer(modifier = Modifier.width(8.dp))
                         Column {
                             Text(
-                                text = "Buat Akun Otomatis",
+                                text = "Buat Akun Otomatis".tr(),
                                 fontWeight = FontWeight.SemiBold,
                                 fontSize = 12.sp,
                                 color = Color.Black
                             )
                             Text(
-                                text = "Data penumpang pertama akan digunakan untuk membuat akun Anda",
+                                text = "Data penumpang pertama akan digunakan untuk membuat akun Anda".tr(),
                                 fontSize = 10.sp,
                                 color = WhooshTextSecondary,
                                 lineHeight = 14.sp
@@ -127,7 +128,7 @@ fun AddEditPassengerScreen(
             }
 
             // Personal Information Section
-            SectionHeader("Personal Information")
+            SectionHeader("Personal Information".tr())
             
             Spacer(modifier = Modifier.height(12.dp))
 
@@ -135,13 +136,13 @@ fun AddEditPassengerScreen(
             Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = "*",
+                        text = "*".tr(),
                         color = WhooshRed,
                         fontSize = 12.sp,
                         modifier = Modifier.padding(end = 4.dp)
                     )
                     Text(
-                        text = "Gender",
+                        text = "Gender".tr(),
                         fontSize = 12.sp,
                         color = Color(0xFF666666)
                     )
@@ -152,13 +153,13 @@ fun AddEditPassengerScreen(
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     GenderOption(
-                        text = "Male",
+                        text = "Male".tr(),
                         isSelected = gender == "Male",
                         onClick = { gender = "Male" },
                         modifier = Modifier.weight(1f)
                     )
                     GenderOption(
-                        text = "Female",
+                        text = "Female".tr(),
                         isSelected = gender == "Female",
                         onClick = { gender = "Female" },
                         modifier = Modifier.weight(1f)
@@ -173,7 +174,7 @@ fun AddEditPassengerScreen(
             // Date of Birth
             SelectableFieldRow(
                 label = "Date of birth",
-                value = dateOfBirth.ifEmpty { "Please select a date of birth" },
+                value = dateOfBirth.ifEmpty { "Please select a date of birth".tr() },
                 onClick = { showDatePicker = true },
                 isRequired = true,
                 isEmpty = dateOfBirth.isEmpty()
@@ -221,12 +222,12 @@ fun AddEditPassengerScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             // Certificate Information Section
-            SectionHeader("Certificate Information")
+            SectionHeader("Certificate Information".tr())
             
             Spacer(modifier = Modifier.height(8.dp))
             
             Text(
-                text = "The input information must be consistent with the certificate information.",
+                text = "The input information must be consistent with the certificate information.".tr(),
                 fontSize = 11.sp,
                 color = WhooshRed,
                 lineHeight = 15.sp,
@@ -267,7 +268,7 @@ fun AddEditPassengerScreen(
                     },
                     placeholder = { 
                         Text(
-                            "Please enter your $documentType number",
+                            "Please enter your ".tr() + documentType.tr() + " number".tr(),
                             fontSize = 11.sp,
                             color = Color(0xFFCCCCCC)
                         ) 
@@ -293,10 +294,10 @@ fun AddEditPassengerScreen(
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("Full Name", fontSize = 11.sp) },
+                    label = { Text("Full Name".tr(), fontSize = 11.sp) },
                     placeholder = { 
                         Text(
-                            "Enter your name on your ID Card",
+                            "Enter your name on your ID Card".tr(),
                             fontSize = 11.sp,
                             color = Color(0xFFCCCCCC)
                         ) 
@@ -330,7 +331,7 @@ fun AddEditPassengerScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             // Contact Information Section
-            SectionHeader("Contact Information")
+            SectionHeader("Contact Information".tr())
             
             Spacer(modifier = Modifier.height(12.dp))
 
@@ -339,8 +340,8 @@ fun AddEditPassengerScreen(
                 OutlinedTextField(
                     value = whatsapp,
                     onValueChange = { whatsapp = it },
-                    label = { Text("WhatsApp Number", fontSize = 11.sp) },
-                    placeholder = { Text("8123456789", fontSize = 11.sp) },
+                    label = { Text("WhatsApp Number".tr(), fontSize = 11.sp) },
+                    placeholder = { Text("8123456789".tr(), fontSize = 11.sp) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     leadingIcon = {
@@ -351,7 +352,7 @@ fun AddEditPassengerScreen(
                                 .padding(horizontal = 8.dp, vertical = 4.dp)
                         ) {
                             Text(
-                                text = "+62",
+                                text = "+62".tr(),
                                 color = Color.White,
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.SemiBold
@@ -377,8 +378,8 @@ fun AddEditPassengerScreen(
                 OutlinedTextField(
                     value = email,
                     onValueChange = { email = it },
-                    label = { Text("Email Address", fontSize = 11.sp) },
-                    placeholder = { Text("example@email.com", fontSize = 11.sp) },
+                    label = { Text("Email Address".tr(), fontSize = 11.sp) },
+                    placeholder = { Text("example@email.com".tr(), fontSize = 11.sp) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
@@ -397,7 +398,7 @@ fun AddEditPassengerScreen(
             if (!isLoggedIn && isFirstPassenger) {
                 Spacer(modifier = Modifier.height(16.dp))
                 
-                SectionHeader("Account Password")
+                SectionHeader("Account Password".tr())
                 
                 Spacer(modifier = Modifier.height(12.dp))
 
@@ -406,8 +407,8 @@ fun AddEditPassengerScreen(
                     OutlinedTextField(
                         value = password,
                         onValueChange = { password = it },
-                        label = { Text("Password (min. 6 characters)", fontSize = 11.sp) },
-                        placeholder = { Text("Enter password", fontSize = 11.sp) },
+                        label = { Text("Password (min. 6 characters)".tr(), fontSize = 11.sp) },
+                        placeholder = { Text("Enter password".tr(), fontSize = 11.sp) },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
@@ -430,8 +431,8 @@ fun AddEditPassengerScreen(
                     OutlinedTextField(
                         value = confirmPassword,
                         onValueChange = { confirmPassword = it },
-                        label = { Text("Confirm Password", fontSize = 11.sp) },
-                        placeholder = { Text("Re-enter password", fontSize = 11.sp) },
+                        label = { Text("Confirm Password".tr(), fontSize = 11.sp) },
+                        placeholder = { Text("Re-enter password".tr(), fontSize = 11.sp) },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
@@ -469,7 +470,7 @@ fun AddEditPassengerScreen(
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = "Save this passenger for future bookings",
+                        text = "Save this passenger for future bookings".tr(),
                         fontSize = 12.sp,
                         color = Color(0xFF666666)
                     )
@@ -587,7 +588,7 @@ fun AddEditPassengerScreen(
         // Passenger Type Dialog
         if (showPassengerTypeDialog) {
             SelectionDialog(
-                title = "Select Passenger Type",
+                title = "Select Passenger Type".tr(),
                 options = listOf("Adult", "Bayi"),
                 selectedOption = passengerType,
                 onOptionSelected = { selected ->
@@ -601,7 +602,7 @@ fun AddEditPassengerScreen(
         // Discount Type Dialog
         if (showDiscountTypeDialog) {
             SelectionDialog(
-                title = "Select Discount Type",
+                title = "Select Discount Type".tr(),
                 options = listOf("none", "veteran", "old", "group"),
                 selectedOption = discountType,
                 onOptionSelected = { selected ->
@@ -616,7 +617,7 @@ fun AddEditPassengerScreen(
         // Document Type Dialog
         if (showDocumentTypeDialog) {
             SelectionDialog(
-                title = "Select Document Type",
+                title = "Select Document Type".tr(),
                 options = listOf("No. identitas", "Paspor"),
                 selectedOption = documentType,
                 onOptionSelected = { selected ->
@@ -705,14 +706,13 @@ private fun SelectableFieldRow(
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (isRequired) {
                 Text(
-                    text = "*",
+                    text = "*".tr(),
                     color = WhooshRed,
                     fontSize = 12.sp,
                     modifier = Modifier.padding(end = 4.dp)
                 )
             }
-            Text(
-                text = label,
+            Text(text = label.tr(),
                 fontSize = 12.sp,
                 color = Color(0xFF666666)
             )
@@ -756,12 +756,12 @@ private fun CustomDatePickerDialog(
                     onDateSelected(formattedDate)
                 }
             }) {
-                Text("Select", fontWeight = FontWeight.Bold, color = WhooshRed)
+                Text("Select".tr(), fontWeight = FontWeight.Bold, color = WhooshRed)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel", color = Color.Gray)
+                Text("Cancel".tr(), color = Color.Gray)
             }
         },
         colors = DatePickerDefaults.colors(
@@ -799,8 +799,7 @@ private fun SelectionDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text(
-                text = title,
+            Text(text = title.tr(),
                 fontSize = 16.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = Color.Black
@@ -827,8 +826,7 @@ private fun SelectionDialog(
                             )
                         )
                         Spacer(modifier = Modifier.width(12.dp))
-                        Text(
-                            text = option,
+                        Text(text = option.tr(),
                             fontSize = 14.sp,
                             color = if (option == selectedOption) Color.Black else Color(0xFF666666)
                         )

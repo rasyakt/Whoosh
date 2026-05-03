@@ -54,6 +54,7 @@ import com.example.whoossh.ui.theme.WhooshTextSecondary
 import com.example.whoossh.ui.theme.WhooshWhite
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import com.example.whoossh.utils.tr
 
 @Composable
 fun PromoScreen(
@@ -94,7 +95,7 @@ fun PromoScreen(
 
     Scaffold(
         topBar = {
-            WhooshTopBar(title = "Promo & Diskon", onBack = onBack)
+            WhooshTopBar(title = "Promo & Diskon".tr(), onBack = onBack)
         }
     ) { paddingValues ->
         if (isLoading) {
@@ -122,7 +123,7 @@ fun PromoScreen(
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = "Belum ada promo tersedia",
+                        text = "Belum ada promo tersedia".tr(),
                         fontSize = 16.sp,
                         color = WhooshTextSecondary,
                         fontWeight = FontWeight.Medium
@@ -183,7 +184,7 @@ private fun PromoCard(promo: Promo) {
                             color = WhooshWhite
                         )
                         Text(
-                            text = "Diskon ${promo.discount}",
+                            text = "Diskon ${promo.discount}".tr(),
                             fontSize = 22.sp,
                             fontWeight = FontWeight.ExtraBold,
                             color = WhooshWhite
@@ -220,7 +221,7 @@ private fun PromoCard(promo: Promo) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column {
-                        Text("Kode Promo:", fontSize = 10.sp, color = Color.Gray)
+                        Text("Kode Promo:".tr(), fontSize = 10.sp, color = Color.Gray)
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(
                                 modifier = Modifier
@@ -244,7 +245,7 @@ private fun PromoCard(promo: Promo) {
                         }
                     }
                     Column(horizontalAlignment = Alignment.End) {
-                        Text("Berlaku sampai", fontSize = 10.sp, color = Color.Gray)
+                        Text("Berlaku sampai".tr(), fontSize = 10.sp, color = Color.Gray)
                         Text(
                             text = promo.validUntil,
                             fontSize = 13.sp,

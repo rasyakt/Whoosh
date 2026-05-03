@@ -17,6 +17,9 @@ import androidx.navigation.compose.rememberNavController
 import com.example.whoossh.navigation.NavGraph
 import com.example.whoossh.ui.theme.WhoosshTheme
 import com.example.whoossh.viewmodel.BookingViewModel
+import com.example.whoossh.utils.LocalLanguage
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.collectAsState
 import java.util.concurrent.atomic.AtomicReference
 
 class MainActivity : ComponentActivity() {
@@ -32,15 +35,19 @@ class MainActivity : ComponentActivity() {
         handleDeepLink(intent)
         
         setContent {
-            WhoosshTheme {
-                Surface(modifier = Modifier.fillMaxSize()) {
-                    val navController = rememberNavController()
-                    val bookingViewModel: BookingViewModel = viewModel()
-                    NavGraph(
-                        navController = navController,
-                        viewModel = bookingViewModel,
-                        deepLinkIntent = deepLinkIntentRef.get()
-                    )
+            val bookingViewModel: BookingViewModel = viewModel()
+            val currentLanguage by bookingViewModel.currentLanguage.collectAsState()
+            
+            CompositionLocalProvider(LocalLanguage provides currentLanguage) {
+                WhoosshTheme {
+                    Surface(modifier = Modifier.fillMaxSize()) {
+                        val navController = rememberNavController()
+                        NavGraph(
+                            navController = navController,
+                            viewModel = bookingViewModel,
+                            deepLinkIntent = deepLinkIntentRef.get()
+                        )
+                    }
                 }
             }
         }

@@ -45,6 +45,7 @@ import com.example.whoossh.ui.theme.WhooshRedLight
 import com.example.whoossh.ui.theme.WhooshTextSecondary
 import com.example.whoossh.ui.theme.WhooshWhite
 import com.example.whoossh.viewmodel.BookingViewModel
+import com.example.whoossh.utils.tr
 
 @Composable
 fun SelectSeatScreen(
@@ -63,7 +64,7 @@ fun SelectSeatScreen(
 
     Scaffold(
         topBar = {
-            WhooshTopBar(title = "Pilih Gerbong & Kursi", onBack = onBack)
+            WhooshTopBar(title = "Pilih Gerbong & Kursi".tr(), onBack = onBack)
         },
         bottomBar = {
             Surface(
@@ -83,12 +84,12 @@ fun SelectSeatScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "Kursi Terpilih:",
+                            text = "Kursi Terpilih:".tr(),
                             color = WhooshTextSecondary,
                             fontSize = 14.sp
                         )
                         Text(
-                            text = "${viewModel.selectedSeats.size} / ${viewModel.ticketCount} Tiket",
+                            text = "${viewModel.selectedSeats.size} / ${viewModel.ticketCount} Tiket".tr(),
                             color = if (completed) WhooshRed else Color.Black,
                             fontWeight = FontWeight.Bold,
                             fontSize = 16.sp
@@ -98,7 +99,7 @@ fun SelectSeatScreen(
                     if (viewModel.selectedSeats.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Gerbong $selectedCarriage: ${viewModel.selectedSeats.sorted().joinToString(", ")}",
+                            text = "Gerbong $selectedCarriage: ${viewModel.selectedSeats.sorted().joinToString(".tr(), ")}",
                             fontWeight = FontWeight.SemiBold,
                             fontSize = 14.sp,
                             color = WhooshRed
@@ -108,7 +109,7 @@ fun SelectSeatScreen(
                     Spacer(modifier = Modifier.height(16.dp))
 
                     WhooshButton(
-                        text = "Lanjutkan",
+                        text = "Lanjutkan".tr(),
                         onClick = onSeatSelected,
                         enabled = completed
                     )
@@ -143,14 +144,14 @@ fun SelectSeatScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "Penumpang Terpilih",
+                            text = "Penumpang Terpilih".tr(),
                             fontSize = 13.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = Color.Black
                         )
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                text = "${selectedPassengers.size} Penumpang",
+                                text = "${selectedPassengers.size} Penumpang".tr(),
                                 fontSize = 12.sp,
                                 color = WhooshRed,
                                 fontWeight = FontWeight.Medium
@@ -212,11 +213,11 @@ fun SelectSeatScreen(
                     .padding(horizontal = 20.dp, vertical = 10.dp),
                 horizontalArrangement = Arrangement.Center
             ) {
-                LegendItem("Tersedia", Color.White, Color.LightGray)
+                LegendItem("Tersedia".tr(), Color.White, Color.LightGray)
                 Spacer(modifier = Modifier.width(16.dp))
-                LegendItem("Terpilih", WhooshRed, WhooshRed)
+                LegendItem("Terpilih".tr(), WhooshRed, WhooshRed)
                 Spacer(modifier = Modifier.width(16.dp))
-                LegendItem("Terisi", Color(0xFFEEEEEE), Color(0xFFDDDDDD))
+                LegendItem("Terisi".tr(), Color(0xFFEEEEEE), Color(0xFFDDDDDD))
             }
 
             // Seat Grid
@@ -353,7 +354,7 @@ private fun CarriageTab(
             .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
         Text(
-            text = "Gerbong $number",
+            text = "Gerbong $number".tr(),
             color = textColor,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
             fontSize = 14.sp
@@ -515,7 +516,7 @@ private fun PassengerItem(index: Int, passenger: com.example.whoossh.model.Passe
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = "$index",
+                text = "$index".tr(),
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
                 color = WhooshRed

@@ -26,6 +26,7 @@ import com.example.whoossh.ui.theme.WhooshTextSecondary
 import com.example.whoossh.utils.TicketUtils
 import com.example.whoossh.viewmodel.BookingViewModel
 import kotlinx.coroutines.delay
+import com.example.whoossh.utils.tr
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -61,11 +62,11 @@ fun UnpaidTicketScreen(
                     val status = viewModel.bookingData?.status ?: OrderStatus.UNPAID
                     Text(
                         text = when (status) {
-                            OrderStatus.REFUNDED -> "Refunded"
-                            OrderStatus.CANCELLED -> "Cancelled"
-                            OrderStatus.PAID -> "Paid"
-                            OrderStatus.CHECKED -> "Used"
-                            else -> "Unpaid"
+                            OrderStatus.REFUNDED -> "Refunded".tr()
+                            OrderStatus.CANCELLED -> "Cancelled".tr()
+                            OrderStatus.PAID -> "Paid".tr()
+                            OrderStatus.CHECKED -> "Used".tr()
+                            else -> "Unpaid".tr()
                         }, 
                         color = Color.White, 
                         fontSize = 18.sp, 
@@ -108,7 +109,7 @@ fun UnpaidTicketScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Fare", color = Color.Gray, fontSize = 14.sp)
+                        Text("Fare".tr(), color = Color.Gray, fontSize = 14.sp)
                         Text(
                             TicketUtils.formatRupiah(totalFare), 
                             fontSize = 14.sp, 
@@ -122,7 +123,7 @@ fun UnpaidTicketScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Total Price", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color.Black)
+                        Text("Total Price".tr(), fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color.Black)
                         Text(
                             TicketUtils.formatRupiah(totalFare), 
                             fontSize = 20.sp, 
@@ -149,7 +150,7 @@ fun UnpaidTicketScreen(
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Black),
                             contentPadding = PaddingValues(0.dp)
                         ) {
-                            Text("Cancel", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                            Text("Cancel".tr(), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                         }
                         OutlinedButton(
                             onClick = {
@@ -166,7 +167,7 @@ fun UnpaidTicketScreen(
                             contentPadding = PaddingValues(0.dp)
                         ) {
                             Text(
-                                "Return Trip", 
+                                "Return Trip".tr(), 
                                 fontSize = 13.sp, 
                                 fontWeight = FontWeight.SemiBold,
                                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
@@ -181,7 +182,7 @@ fun UnpaidTicketScreen(
                             colors = ButtonDefaults.buttonColors(containerColor = WhooshRed),
                             contentPadding = PaddingValues(0.dp)
                         ) {
-                            Text("Pay", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
+                            Text("Pay".tr(), fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
                     }
                 }
             }
@@ -219,7 +220,7 @@ fun UnpaidTicketScreen(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = if (isRefund) "Pengembalian dana (Refund) telah berhasil" else "Tiket ini telah dibatalkan", 
+                            text = if (isRefund) "Pengembalian dana (Refund) telah berhasil".tr() else "Tiket ini telah dibatalkan".tr(), 
                             fontSize = 12.sp, 
                             color = if (isRefund) Color(0xFF2E7D32) else WhooshRed, 
                             fontWeight = FontWeight.Bold
@@ -237,7 +238,7 @@ fun UnpaidTicketScreen(
                     ) {
                         Icon(Icons.Default.Close, null, tint = WhooshRed, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(text = "Waktu pembayaran telah habis", fontSize = 12.sp, color = WhooshRed, fontWeight = FontWeight.Bold)
+                        Text(text = "Waktu pembayaran telah habis".tr(), fontSize = 12.sp, color = WhooshRed, fontWeight = FontWeight.Bold)
                     }
                 }
                 else -> {
@@ -253,7 +254,7 @@ fun UnpaidTicketScreen(
                     ) {
                         Icon(Icons.Default.AccessTime, null, tint = WhooshTextSecondary, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(text = "Remaining payment time: ", fontSize = 12.sp, color = WhooshTextSecondary)
+                        Text(text = "Remaining payment time: ".tr(), fontSize = 12.sp, color = WhooshTextSecondary)
                         Text(
                             text = "${payTime / 60}:${String.format("%02d", payTime % 60)}",
                             fontSize = 12.sp,
@@ -294,7 +295,7 @@ fun UnpaidTicketScreen(
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
-                                text = "${bookingData.duration} m", 
+                                text = "${bookingData.duration} m".tr(), 
                                 fontSize = 13.sp, 
                                 color = WhooshTextSecondary
                             )
@@ -323,7 +324,7 @@ fun UnpaidTicketScreen(
                         
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
-                                text = "G${1100 + (bookingData.bookingCode.hashCode() % 100).let { if (it < 0) -it else it }}", 
+                                text = "G${1100 + (bookingData.bookingCode.hashCode() % 100).let { if (it < 0) -it else it }}".tr(), 
                                 fontSize = 12.sp, 
                                 color = WhooshTextSecondary
                             )
@@ -364,7 +365,7 @@ fun UnpaidTicketScreen(
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        "Passenger", 
+                        "Passenger".tr(), 
                         fontSize = 16.sp, 
                         fontWeight = FontWeight.SemiBold
                     )
@@ -394,7 +395,7 @@ fun UnpaidTicketScreen(
                                         shape = RoundedCornerShape(4.dp)
                                     ) {
                                         Text(
-                                            text = "${passenger.passengerType} ticket",
+                                            text = "${passenger.passengerType} ticket".tr(),
                                             fontSize = 10.sp,
                                             modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
                                             color = WhooshTextSecondary
@@ -402,13 +403,13 @@ fun UnpaidTicketScreen(
                                     }
                                 }
                                 Text(
-                                    text = "Identity No. ${passenger.identityNo.take(4)}****${passenger.identityNo.takeLast(2)}",
+                                    text = "Identity No. ".tr() + "${passenger.identityNo.take(4)}****${passenger.identityNo.takeLast(2)}".tr(),
                                     fontSize = 13.sp,
                                     color = WhooshTextSecondary,
                                     modifier = Modifier.padding(vertical = 4.dp)
                                 )
                                  Text(
-                                    text = "Coach ${bookingData.selectedCarriage} | ${bookingData.coachClass.displayName} $seat",
+                                    text = "Coach ${bookingData.selectedCarriage} | ${bookingData.coachClass.displayName} $seat".tr(),
                                     fontSize = 13.sp,
                                     color = WhooshTextSecondary
                                 )
@@ -443,16 +444,16 @@ fun UnpaidTicketScreen(
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
-                            "Reminder", 
+                            "Reminder".tr(), 
                             fontSize = 14.sp, 
                             fontWeight = FontWeight.SemiBold, 
                             color = Color.Black
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "1. Please complete the online payment within the specified time.\n" +
+                            text = ("1. Please complete the online payment within the specified time.\n" +
                                    "2. In case of late payment, the system will cancel the transaction.\n" +
-                                   "3. You will not be able to purchase additional tickets until you complete payment or cancel this order.",
+                                   "3. You will not be able to purchase additional tickets until you complete payment or cancel this order.").tr(),
                             fontSize = 12.sp,
                             color = WhooshTextSecondary,
                             lineHeight = 18.sp
@@ -471,14 +472,14 @@ fun UnpaidTicketScreen(
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
-                            "Informasi Refund", 
+                            "Informasi Refund".tr(), 
                             fontSize = 14.sp, 
                             fontWeight = FontWeight.SemiBold, 
                             color = Color(0xFF1B5E20)
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Tiket ini telah berhasil direfund. Dana sebesar 75% dari total bayar (setelah biaya administrasi 25%) telah dikirimkan ke rekening yang Anda daftarkan.",
+                            text = "Tiket ini telah berhasil direfund. Dana sebesar 75% dari total bayar (setelah biaya administrasi 25%) telah dikirimkan ke rekening yang Anda daftarkan.".tr(),
                             fontSize = 12.sp,
                             color = Color(0xFF2E7D32),
                             lineHeight = 18.sp
@@ -497,7 +498,7 @@ fun UnpaidTicketScreen(
             onDismissRequest = { showCancelDialog = false },
             title = {
                 Text(
-                    "Batalkan Tiket?",
+                    "Batalkan Tiket?".tr(),
                     fontWeight = FontWeight.Bold,
                     fontSize = 18.sp
                 )
@@ -505,13 +506,13 @@ fun UnpaidTicketScreen(
             text = {
                 Column {
                     Text(
-                        "Apakah Anda yakin ingin membatalkan tiket ini?",
+                        "Apakah Anda yakin ingin membatalkan tiket ini?".tr(),
                         fontSize = 14.sp,
                         color = Color.Black
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        "• Timer pembayaran akan dihentikan\n• Kursi akan dilepas",
+                        "• Timer pembayaran akan dihentikan\n• Kursi akan dilepas".tr(),
                         fontSize = 12.sp,
                         color = WhooshTextSecondary,
                         lineHeight = 18.sp
@@ -531,7 +532,7 @@ fun UnpaidTicketScreen(
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = WhooshRed)
                 ) {
-                    Text("Ya, Batalkan", color = Color.White)
+                    Text("Ya, Batalkan".tr(), color = Color.White)
                 }
             },
             dismissButton = {
@@ -539,7 +540,7 @@ fun UnpaidTicketScreen(
                     onClick = { showCancelDialog = false },
                     border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFD0D0D0))
                 ) {
-                    Text("Tidak", color = Color.Black)
+                    Text("Tidak".tr(), color = Color.Black)
                 }
             }
         )
@@ -565,7 +566,7 @@ fun UnpaidTicketScreen(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        "Tiket Dibatalkan",
+                        "Tiket Dibatalkan".tr(),
                         fontWeight = FontWeight.Bold,
                         fontSize = 18.sp,
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center
@@ -573,8 +574,7 @@ fun UnpaidTicketScreen(
                 }
             },
             text = {
-                Text(
-                    cancelMessage,
+                Text(cancelMessage.tr(),
                     fontSize = 14.sp,
                     color = Color.Black,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center,
@@ -590,7 +590,7 @@ fun UnpaidTicketScreen(
                     colors = ButtonDefaults.buttonColors(containerColor = WhooshRed),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("OK", color = Color.White)
+                    Text("OK".tr(), color = Color.White)
                 }
             }
         )

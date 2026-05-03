@@ -43,6 +43,7 @@ import com.example.whoossh.ui.theme.WhooshGreen
 import com.example.whoossh.ui.theme.WhooshRed
 import com.example.whoossh.ui.theme.WhooshTextSecondary
 import com.example.whoossh.viewmodel.BookingViewModel
+import com.example.whoossh.utils.tr
 
 @Composable
 fun PrivacySecurityScreen(
@@ -54,7 +55,7 @@ fun PrivacySecurityScreen(
 
     Scaffold(
         topBar = {
-            WhooshTopBar(title = "Privasi & Keamanan", onBack = onBack)
+            WhooshTopBar(title = "Privasi & Keamanan".tr(), onBack = onBack)
         }
     ) { paddingValues ->
         Column(
@@ -67,7 +68,7 @@ fun PrivacySecurityScreen(
         ) {
             // Security Settings
             Text(
-                text = "Pengaturan Keamanan",
+                text = "Pengaturan Keamanan".tr(),
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(bottom = 16.dp)
@@ -108,7 +109,7 @@ fun PrivacySecurityScreen(
 
             // Privacy Info
             Text(
-                text = "Kebijakan Privasi",
+                text = "Kebijakan Privasi".tr(),
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(bottom = 16.dp)
@@ -151,7 +152,7 @@ fun PrivacySecurityScreen(
             Spacer(modifier = Modifier.height(20.dp))
 
             Text(
-                text = "Versi Aplikasi: 1.0.0\nTerakhir diperbarui: April 2026",
+                text = "Versi Aplikasi: 1.0.0\nTerakhir diperbarui: April 2026".tr(),
                 fontSize = 12.sp,
                 color = Color.LightGray,
                 lineHeight = 18.sp
@@ -181,8 +182,8 @@ private fun SecurityToggleRow(
             modifier = Modifier.padding(end = 12.dp)
         )
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = title, fontSize = 15.sp, fontWeight = FontWeight.Medium)
-            Text(text = description, fontSize = 12.sp, color = WhooshTextSecondary, modifier = Modifier.padding(top = 2.dp))
+            Text(text = title.tr(), fontSize = 15.sp, fontWeight = FontWeight.Medium)
+            Text(text = description.tr(), fontSize = 12.sp, color = WhooshTextSecondary, modifier = Modifier.padding(top = 2.dp))
         }
         Switch(
             checked = checked,
@@ -212,9 +213,8 @@ private fun PrivacyInfoRow(
             modifier = Modifier.padding(end = 12.dp, top = 2.dp)
         )
         Column {
-            Text(text = title, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-            Text(
-                text = description,
+            Text(text = title.tr(), fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+            Text(text = description.tr(),
                 fontSize = 12.sp,
                 color = WhooshTextSecondary,
                 lineHeight = 18.sp,

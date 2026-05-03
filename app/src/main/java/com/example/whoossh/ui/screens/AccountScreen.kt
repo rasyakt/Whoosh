@@ -73,6 +73,7 @@ import com.example.whoossh.ui.theme.WhooshRed
 import com.example.whoossh.ui.theme.WhooshTextSecondary
 import com.example.whoossh.ui.theme.WhooshWhite
 import com.example.whoossh.viewmodel.BookingViewModel
+import com.example.whoossh.utils.tr
 
 @Composable
 fun AccountScreen(
@@ -102,14 +103,14 @@ fun AccountScreen(
             onDismissRequest = { showLogoutDialog = false },
             title = {
                 Text(
-                    text = "Konfirmasi Keluar",
+                    text = "Konfirmasi Keluar".tr(),
                     fontWeight = FontWeight.Bold,
                     fontSize = 18.sp
                 )
             },
             text = {
                 Text(
-                    text = "Apakah Anda yakin ingin keluar dari akun Anda?",
+                    text = "Apakah Anda yakin ingin keluar dari akun Anda?".tr(),
                     fontSize = 15.sp,
                     color = Color.DarkGray
                 )
@@ -122,7 +123,7 @@ fun AccountScreen(
                     }
                 ) {
                     Text(
-                        "Keluar",
+                        "Keluar".tr(),
                         color = Color(0xFFE53935),
                         fontWeight = FontWeight.Bold
                     )
@@ -130,7 +131,7 @@ fun AccountScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showLogoutDialog = false }) {
-                    Text("Batal", color = Color.Gray)
+                    Text("Batal".tr(), color = Color.Gray)
                 }
             },
             containerColor = WhooshWhite,
@@ -141,15 +142,15 @@ fun AccountScreen(
     if (showBankDialog) {
         AlertDialog(
             onDismissRequest = { showBankDialog = false },
-            title = { Text("Data Rekening Refund", fontWeight = FontWeight.Bold) },
+            title = { Text("Data Rekening Refund".tr(), fontWeight = FontWeight.Bold) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("Simpan data rekening Anda untuk mempercepat proses refund tiket.", fontSize = 14.sp, color = Color.Gray)
+                    Text("Simpan data rekening Anda untuk mempercepat proses refund tiket.".tr(), fontSize = 14.sp, color = Color.Gray)
                     
                     OutlinedTextField(
                         value = tempBankName,
                         onValueChange = { tempBankName = it },
-                        label = { Text("Nama Bank") },
+                        label = { Text("Nama Bank".tr()) },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
                     )
@@ -157,7 +158,7 @@ fun AccountScreen(
                     OutlinedTextField(
                         value = tempAccountNo,
                         onValueChange = { tempAccountNo = it },
-                        label = { Text("Nomor Rekening") },
+                        label = { Text("Nomor Rekening".tr()) },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
                     )
@@ -165,7 +166,7 @@ fun AccountScreen(
                     OutlinedTextField(
                         value = tempAccountHolder,
                         onValueChange = { tempAccountHolder = it },
-                        label = { Text("Nama Pemilik Rekening") },
+                        label = { Text("Nama Pemilik Rekening".tr()) },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
                     )
@@ -180,12 +181,12 @@ fun AccountScreen(
                     colors = ButtonDefaults.buttonColors(containerColor = WhooshRed),
                     shape = RoundedCornerShape(8.dp)
                 ) {
-                    Text("Simpan", color = Color.White)
+                    Text("Simpan".tr(), color = Color.White)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showBankDialog = false }) {
-                    Text("Batal", color = Color.Gray)
+                    Text("Batal".tr(), color = Color.Gray)
                 }
             },
             containerColor = WhooshWhite,
@@ -235,13 +236,13 @@ fun AccountScreen(
                 Spacer(modifier = Modifier.width(16.dp))
                 Column {
                     Text(
-                        text = if (viewModel.isLoggedIn) viewModel.userName else "Pengguna Tamu",
+                        text = if (viewModel.isLoggedIn) viewModel.userName else "Pengguna Tamu".tr(),
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
                         color = WhooshWhite
                     )
                     Text(
-                        text = if (viewModel.isLoggedIn) viewModel.userEmail else "Silakan login untuk akses penuh",
+                        text = if (viewModel.isLoggedIn) viewModel.userEmail else "Silakan login untuk akses penuh".tr(),
                         fontSize = 13.sp,
                         color = WhooshWhite.copy(alpha = 0.8f)
                     )
@@ -273,8 +274,8 @@ fun AccountScreen(
                         .padding(vertical = 16.dp),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    StatItem("Total Trip", "${viewModel.getTotalTrips()}", Icons.Outlined.Train)
-                    StatItem("Tiket Aktif", "${viewModel.getActiveTicketCount()}", Icons.Outlined.ConfirmationNumber)
+                    StatItem("Total Perjalanan".tr(), "${viewModel.getTotalTrips()}", Icons.Outlined.Train)
+                    StatItem("Tiket Aktif".tr(), "${viewModel.getActiveTicketCount()}", Icons.Outlined.ConfirmationNumber)
                 }
             }
         }
@@ -283,7 +284,7 @@ fun AccountScreen(
 
         // Akun Section
         if (viewModel.isLoggedIn) {
-            SectionLabel("Akun")
+            SectionLabel("Akun".tr())
             MenuCard {
                 MenuRow(Icons.Outlined.Edit, "Edit Profil", onClick = onNavigateToEditProfile)
                 MenuDivider()
@@ -305,7 +306,7 @@ fun AccountScreen(
         }
 
         // Pengaturan Section
-        SectionLabel("Pengaturan")
+        SectionLabel("Pengaturan".tr())
         MenuCard {
             MenuRow(Icons.Outlined.Notifications, "Notifikasi", onClick = onNavigateToNotifications)
             MenuDivider()
@@ -314,14 +315,14 @@ fun AccountScreen(
             MenuRow(Icons.Outlined.Security, "Privasi & Keamanan", onClick = onNavigateToPrivacy)
             if (viewModel.isLoggedIn) {
                 MenuDivider()
-                MenuRow(Icons.Outlined.Lock, "Ubah Password", onClick = onNavigateToChangePassword)
+                MenuRow(Icons.Outlined.Lock, "Ubah Kata Sandi", onClick = onNavigateToChangePassword)
             }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
         // Lainnya Section
-        SectionLabel("Lainnya")
+        SectionLabel("Lainnya".tr())
         MenuCard {
             MenuRow(Icons.AutoMirrored.Outlined.HelpOutline, "Pusat Bantuan", onClick = onNavigateToHelpCenter)
         }
@@ -353,7 +354,7 @@ fun AccountScreen(
                     )
                     Spacer(modifier = Modifier.width(18.dp))
                     Text(
-                        text = "Keluar",
+                        text = "Keluar".tr(),
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Medium,
                         color = Color(0xFFE53935)
@@ -365,7 +366,7 @@ fun AccountScreen(
         Spacer(modifier = Modifier.height(24.dp))
 
         Text(
-            text = "Whoosh Ticket v1.0.0",
+            text = "Aplikasi Tiket Whoosh v1.0.0".tr(),
             fontSize = 12.sp,
             color = Color.LightGray,
             modifier = Modifier
@@ -424,8 +425,7 @@ private fun MenuRow(
             modifier = Modifier.size(22.dp)
         )
         Spacer(modifier = Modifier.width(18.dp))
-        Text(
-            text = title,
+        Text(text = title.tr(),
             fontSize = 15.sp,
             fontWeight = FontWeight.Medium,
             color = Color(0xFF1A1A1A),

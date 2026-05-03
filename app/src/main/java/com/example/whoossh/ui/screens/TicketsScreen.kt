@@ -73,6 +73,7 @@ import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import com.example.whoossh.utils.tr
 
 @Composable
 fun TicketsScreen(
@@ -117,7 +118,7 @@ fun TicketsScreen(
                 .padding(top = 50.dp, bottom = 16.dp, start = 20.dp, end = 20.dp)
         ) {
             Text(
-                text = "Tiket Saya",
+                text = "Tiket Saya".tr(),
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
                 color = WhooshWhite
@@ -142,8 +143,7 @@ fun TicketsScreen(
                     selected = pagerState.currentPage == index,
                     onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
                     text = {
-                        Text(
-                            text = title,
+                        Text(text = title.tr(),
                             fontSize = 13.sp,
                             fontWeight = if (pagerState.currentPage == index) FontWeight.Bold else FontWeight.Normal,
                             color = if (pagerState.currentPage == index) WhooshRed else Color.Gray
@@ -181,9 +181,9 @@ fun TicketsScreen(
                             Spacer(modifier = Modifier.height(16.dp))
                             Text(
                                 text = when(page) {
-                                    0 -> "Belum ada tiket yang belum dibayar"
-                                    1 -> "Belum ada tiket aktif"
-                                    else -> "Belum ada riwayat tiket"
+                                    0 -> "Belum ada tiket yang belum dibayar".tr()
+                                    1 -> "Belum ada tiket aktif".tr()
+                                    else -> "Belum ada riwayat tiket".tr()
                                 },
                                 fontSize = 16.sp,
                                 color = WhooshTextSecondary,
@@ -191,9 +191,9 @@ fun TicketsScreen(
                             )
                             Text(
                                 text = when(page) {
-                                    0 -> "Selesaikan pembayaran untuk\nmendapatkan tiket Anda"
-                                    1 -> "Tiket yang sudah dibayar\nakan muncul di sini"
-                                    else -> "Riwayat tiket yang sudah\ndigunakan akan muncul di sini"
+                                    0 -> "Selesaikan pembayaran untuk\nmendapatkan tiket Anda".tr()
+                                    1 -> "Tiket yang sudah dibayar\nakan muncul di sini".tr()
+                                    else -> "Riwayat tiket yang sudah\ndigunakan akan muncul di sini".tr()
                                 },
                                 fontSize = 13.sp,
                                 color = Color.LightGray,
@@ -310,8 +310,7 @@ private fun TicketCard(
                         .background(statusBg, RoundedCornerShape(6.dp))
                         .padding(horizontal = 8.dp, vertical = 3.dp)
                 ) {
-                    Text(
-                        text = statusText,
+                    Text(text = statusText.tr(),
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
                         color = statusColor
@@ -345,7 +344,7 @@ private fun TicketCard(
                         .padding(horizontal = 12.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text("${ticket.duration} mnt", fontSize = 10.sp, color = Color.Gray)
+                    Text("${ticket.duration} mnt".tr(), fontSize = 10.sp, color = Color.Gray)
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -403,7 +402,7 @@ private fun TicketCard(
                         color = WhooshTextSecondary
                     )
                     Text(
-                        text = "${ticket.ticketCount} tiket • ${ticket.coachClass.displayName} • Gerbong ${ticket.selectedCarriage}",
+                        text = "${ticket.ticketCount} tiket • ${ticket.coachClass.displayName} • Gerbong ${ticket.selectedCarriage}".tr(),
                         fontSize = 11.sp,
                         color = Color.LightGray
                     )

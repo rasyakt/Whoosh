@@ -30,6 +30,7 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 import kotlin.math.ceil
+import com.example.whoossh.utils.tr
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -54,7 +55,7 @@ fun CustomDatePickerOverlay(
                     .padding(bottom = 12.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Text("Pilih tanggal", fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                Text("Pilih tanggal".tr(), fontSize = 16.sp, fontWeight = FontWeight.Medium)
             }
             Row(
                 modifier = Modifier
@@ -156,10 +157,10 @@ private fun MonthView(cal: Calendar, onDateSelected: (String) -> Unit) {
                             
                             if (isToday) {
                                 Box(modifier = Modifier.size(32.dp).background(WhooshRed), contentAlignment = Alignment.Center) {
-                                    Text("$dayCounter", fontSize = 13.sp, color = Color.White)
+                                    Text("$dayCounter".tr(), fontSize = 13.sp, color = Color.White)
                                 }
                             } else {
-                                Text("$dayCounter", fontSize = 13.sp, color = textColor)
+                                Text("$dayCounter".tr(), fontSize = 13.sp, color = textColor)
                             }
                         }
                         dayCounter++

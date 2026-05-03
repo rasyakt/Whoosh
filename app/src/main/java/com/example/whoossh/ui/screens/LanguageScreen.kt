@@ -37,6 +37,7 @@ import com.example.whoossh.ui.components.WhooshTopBar
 import com.example.whoossh.ui.theme.WhooshRed
 import com.example.whoossh.ui.theme.WhooshTextSecondary
 import com.example.whoossh.viewmodel.BookingViewModel
+import com.example.whoossh.utils.tr
 
 @Composable
 fun LanguageScreen(
@@ -52,7 +53,7 @@ fun LanguageScreen(
 
     Scaffold(
         topBar = {
-            WhooshTopBar(title = "Bahasa", onBack = onBack)
+            WhooshTopBar(title = "Bahasa".tr(), onBack = onBack)
         }
     ) { paddingValues ->
         Column(
@@ -64,13 +65,13 @@ fun LanguageScreen(
                 .padding(horizontal = 16.dp, vertical = 20.dp)
         ) {
             Text(
-                text = "Pilih Bahasa",
+                text = "Pilih Bahasa".tr(),
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(bottom = 4.dp)
             )
             Text(
-                text = "Pilih bahasa yang ingin digunakan pada aplikasi",
+                text = "Pilih bahasa yang ingin digunakan pada aplikasi".tr(),
                 fontSize = 13.sp,
                 color = WhooshTextSecondary,
                 modifier = Modifier.padding(bottom = 20.dp)
@@ -137,7 +138,7 @@ fun LanguageScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = "Perubahan bahasa akan diterapkan pada seluruh halaman aplikasi.",
+                text = "Perubahan bahasa akan diterapkan pada seluruh halaman aplikasi.".tr(),
                 fontSize = 12.sp,
                 color = Color.LightGray
             )

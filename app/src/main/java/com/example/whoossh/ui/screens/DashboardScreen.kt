@@ -102,6 +102,8 @@ import kotlinx.coroutines.launch
 import java.util.Calendar
 import java.util.Locale
 import java.text.SimpleDateFormat
+import com.example.whoossh.utils.tr
+import com.example.whoossh.utils.trStr
 
 private data class QuickAction(val icon: ImageVector, val label: String, val action: () -> Unit)
 
@@ -139,7 +141,7 @@ fun DashboardScreen(
                 (context as? ComponentActivity)?.finish()
             } else {
                 lastBackPressTime = currentTime
-                Toast.makeText(context, "Tekan sekali lagi untuk keluar", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Tekan sekali lagi untuk keluar".trStr(viewModel.currentLanguage.value), Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -268,7 +270,7 @@ private fun HomeContent(
     LaunchedEffect(viewModel.formError) {
         viewModel.formError?.let {
             scope.launch {
-                snackbarHostState.showSnackbar(it)
+                snackbarHostState.showSnackbar(it.trStr(viewModel.currentLanguage.value))
                 viewModel.clearFormError()
             }
         }
@@ -373,7 +375,7 @@ private fun HomeContent(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            "Dari",
+                            "Dari".tr(),
                             color = WhooshRed,
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
@@ -393,7 +395,7 @@ private fun HomeContent(
                         modifier = Modifier.padding(horizontal = 6.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text(" ", fontSize = 10.sp) // invisible placeholder for 'Dari'/'Ke' label height
+                        Text(" ".tr(), fontSize = 10.sp) // invisible placeholder for 'Dari'/'Ke' label height
                         Spacer(modifier = Modifier.height(4.dp))
                         Box(
                             modifier = Modifier
@@ -411,7 +413,7 @@ private fun HomeContent(
 
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            "Ke",
+                            "Ke".tr(),
                             color = WhooshRed,
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
@@ -436,7 +438,7 @@ private fun HomeContent(
                 )
 
                 Text(
-                    "Tanggal Berangkat",
+                    "Tanggal Berangkat".tr(),
                     color = WhooshTextSecondary,
                     fontSize = 10.sp,
                     fontWeight = FontWeight.SemiBold,
@@ -478,7 +480,7 @@ private fun HomeContent(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        "Cari Tiket",
+                        "Cari Tiket".tr(),
                         color = WhooshWhite,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
@@ -507,7 +509,7 @@ private fun HomeContent(
                 )
                 Spacer(modifier = Modifier.width(10.dp))
                 Text(
-                    text = "Pengembalian Dana / Perubahan Jadwal Mohon cek kembali jadwal perjalanan Anda. Proses memberikan izin kepada pelanggan atau calon penumpang untuk masuk stasiun atau naik Kereta Cepat",
+                    text = "Pengembalian Dana / Perubahan Jadwal Mohon cek kembali jadwal perjalanan Anda. Proses memberikan izin kepada pelanggan atau calon penumpang untuk masuk stasiun atau naik Kereta Cepat".tr(),
                     fontSize = 12.sp,
                     color = Color(0xFF333333),
                     maxLines = 1,
@@ -533,7 +535,7 @@ private fun HomeContent(
         ) {
             Column(modifier = Modifier.padding(vertical = 16.dp, horizontal = 8.dp)) {
                 Text(
-                    "Layanan",
+                    "Layanan".tr(),
                     color = Color(0xFF1A1A1A),
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
@@ -566,8 +568,7 @@ private fun HomeContent(
                                 )
                             }
                             Spacer(modifier = Modifier.height(7.dp))
-                            Text(
-                                action.label,
+                            Text(action.label.tr(),
                                 fontSize = 11.sp,
                                 color = Color(0xFF444444),
                                 fontWeight = FontWeight.Medium,
@@ -590,13 +591,13 @@ private fun HomeContent(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                "Ketentuan Layanan",
+                "Ketentuan Layanan".tr(),
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color(0xFF1A1A1A)
             )
             Text(
-                "Lebih banyak",
+                "Lebih banyak".tr(),
                 fontSize = 12.sp,
                 color = Color(0xFF7A8D9C),
                 modifier = Modifier.clickable { showMoreInfo = true }
@@ -676,9 +677,9 @@ private fun HomeContent(
                     }
                     Spacer(modifier = Modifier.width(14.dp))
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(item.first, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1A1A1A))
+                        Text(item.first.tr(), fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1A1A1A))
                         Spacer(modifier = Modifier.height(4.dp))
-                        Text(item.second, fontSize = 11.sp, color = Color(0xFF7A8D9C), lineHeight = 16.sp)
+                        Text(item.second.tr(), fontSize = 11.sp, color = Color(0xFF7A8D9C), lineHeight = 16.sp)
                     }
                 }
             }
@@ -712,8 +713,7 @@ private fun StationSelector(
         ) {
             Icon(icon, null, tint = WhooshRed, modifier = Modifier.size(14.dp))
             Spacer(modifier = Modifier.width(4.dp))
-            Text(
-                text = label,
+            Text(text = label.tr(),
                 fontSize = 11.sp, // Reduced to prevent clipping on long text
                 fontWeight = FontWeight.SemiBold,
                 color = if (label == "Pilih Stasiun") Color(0xFFBBBBBB) else Color(0xFF1A1A1A),
@@ -742,8 +742,7 @@ private fun StationSelector(
             options.forEach { option ->
                 androidx.compose.material3.DropdownMenuItem(
                     text = { 
-                        Text(
-                            text = option,
+                        Text(text = option.tr(),
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Medium,
                             color = Color(0xFF1F1F1F),
@@ -786,10 +785,9 @@ private fun WhooshBottomBar(selectedIndex: Int, onItemSelected: (Int) -> Unit) {
                 NavigationBarItem(
                     selected = selectedIndex == index,
                     onClick = { onItemSelected(index) },
-                    icon = { Icon(icon, label, modifier = Modifier.size(22.dp)) },
+                    icon = { Icon(icon, label.tr(), modifier = Modifier.size(22.dp)) },
                     label = {
-                        Text(
-                            label,
+                        Text(label.tr(),
                             fontSize = 10.sp,
                             fontWeight = if (selectedIndex == index) FontWeight.Bold else FontWeight.Normal
                         )
@@ -829,14 +827,14 @@ private fun InformasiTambahanOverlay(onDismiss: () -> Unit) {
             ) {
                 Icon(
                     Icons.Filled.ArrowBackIosNew,
-                    "Kembali",
+                    "Kembali".tr(),
                     tint = WhooshWhite,
                     modifier = Modifier
                         .size(20.dp)
                         .clickable { onDismiss() }
                 )
                 Text(
-                    "Informasi Tambahan",
+                    "Informasi Tambahan".tr(),
                     color = WhooshWhite,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Medium,
@@ -863,9 +861,9 @@ private fun InformasiTambahanOverlay(onDismiss: () -> Unit) {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(item.first, fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Color(0xFF1A1A1A))
+                            Text(item.first.tr(), fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Color(0xFF1A1A1A))
                             Spacer(modifier = Modifier.height(6.dp))
-                            Text(item.second, fontSize = 13.sp, color = Color(0xFF7A8D9C), maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                            Text(item.second.tr(), fontSize = 13.sp, color = Color(0xFF7A8D9C), maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                         }
                         Icon(Icons.Filled.ChevronRight, null, tint = Color(0xFFBBBBBB), modifier = Modifier.size(20.dp))
                     }
@@ -899,8 +897,7 @@ private fun KetentuanDetailDialog(
             Column(
                 modifier = Modifier.padding(24.dp)
             ) {
-                Text(
-                    text = title,
+                Text(text = title.tr(),
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFF1A1A1A)
@@ -909,7 +906,7 @@ private fun KetentuanDetailDialog(
                 Spacer(modifier = Modifier.height(16.dp))
                 
                 Text(
-                    text = content,
+                    text = content.tr(),
                     fontSize = 14.sp,
                     color = Color(0xFF444444),
                     lineHeight = 22.sp
@@ -930,7 +927,7 @@ private fun KetentuanDetailDialog(
                             },
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(actionLabel, color = WhooshWhite, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                        Text(actionLabel.tr(), color = WhooshWhite, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                     }
                     Spacer(modifier = Modifier.height(12.dp))
                 }
@@ -943,7 +940,7 @@ private fun KetentuanDetailDialog(
                     shape = RoundedCornerShape(12.dp),
                     border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFDDDDDD))
                 ) {
-                    Text("Tutup", color = Color(0xFF666666), fontWeight = FontWeight.Medium)
+                    Text("Tutup".tr(), color = Color(0xFF666666), fontWeight = FontWeight.Medium)
                 }
             }
         }

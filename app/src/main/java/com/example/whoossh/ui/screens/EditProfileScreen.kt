@@ -48,6 +48,8 @@ import com.example.whoossh.ui.theme.WhooshGradientStart
 import com.example.whoossh.ui.theme.WhooshRed
 import com.example.whoossh.ui.theme.WhooshWhite
 import com.example.whoossh.viewmodel.BookingViewModel
+import com.example.whoossh.utils.tr
+import com.example.whoossh.utils.trStr
 
 @Composable
 fun EditProfileScreen(
@@ -61,7 +63,7 @@ fun EditProfileScreen(
 
     Scaffold(
         topBar = {
-            WhooshTopBar(title = "Edit Profil", onBack = onBack)
+            WhooshTopBar(title = "Edit Profil".tr(), onBack = onBack)
         }
     ) { paddingValues ->
         Column(
@@ -114,7 +116,7 @@ fun EditProfileScreen(
                     }
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Ubah Foto Profil",
+                        text = "Ubah Foto Profil".tr(),
                         fontSize = 13.sp,
                         color = WhooshWhite.copy(0.8f)
                     )
@@ -123,7 +125,7 @@ fun EditProfileScreen(
 
             Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 24.dp)) {
                 // Name
-                Text("Nama Lengkap", fontSize = 13.sp, color = Color.Gray, fontWeight = FontWeight.Medium)
+                Text("Nama Lengkap".tr(), fontSize = 13.sp, color = Color.Gray, fontWeight = FontWeight.Medium)
                 Spacer(modifier = Modifier.height(6.dp))
                 OutlinedTextField(
                     value = name,
@@ -142,7 +144,7 @@ fun EditProfileScreen(
                 Spacer(modifier = Modifier.height(18.dp))
 
                 // Email
-                Text("Email", fontSize = 13.sp, color = Color.Gray, fontWeight = FontWeight.Medium)
+                Text("Email".tr(), fontSize = 13.sp, color = Color.Gray, fontWeight = FontWeight.Medium)
                 Spacer(modifier = Modifier.height(6.dp))
                 OutlinedTextField(
                     value = email,
@@ -161,7 +163,7 @@ fun EditProfileScreen(
                 Spacer(modifier = Modifier.height(18.dp))
 
                 // Phone
-                Text("Nomor HP", fontSize = 13.sp, color = Color.Gray, fontWeight = FontWeight.Medium)
+                Text("Nomor HP".tr(), fontSize = 13.sp, color = Color.Gray, fontWeight = FontWeight.Medium)
                 Spacer(modifier = Modifier.height(6.dp))
                 OutlinedTextField(
                     value = phone,
@@ -180,14 +182,14 @@ fun EditProfileScreen(
                 Spacer(modifier = Modifier.height(32.dp))
 
                 WhooshButton(
-                    text = if (viewModel.isLoading) "Menyimpan..." else "Simpan Perubahan",
+                    text = if (viewModel.isLoading) "Menyimpan...".tr() else "Simpan Perubahan".tr(),
                     onClick = {
                         viewModel.updateProfile(name, email, phone) { success ->
                             if (success) {
-                                Toast.makeText(context, "Profil berhasil diperbarui", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "Profil berhasil diperbarui".trStr(viewModel.currentLanguage.value), Toast.LENGTH_SHORT).show()
                                 onBack()
                             } else {
-                                Toast.makeText(context, "Gagal memperbarui profil. Periksa data Anda.", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "Gagal memperbarui profil. Periksa data Anda.".trStr(viewModel.currentLanguage.value), Toast.LENGTH_SHORT).show()
                             }
                         }
                     },

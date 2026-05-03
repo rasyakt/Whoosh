@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.whoossh.ui.theme.WhooshRed
 import com.example.whoossh.ui.theme.WhooshWhite
+import com.example.whoossh.utils.tr
 
 @Composable
 fun SchedulesScreen() {
@@ -62,7 +63,7 @@ fun SchedulesScreen() {
                 .padding(top = 40.dp, bottom = 16.dp, start = 20.dp, end = 20.dp)
         ) {
             Text(
-                text = "Jadwal Perjalanan",
+                text = "Jadwal Perjalanan".tr(),
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color(0xFF1A1A1A)
@@ -89,8 +90,7 @@ fun SchedulesScreen() {
                     selected = selectedTab == index,
                     onClick = { selectedTab = index },
                     text = {
-                        Text(
-                            text = title,
+                        Text(text = title.tr(),
                             fontSize = 14.sp,
                             fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Medium,
                             color = if (selectedTab == index) WhooshRed else Color.Gray
@@ -204,7 +204,7 @@ private fun WhooshMainSchedule() {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(Color(0xFFFFA000)))
             Spacer(modifier = Modifier.width(8.dp))
-            Text("Beroperasi pada hari Senin-Sabtu", fontSize = 11.sp, color = Color.Gray)
+            Text("Beroperasi pada hari Senin-Sabtu".tr(), fontSize = 11.sp, color = Color.Gray)
         }
     }
 }
@@ -302,7 +302,7 @@ private fun ScheduleTableHeader(title: String) {
     ) {
         Icon(Icons.Filled.Train, null, tint = Color(0xFF1A1A1A), modifier = Modifier.size(20.dp))
         Spacer(modifier = Modifier.width(8.dp))
-        Text(title, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1A1A1A))
+        Text(title.tr(), fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1A1A1A))
     }
 }
 
@@ -322,8 +322,7 @@ private fun ScheduleTable(headers: List<String>, rows: List<List<String>>) {
                 .padding(vertical = 10.dp, horizontal = 4.dp)
         ) {
             headers.forEach { header ->
-                Text(
-                    text = header,
+                Text(text = header.tr(),
                     modifier = Modifier.weight(1f),
                     color = WhooshWhite,
                     fontSize = 10.sp,
@@ -363,7 +362,7 @@ private fun ScheduleTable(headers: List<String>, rows: List<List<String>>) {
 @Composable
 private fun RouteMapSection() {
     Column(modifier = Modifier.fillMaxWidth()) {
-        Text("Peta Rute Whoosh", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1A1A1A))
+        Text("Peta Rute Whoosh".tr(), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1A1A1A))
         Spacer(modifier = Modifier.height(20.dp))
         
         Box(modifier = Modifier.fillMaxWidth().height(80.dp), contentAlignment = Alignment.Center) {
@@ -399,7 +398,7 @@ private fun RouteMapSection() {
         }
         
         Text(
-            "Update: 12.03.2026",
+            "Update: 12.03.2026".tr(),
             fontSize = 10.sp,
             color = Color.LightGray,
             modifier = Modifier.align(Alignment.End).padding(top = 8.dp)

@@ -61,6 +61,8 @@ import com.example.whoossh.viewmodel.BookingViewModel
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
+import com.example.whoossh.utils.tr
+import com.example.whoossh.utils.trStr
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -114,7 +116,7 @@ fun ETicketScreen(
                 androidx.compose.material3.CircularProgressIndicator(color = WhooshRed)
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = "Memuat tiket Anda...",
+                    text = "Memuat tiket Anda...".tr(),
                     fontSize = 14.sp,
                     color = WhooshTextSecondary
                 )
@@ -138,7 +140,7 @@ fun ETicketScreen(
                 CenterAlignedTopAppBar(
                     title = { 
                         Text(
-                            "Payment Succeeded", 
+                            "Payment Succeeded".tr(), 
                             fontSize = 18.sp, 
                             fontWeight = FontWeight.SemiBold,
                             color = Color.White
@@ -151,7 +153,7 @@ fun ETicketScreen(
                     },
                     actions = {
                         Text(
-                            "Rules", 
+                            "Rules".tr(), 
                             color = Color.White, 
                             fontSize = 14.sp, 
                             modifier = Modifier.padding(end = 16.dp)
@@ -164,13 +166,13 @@ fun ETicketScreen(
                 
                 Column(modifier = Modifier.padding(horizontal = 20.dp)) {
                     Text(
-                        "Order Number: ${booking.bookingCode}", 
+                        "Order Number: ${booking.bookingCode}".tr(), 
                         color = Color.White.copy(alpha = 0.9f),
                         fontSize = 13.sp
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        "Order Time: ${booking.departureTime} ${booking.departureDate}", 
+                        "Order Time: ${booking.departureTime} ${booking.departureDate}".tr(), 
                         color = Color.White.copy(alpha = 0.9f),
                         fontSize = 13.sp
                     )
@@ -203,7 +205,7 @@ fun ETicketScreen(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.Train, contentDescription = null, modifier = Modifier.size(14.dp), tint = Color.Gray)
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("${booking.duration} m", fontSize = 14.sp, color = Color.Gray)
+                            Text("${booking.duration} m".tr(), fontSize = 14.sp, color = Color.Gray)
                         }
                     }
                     
@@ -224,7 +226,7 @@ fun ETicketScreen(
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Text(
-                                text = "G${1100 + (booking.bookingCode.hashCode() % 100).let { if (it < 0) -it else it }}", 
+                                text = "G${1100 + (booking.bookingCode.hashCode() % 100).let { if (it < 0) -it else it }}".tr(), 
                                 fontSize = 13.sp, 
                                 color = Color.Gray
                             )
@@ -250,7 +252,7 @@ fun ETicketScreen(
                                 shape = RoundedCornerShape(8.dp),
                                 border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE0E0E0))
                             ) {
-                                Text("Reschedule", color = Color.Black)
+                                Text("Reschedule".tr(), color = Color.Black)
                             }
                             OutlinedButton(
                                 onClick = { showRefundDialog = true },
@@ -258,7 +260,7 @@ fun ETicketScreen(
                                 shape = RoundedCornerShape(8.dp),
                                 border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE0E0E0))
                             ) {
-                                Text("Refund", color = Color.Black)
+                                Text("Refund".tr(), color = Color.Black)
                             }
                         }
                     } else {
@@ -307,18 +309,18 @@ fun ETicketScreen(
                                         .background(Color(0xFFF5F5F5), RoundedCornerShape(4.dp))
                                         .padding(horizontal = 4.dp, vertical = 2.dp)
                                 ) {
-                                    Text("Adult ticket", fontSize = 10.sp, color = Color.Gray)
+                                    Text("Adult ticket".tr(), fontSize = 10.sp, color = Color.Gray)
                                 }
                             }
                             Spacer(modifier = Modifier.height(6.dp))
-                            Text("Identity No. 3206****03", fontSize = 13.sp, color = Color.Gray)
+                            Text("Identity No. 3206****03".tr(), fontSize = 13.sp, color = Color.Gray)
                             Text(
-                                "Coach ${booking.selectedCarriage} | ${booking.coachClass.displayName}", 
+                                "Coach ${booking.selectedCarriage} | ${booking.coachClass.displayName}".tr(), 
                                 fontSize = 13.sp, 
                                 color = Color.Gray
                             )
                              Text(
-                                "Seat ${booking.selectedSeats.joinToString(", ").ifEmpty { "-" }}", 
+                                "Seat ".tr() + booking.selectedSeats.joinToString(", ").ifEmpty { "-" }, 
                                 fontSize = 13.sp, 
                                 color = Color.Gray
                             )
@@ -337,7 +339,7 @@ fun ETicketScreen(
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(Icons.Default.QrCode2, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color(0xFFE65100))
                                     Spacer(modifier = Modifier.width(4.dp))
-                                    Text("QR Code >", fontSize = 12.sp, color = Color(0xFFE65100), fontWeight = FontWeight.Medium)
+                                    Text("QR Code >".tr(), fontSize = 12.sp, color = Color(0xFFE65100), fontWeight = FontWeight.Medium)
                                 }
                             }
                         }
@@ -352,7 +354,7 @@ fun ETicketScreen(
                             shape = RoundedCornerShape(8.dp),
                             border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE0E0E0))
                         ) {
-                            Text("Add Infant", color = Color.Black)
+                            Text("Add Infant".tr(), color = Color.Black)
                         }
                     }
                 }
@@ -371,7 +373,7 @@ fun ETicketScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Total payment amount:", fontSize = 14.sp, color = Color.Gray)
+                    Text("Total payment amount:".tr(), fontSize = 14.sp, color = Color.Gray)
                     Text(TicketUtils.formatRupiah(booking.totalPrice), fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 }
             }
@@ -386,20 +388,20 @@ fun ETicketScreen(
                 border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE0E0E0))
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text("Reminder", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color.DarkGray)
+                    Text("Reminder".tr(), fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color.DarkGray)
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        "1. The ticket you purchased this time has been issued, You can enter the station with the QR code of the ticket, or enter the station after exchanging the paper ticket at the station window.",
+                        "1. The ticket you purchased this time has been issued, You can enter the station with the QR code of the ticket, or enter the station after exchanging the paper ticket at the station window.".tr(),
                         fontSize = 13.sp, color = Color.Gray, lineHeight = 18.sp
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        "2. After exchanging for a paper ticket, the ticket cannot be refunded or Rescheduled on the APP.",
+                        "2. After exchanging for a paper ticket, the ticket cannot be refunded or Rescheduled on the APP.".tr(),
                         fontSize = 13.sp, color = Color.Gray, lineHeight = 18.sp
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        "3. You can save a screenshot of the current order details interface so that you can view the seat position when taking the bus.",
+                        "3. You can save a screenshot of the current order details interface so that you can view the seat position when taking the bus.".tr(),
                         fontSize = 13.sp, color = Color.Gray, lineHeight = 18.sp
                     )
                 }
@@ -432,7 +434,7 @@ fun ETicketScreen(
                             modifier = Modifier.height(20.dp).align(Alignment.CenterStart)
                         )
                         Text(
-                            "QR Code", 
+                            "QR Code".tr(), 
                             fontSize = 18.sp, 
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.align(Alignment.Center)
@@ -471,7 +473,7 @@ fun ETicketScreen(
                             
                             // Dynamic Booking Code / Hash
                             Text(
-                                "${booking.bookingCode}", 
+                                "${booking.bookingCode}".tr(), 
                                 fontSize = 12.sp, 
                                 color = Color.Gray,
                                 letterSpacing = 1.sp,
@@ -488,7 +490,7 @@ fun ETicketScreen(
                             .padding(horizontal = 12.dp, vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Click to Refresh Status", color = Color(0xFF0288D1), fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                        Text("Click to Refresh Status".tr(), color = Color(0xFF0288D1), fontSize = 12.sp, fontWeight = FontWeight.Medium)
                         Spacer(modifier = Modifier.width(6.dp))
                         Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(14.dp), tint = Color(0xFF0288D1))
                     }
@@ -516,7 +518,7 @@ fun ETicketScreen(
                             modifier = Modifier.padding(horizontal = 12.dp) // Auto-width based on content
                         ) {
                             Text(
-                                text = "G${1100 + (booking.bookingCode.hashCode() % 100).let { if (it < 0) -it else it }}", 
+                                text = "G${1100 + (booking.bookingCode.hashCode() % 100).let { if (it < 0) -it else it }}".tr(), 
                                 fontSize = 10.sp, 
                                 color = WhooshRed, 
                                 fontWeight = FontWeight.ExtraBold,
@@ -553,20 +555,20 @@ fun ETicketScreen(
                     ) {
                         // Time Info
                         Row(modifier = Modifier.fillMaxWidth()) {
-                            DetailColumn(label = "Departure Time", value = "${booking.departureTime}, ${booking.departureDate}", valueColor = WhooshRed, modifier = Modifier.weight(1f))
+                            DetailColumn(label = "Departure Time".tr(), value = "${booking.departureTime}, ${booking.departureDate}", valueColor = WhooshRed, modifier = Modifier.weight(1f))
                         }
                         
                         // Seat & Class Info
                         Row(modifier = Modifier.fillMaxWidth()) {
-                            DetailColumn(label = "Seat Info", value = "Coach ${booking.selectedCarriage} | ${booking.selectedSeats.joinToString(", ").ifEmpty { "-" }}", modifier = Modifier.weight(1f))
-                            DetailColumn(label = "Class", value = booking.coachClass.displayName, modifier = Modifier.weight(1f))
+                            DetailColumn(label = "Seat Info".tr(), value = "Coach ".tr() + "${booking.selectedCarriage} | ${booking.selectedSeats.joinToString(", ").ifEmpty { "-" }}", modifier = Modifier.weight(1f))
+                            DetailColumn(label = "Class".tr(), value = booking.coachClass.displayName.tr(), modifier = Modifier.weight(1f))
                         }
                         
                         // Passenger Info
                         Row(modifier = Modifier.fillMaxWidth()) {
-                            DetailColumn(label = "Name", value = booking.userName, modifier = Modifier.weight(1f))
+                            DetailColumn(label = "Name".tr(), value = booking.userName, modifier = Modifier.weight(1f))
                             val identityMasked = "3206****" + (booking.bookingCode.hashCode().let { if (it < 0) -it else it } % 100).toString().padStart(2, '0')
-                            DetailColumn(label = "Identity No.", value = identityMasked, modifier = Modifier.weight(1f))
+                            DetailColumn(label = "Identity No.".tr(), value = identityMasked, modifier = Modifier.weight(1f))
                         }
                     }
                     
@@ -583,30 +585,30 @@ fun ETicketScreen(
         if (!canReschedule) {
             AlertDialog(
                 onDismissRequest = { showRescheduleDialog = false },
-                title = { Text("Cannot Reschedule", fontWeight = FontWeight.Bold) },
-                text = { Text(errorMsg, fontSize = 14.sp) },
+                title = { Text("Cannot Reschedule".tr(), fontWeight = FontWeight.Bold) },
+                text = { Text(errorMsg.tr(), fontSize = 14.sp) },
                 confirmButton = {
                     Button(
                         onClick = { showRescheduleDialog = false },
                         colors = ButtonDefaults.buttonColors(containerColor = WhooshRed)
                     ) {
-                        Text("OK")
+                        Text("OK".tr())
                     }
                 }
             )
         } else {
             AlertDialog(
                 onDismissRequest = { showRescheduleDialog = false },
-                title = { Text("Reschedule Ticket", fontWeight = FontWeight.Bold) },
+                title = { Text("Reschedule Ticket".tr(), fontWeight = FontWeight.Bold) },
                 text = {
                     Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                        Text("Current Schedule:", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                        Text("${booking.departureDate} at ${booking.departureTime}", fontSize = 13.sp, color = Color.Gray)
-                        Text("${booking.originStation} → ${booking.destinationStation}", fontSize = 13.sp, color = Color.Gray)
+                        Text("Current Schedule:".tr(), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                        Text("${booking.departureDate} at ${booking.departureTime}".tr(), fontSize = 13.sp, color = Color.Gray)
+                        Text("${booking.originStation} → ${booking.destinationStation}".tr(), fontSize = 13.sp, color = Color.Gray)
                         
                         Spacer(modifier = Modifier.height(16.dp))
                         
-                        Text("Select New Date:", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                        Text("Select New Date:".tr(), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                         OutlinedButton(
                             onClick = { showDatePicker = true },
                             modifier = Modifier.fillMaxWidth()
@@ -623,14 +625,14 @@ fun ETicketScreen(
                             
                             if (fee > 0) {
                                 Text(
-                                    "Reschedule Fee (25%): ${TicketUtils.formatRupiah(fee)}",
+                                    "Reschedule Fee (25%): ${TicketUtils.formatRupiah(fee)}".tr(),
                                     fontSize = 13.sp,
                                     color = WhooshRed,
                                     fontWeight = FontWeight.SemiBold
                                 )
                             } else {
                                 Text(
-                                    "Same day reschedule: No fee",
+                                    "Same day reschedule: No fee".tr(),
                                     fontSize = 13.sp,
                                     color = Color(0xFF4CAF50),
                                     fontWeight = FontWeight.SemiBold
@@ -650,7 +652,7 @@ fun ETicketScreen(
                             }
                             
                             if (availableSchedules.isNotEmpty()) {
-                                Text("Available Schedules:", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                                Text("Available Schedules:".tr(), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                                 Spacer(modifier = Modifier.height(8.dp))
                                 
                                 availableSchedules.take(3).forEach { schedule ->
@@ -673,7 +675,7 @@ fun ETicketScreen(
                                         ) {
                                             Column {
                                                 Text(
-                                                    "${schedule.departureTime} - ${schedule.arrivalTime}",
+                                                    "${schedule.departureTime} - ${schedule.arrivalTime}".tr(),
                                                     fontSize = 14.sp,
                                                     fontWeight = FontWeight.SemiBold
                                                 )
@@ -684,7 +686,7 @@ fun ETicketScreen(
                                                 )
                                             }
                                             Text(
-                                                "${schedule.duration} m",
+                                                "${schedule.duration} m".tr(),
                                                 fontSize = 12.sp,
                                                 color = Color.Gray
                                             )
@@ -702,7 +704,7 @@ fun ETicketScreen(
                         
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(
-                            "Note: Reschedule is subject to seat availability.",
+                            "Note: Reschedule is subject to seat availability.".tr(),
                             fontSize = 11.sp,
                             color = WhooshTextSecondary,
                             lineHeight = 14.sp
@@ -726,7 +728,7 @@ fun ETicketScreen(
                                     }
                                 }
                             } else {
-                                Toast.makeText(context, "Please select a new schedule", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "Please select a new schedule".trStr(viewModel.currentLanguage.value), Toast.LENGTH_SHORT).show()
                             }
                         },
                         enabled = selectedNewSchedule != null && !viewModel.isLoading,
@@ -739,7 +741,7 @@ fun ETicketScreen(
                                 strokeWidth = 2.dp
                             )
                         } else {
-                            Text("Confirm Reschedule")
+                            Text("Confirm Reschedule".tr())
                         }
                     }
                 },
@@ -749,7 +751,7 @@ fun ETicketScreen(
                         rescheduleDate = ""
                         selectedNewSchedule = null
                     }) {
-                        Text("Cancel", color = Color.Gray)
+                        Text("Cancel".tr(), color = Color.Gray)
                     }
                 }
             )
@@ -791,24 +793,24 @@ fun ETicketScreen(
         if (!canRefund) {
             AlertDialog(
                 onDismissRequest = { showRefundDialog = false },
-                title = { Text("Cannot Refund", fontWeight = FontWeight.Bold) },
-                text = { Text(errorMsg, fontSize = 14.sp) },
+                title = { Text("Cannot Refund".tr(), fontWeight = FontWeight.Bold) },
+                text = { Text(errorMsg.tr(), fontSize = 14.sp) },
                 confirmButton = {
                     Button(
                         onClick = { showRefundDialog = false },
                         colors = ButtonDefaults.buttonColors(containerColor = WhooshRed)
                     ) {
-                        Text("OK")
+                        Text("OK".tr())
                     }
                 }
             )
         } else {
             AlertDialog(
                 onDismissRequest = { showRefundDialog = false },
-                title = { Text("Refund Ticket", fontWeight = FontWeight.Bold) },
+                title = { Text("Refund Ticket".tr(), fontWeight = FontWeight.Bold) },
                 text = {
                     Column {
-                        Text("Are you sure you want to request a refund for this ticket?", fontSize = 14.sp)
+                        Text("Are you sure you want to request a refund for this ticket?".tr(), fontSize = 14.sp)
                         
                         Spacer(modifier = Modifier.height(16.dp))
                         
@@ -822,7 +824,7 @@ fun ETicketScreen(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
-                                    Text("Original Amount:", fontSize = 13.sp, color = Color.Gray)
+                                    Text("Original Amount:".tr(), fontSize = 13.sp, color = Color.Gray)
                                     Text(
                                         TicketUtils.formatRupiah(booking.totalPrice),
                                         fontSize = 13.sp,
@@ -834,9 +836,9 @@ fun ETicketScreen(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
-                                    Text("Cancellation Fee (10%):", fontSize = 13.sp, color = Color.Gray)
+                                    Text("Cancellation Fee (10%):".tr(), fontSize = 13.sp, color = Color.Gray)
                                     Text(
-                                        "- ${TicketUtils.formatRupiah(booking.totalPrice - refundAmount)}",
+                                        "- ${TicketUtils.formatRupiah(booking.totalPrice - refundAmount)}".tr(),
                                         fontSize = 13.sp,
                                         color = WhooshRed
                                     )
@@ -848,7 +850,7 @@ fun ETicketScreen(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
-                                    Text("Refund Amount:", fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                                    Text("Refund Amount:".tr(), fontSize = 14.sp, fontWeight = FontWeight.Bold)
                                     Text(
                                         TicketUtils.formatRupiah(refundAmount),
                                         fontSize = 16.sp,
@@ -862,9 +864,9 @@ fun ETicketScreen(
                         Spacer(modifier = Modifier.height(12.dp))
                         
                         Text(
-                            "• Refund will be processed within 3-7 business days\n" +
-                            "• Amount will be returned to your original payment method\n" +
-                            "• This action cannot be undone",
+                            "• Refund will be processed within 3-7 business days\n".tr() +
+                            "• Amount will be returned to your original payment method\n".tr() +
+                            "• This action cannot be undone".tr(),
                             fontSize = 12.sp,
                             color = WhooshTextSecondary,
                             lineHeight = 16.sp
@@ -878,7 +880,7 @@ fun ETicketScreen(
                                 if (success) {
                                     Toast.makeText(
                                         context,
-                                        "Refund request submitted. You will receive ${TicketUtils.formatRupiah(amount)}",
+                                        "Refund request submitted. You will receive ".trStr(viewModel.currentLanguage.value) + TicketUtils.formatRupiah(amount),
                                         Toast.LENGTH_LONG
                                     ).show()
                                     showRefundDialog = false
@@ -899,13 +901,13 @@ fun ETicketScreen(
                                 strokeWidth = 2.dp
                             )
                         } else {
-                            Text("Confirm Refund")
+                            Text("Confirm Refund".tr())
                         }
                     }
                 },
                 dismissButton = {
                     TextButton(onClick = { showRefundDialog = false }) {
-                        Text("Cancel", color = Color.Gray)
+                        Text("Cancel".tr(), color = Color.Gray)
                     }
                 }
             )
@@ -916,11 +918,11 @@ fun ETicketScreen(
     if (showAddInfantDialog && booking != null) {
         AlertDialog(
             onDismissRequest = { showAddInfantDialog = false },
-            title = { Text("Add Infant", fontWeight = FontWeight.Bold) },
+            title = { Text("Add Infant".tr(), fontWeight = FontWeight.Bold) },
             text = {
                 Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                     Text(
-                        "Add an infant passenger (under 3 years old) to this booking.",
+                        "Add an infant passenger (under 3 years old) to this booking.".tr(),
                         fontSize = 13.sp,
                         color = Color.Gray
                     )
@@ -928,13 +930,13 @@ fun ETicketScreen(
                     Spacer(modifier = Modifier.height(16.dp))
                     
                     // Infant Name
-                    Text("Infant Name *", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    Text("Infant Name *".tr(), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                     Spacer(modifier = Modifier.height(4.dp))
                     OutlinedTextField(
                         value = infantName,
                         onValueChange = { infantName = it },
                         modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("Enter infant's full name", fontSize = 13.sp) },
+                        placeholder = { Text("Enter infant's full name".tr(), fontSize = 13.sp) },
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = WhooshRed,
@@ -945,13 +947,13 @@ fun ETicketScreen(
                     Spacer(modifier = Modifier.height(12.dp))
                     
                     // Identity Number (Birth Certificate)
-                    Text("Birth Certificate No. *", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    Text("Birth Certificate No. *".tr(), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                     Spacer(modifier = Modifier.height(4.dp))
                     OutlinedTextField(
                         value = infantIdentityNo,
                         onValueChange = { infantIdentityNo = it },
                         modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("Enter birth certificate number", fontSize = 13.sp) },
+                        placeholder = { Text("Enter birth certificate number".tr(), fontSize = 13.sp) },
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = WhooshRed,
@@ -962,13 +964,13 @@ fun ETicketScreen(
                     Spacer(modifier = Modifier.height(12.dp))
                     
                     // Date of Birth
-                    Text("Date of Birth *", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    Text("Date of Birth *".tr(), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                     Spacer(modifier = Modifier.height(4.dp))
                     OutlinedTextField(
                         value = infantDateOfBirth,
                         onValueChange = { infantDateOfBirth = it },
                         modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("DD/MM/YYYY", fontSize = 13.sp) },
+                        placeholder = { Text("DD/MM/YYYY".tr(), fontSize = 13.sp) },
                         singleLine = true,
                         trailingIcon = {
                             IconButton(onClick = {
@@ -1012,13 +1014,13 @@ fun ETicketScreen(
                         border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFD0DCE8))
                     ) {
                         Column(modifier = Modifier.padding(12.dp)) {
-                            Text("Important Notes:", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                            Text("Important Notes:".tr(), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                "• Infants travel free of charge\n" +
-                                "• No separate seat required\n" +
-                                "• Must be accompanied by an adult\n" +
-                                "• Age must be under 3 years old",
+                                "• Infants travel free of charge\n".tr() +
+                                "• No separate seat required\n".tr() +
+                                "• Must be accompanied by an adult\n".tr() +
+                                "• Age must be under 3 years old".tr(),
                                 fontSize = 11.sp,
                                 color = WhooshTextSecondary,
                                 lineHeight = 16.sp
@@ -1031,7 +1033,7 @@ fun ETicketScreen(
                 Button(
                     onClick = {
                         if (infantName.isBlank() || infantIdentityNo.isBlank() || infantDateOfBirth.isBlank()) {
-                            Toast.makeText(context, "Please fill all required fields", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "Please fill all required fields".trStr(viewModel.currentLanguage.value), Toast.LENGTH_SHORT).show()
                         } else {
                             viewModel.addInfantToBooking(
                                 booking = booking,
@@ -1059,7 +1061,7 @@ fun ETicketScreen(
                             strokeWidth = 2.dp
                         )
                     } else {
-                        Text("Add Infant")
+                        Text("Add Infant".tr())
                     }
                 }
             },
@@ -1070,7 +1072,7 @@ fun ETicketScreen(
                     infantIdentityNo = ""
                     infantDateOfBirth = ""
                 }) {
-                    Text("Cancel", color = Color.Gray)
+                    Text("Cancel".tr(), color = Color.Gray)
                 }
             }
         )
@@ -1084,7 +1086,7 @@ private fun DetailItemRow(label: String?, content: @Composable () -> Unit) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (label != null) {
-            Text("$label: ", fontSize = 14.sp, color = Color.Gray)
+            Text("$label: ".tr(), fontSize = 14.sp, color = Color.Gray)
         } else {
             // Optional: indentation for items without labels
             Spacer(modifier = Modifier.width(0.dp)) 
@@ -1100,8 +1102,7 @@ private fun DetailColumn(
     valueColor: Color = Color.Black
 ) {
     Column(modifier = modifier) {
-        Text(
-            text = label,
+        Text(text = label.tr(),
             fontSize = 11.sp,
             color = Color.Gray,
             fontWeight = FontWeight.Normal

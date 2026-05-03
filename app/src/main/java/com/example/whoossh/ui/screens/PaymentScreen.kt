@@ -33,6 +33,8 @@ import com.example.whoossh.R
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
+import com.example.whoossh.utils.tr
+import com.example.whoossh.utils.trStr
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -67,7 +69,7 @@ fun PaymentScreen(
             CenterAlignedTopAppBar(
                 title = { 
                     Text(
-                        "Pay", 
+                        "Pay".tr(), 
                         fontSize = 18.sp, 
                         fontWeight = FontWeight.SemiBold 
                     ) 
@@ -112,7 +114,7 @@ fun PaymentScreen(
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Text(
-                    "Complete Payment", 
+                    "Complete Payment".tr(), 
                     color = Color.White, 
                     fontSize = 16.sp, 
                     fontWeight = FontWeight.Medium
@@ -127,11 +129,11 @@ fun PaymentScreen(
                     .padding(horizontal = 16.dp, vertical = 12.dp)
             ) {
                 Row {
-                    Text("Passenger : ", color = WhooshTextSecondary, fontSize = 14.sp)
+                    Text("Passenger : ".tr(), color = WhooshTextSecondary, fontSize = 14.sp)
                     Text(primaryPassenger, color = Color.DarkGray, fontSize = 14.sp)
                 }
                 Row(modifier = Modifier.padding(top = 4.dp)) {
-                    Text("Booking No : ", color = WhooshTextSecondary, fontSize = 14.sp)
+                    Text("Booking No : ".tr(), color = WhooshTextSecondary, fontSize = 14.sp)
                     Text(bookingCode, color = Color.DarkGray, fontSize = 14.sp)
                 }
             }
@@ -154,7 +156,7 @@ fun PaymentScreen(
             val payTime = viewModel.paymentTimeLeft
 
             Text(
-                text = "Payment Countdown : ${payTime / 60}:${String.format("%02d", payTime % 60)}",
+                text = "Payment Countdown : ".tr() + "${payTime / 60}:${String.format("%02d", payTime % 60)}",
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.Center,
                 fontSize = 15.sp,
@@ -165,7 +167,7 @@ fun PaymentScreen(
 
             // Warning
             Text(
-                text = "In accordance to KCIC policy, ticket booking payment cannot start if remaining booking time is less than 5 minutes",
+                text = "In accordance to KCIC policy, ticket booking payment cannot start if remaining booking time is less than 5 minutes".tr(),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 40.dp),
@@ -187,7 +189,7 @@ fun PaymentScreen(
                     .padding(vertical = 12.dp)
             ) {
                 Text(
-                    "Virtual Account", 
+                    "Virtual Account".tr(), 
                     modifier = Modifier.padding(start = 24.dp, bottom = 12.dp),
                     color = Color(0xFF1A73E8),
                     fontSize = 15.sp,
@@ -244,7 +246,7 @@ fun PaymentScreen(
                             .padding(bottom = 32.dp)
                     ) {
                         Text(
-                            text = "Detail Pembayaran",
+                            text = "Detail Pembayaran".tr(),
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.Black
@@ -277,7 +279,7 @@ fun PaymentScreen(
                             IconButton(onClick = { 
                                 clipboardManager.setText(AnnotatedString(vaNumber))
                                 scope.launch {
-                                    snackbarHostState.showSnackbar("Nomor VA berhasil disalin")
+                                    snackbarHostState.showSnackbar("Nomor VA berhasil disalin".trStr(viewModel.currentLanguage.value))
                                 }
                             }) {
                                 Icon(
@@ -292,7 +294,7 @@ fun PaymentScreen(
                         Spacer(modifier = Modifier.height(24.dp))
                         
                         Text(
-                            text = "Mohon selesaikan pembayaran sebelum waktu habis.",
+                            text = "Mohon selesaikan pembayaran sebelum waktu habis.".tr(),
                             fontSize = 13.sp,
                             color = WhooshTextSecondary,
                             lineHeight = 18.sp
@@ -312,7 +314,7 @@ fun PaymentScreen(
                             colors = ButtonDefaults.buttonColors(containerColor = WhooshRed)
                         ) {
                             Text(
-                                "Konfirmasi Pembayaran", 
+                                "Konfirmasi Pembayaran".tr(), 
                                 fontSize = 16.sp, 
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White

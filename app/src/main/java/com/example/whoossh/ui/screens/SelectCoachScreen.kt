@@ -29,6 +29,7 @@ import com.example.whoossh.ui.theme.WhooshRed
 import com.example.whoossh.ui.theme.WhooshTextSecondary
 import com.example.whoossh.utils.TicketUtils
 import com.example.whoossh.viewmodel.BookingViewModel
+import com.example.whoossh.utils.tr
 
 @Composable
 fun SelectCoachScreen(
@@ -41,7 +42,7 @@ fun SelectCoachScreen(
     
     Scaffold(
         topBar = {
-            WhooshTopBar(title = "Book", onBack = onBack)
+            WhooshTopBar(title = "Book".tr(), onBack = onBack)
         }
     ) { paddingValues ->
         Column(
@@ -120,7 +121,7 @@ fun SelectCoachScreen(
                                     )
                                     Spacer(modifier = Modifier.width(3.dp))
                                     Text(
-                                        text = "${schedule.duration}m",
+                                        text = "${schedule.duration}m".tr(),
                                         fontSize = 11.sp,
                                         color = WhooshTextSecondary,
                                         fontWeight = FontWeight.Medium
@@ -153,7 +154,7 @@ fun SelectCoachScreen(
             // Coach Class Selection
             Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                 Text(
-                    text = "Pilih Jenis Gerbong",
+                    text = "Pilih Jenis Gerbong".tr(),
                     fontSize = 16.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = Color.Black,
@@ -208,7 +209,7 @@ fun SelectCoachScreen(
             // Passenger Section
             Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                 Text(
-                    text = "Penumpang",
+                    text = "Penumpang".tr(),
                     fontSize = 16.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = Color.Black,
@@ -238,19 +239,19 @@ fun SelectCoachScreen(
                         Column(modifier = Modifier.weight(1f)) {
                             if (selectedPassengers.isEmpty()) {
                                 Text(
-                                    text = "Pilih Penumpang",
+                                    text = "Pilih Penumpang".tr(),
                                     fontSize = 14.sp,
                                     color = WhooshRed,
                                     fontWeight = FontWeight.SemiBold
                                 )
                                 Text(
-                                    text = "Tambahkan penumpang (maks. 15)",
+                                    text = "Tambahkan penumpang (maks. 15)".tr(),
                                     fontSize = 12.sp,
                                     color = WhooshTextSecondary
                                 )
                             } else {
                                 Text(
-                                    text = "${selectedPassengers.size}/15 Penumpang Terpilih",
+                                    text = "${selectedPassengers.size}/15 Penumpang Terpilih".tr(),
                                     fontSize = 14.sp,
                                     color = Color.Black,
                                     fontWeight = FontWeight.SemiBold
@@ -259,7 +260,7 @@ fun SelectCoachScreen(
                                 Column {
                                     selectedPassengers.take(3).forEachIndexed { index, passenger ->
                                         Text(
-                                            text = "${index + 1}. ${passenger.name}",
+                                            text = "${index + 1}. ${passenger.name}".tr(),
                                             fontSize = 11.sp,
                                             color = WhooshTextSecondary,
                                             maxLines = 1,
@@ -268,7 +269,7 @@ fun SelectCoachScreen(
                                     }
                                     if (selectedPassengers.size > 3) {
                                         Text(
-                                            text = "+${selectedPassengers.size - 3} lainnya",
+                                            text = "+${selectedPassengers.size - 3} lainnya".tr(),
                                             fontSize = 11.sp,
                                             color = WhooshRed,
                                             fontWeight = FontWeight.Medium
@@ -309,16 +310,16 @@ fun SelectCoachScreen(
                 }
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        text = "Ticket Detection & Cancel Condition",
+                        text = "Ticket Detection & Cancel Condition".tr(),
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 14.sp,
                         color = Color.Black
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "1. BA baby under three\n" +
+                        text = ("1. BA baby under three\n" +
                               "2. Adults 17 years of age or older\n" +
-                              "3. The name and identity number must be in accordance with that contained in the identity certificate (KTP/ Passport), when the passenger age below 17 years can be filled in with the date of birth of",
+                              "3. The name and identity number must be in accordance with that contained in the identity certificate (KTP/ Passport), when the passenger age below 17 years can be filled in with the date of birth of").tr(),
                         fontSize = 12.sp,
                         color = Color(0xFF666666),
                         lineHeight = 18.sp
@@ -331,7 +332,7 @@ fun SelectCoachScreen(
             // Action Buttons
             Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                 WhooshButton(
-                    text = "Lanjutkan",
+                    text = "Lanjutkan".tr(),
                     onClick = onCoachSelected,
                     enabled = viewModel.selectedCoachClass != null && selectedPassengers.isNotEmpty()
                 )
@@ -388,8 +389,7 @@ private fun CoachClassOption(
                     textAlign = TextAlign.Center
                 )
                 Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    text = title,
+                Text(text = title.tr(),
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium,
                     color = if (isSelected) WhooshRed else Color(0xFF666666),
@@ -400,7 +400,7 @@ private fun CoachClassOption(
             
             // Status
             Text(
-                text = "Tersedia",
+                text = "Tersedia".tr(),
                 fontSize = 10.sp,
                 color = Color(0xFF999999),
                 fontWeight = FontWeight.Normal

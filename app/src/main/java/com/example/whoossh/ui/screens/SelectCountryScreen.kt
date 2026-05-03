@@ -33,6 +33,7 @@ import com.example.whoossh.ui.theme.WhooshRed
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.example.whoossh.utils.tr
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -116,7 +117,7 @@ fun SelectCountryScreen(
     Scaffold(
         topBar = {
             Column {
-                WhooshTopBar(title = "Select Country/Region", onBack = onBack)
+                WhooshTopBar(title = "Select Country/Region".tr(), onBack = onBack)
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -127,7 +128,7 @@ fun SelectCountryScreen(
                         value = searchQuery,
                         onValueChange = { searchQuery = it },
                         modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("Search country...", fontSize = 14.sp) },
+                        placeholder = { Text("Search country...".tr(), fontSize = 14.sp) },
                         leadingIcon = { Icon(Icons.Default.Search, null, tint = Color.Gray) },
                         trailingIcon = {
                             if (searchQuery.isNotEmpty()) {

@@ -34,6 +34,7 @@ import com.example.whoossh.ui.components.WhooshTopBar
 import com.example.whoossh.ui.theme.WhooshRed
 import com.example.whoossh.ui.theme.WhooshTextSecondary
 import com.example.whoossh.viewmodel.BookingViewModel
+import com.example.whoossh.utils.tr
 
 @Composable
 fun NotificationSettingsScreen(
@@ -47,7 +48,7 @@ fun NotificationSettingsScreen(
 
     Scaffold(
         topBar = {
-            WhooshTopBar(title = "Notifikasi", onBack = onBack)
+            WhooshTopBar(title = "Notifikasi".tr(), onBack = onBack)
         }
     ) { paddingValues ->
         Column(
@@ -59,13 +60,13 @@ fun NotificationSettingsScreen(
                 .padding(horizontal = 16.dp, vertical = 20.dp)
         ) {
             Text(
-                text = "Pengaturan Notifikasi",
+                text = "Pengaturan Notifikasi".tr(),
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(bottom = 4.dp)
             )
             Text(
-                text = "Kelola notifikasi yang ingin Anda terima",
+                text = "Kelola notifikasi yang ingin Anda terima".tr(),
                 fontSize = 13.sp,
                 color = WhooshTextSecondary,
                 modifier = Modifier.padding(bottom = 20.dp)
@@ -137,13 +138,11 @@ private fun NotifToggleRow(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
+            Text(text = title.tr(),
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Medium
             )
-            Text(
-                text = description,
+            Text(text = description.tr(),
                 fontSize = 12.sp,
                 color = WhooshTextSecondary,
                 modifier = Modifier.padding(top = 2.dp)

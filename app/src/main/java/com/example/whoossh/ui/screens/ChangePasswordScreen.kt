@@ -39,6 +39,8 @@ import com.example.whoossh.ui.components.WhooshButton
 import com.example.whoossh.ui.components.WhooshTopBar
 import com.example.whoossh.ui.theme.WhooshRed
 import com.example.whoossh.viewmodel.BookingViewModel
+import com.example.whoossh.utils.tr
+import com.example.whoossh.utils.trStr
 
 @Composable
 fun ChangePasswordScreen(
@@ -55,7 +57,7 @@ fun ChangePasswordScreen(
 
     Scaffold(
         topBar = {
-            WhooshTopBar(title = "Ubah Password", onBack = onBack)
+            WhooshTopBar(title = "Ubah Password".tr(), onBack = onBack)
         }
     ) { paddingValues ->
         Column(
@@ -67,7 +69,7 @@ fun ChangePasswordScreen(
                 .padding(horizontal = 20.dp, vertical = 24.dp)
         ) {
             Text(
-                text = "Pastikan password baru Anda minimal 6 karakter dan berbeda dari password sebelumnya.",
+                text = "Pastikan password baru Anda minimal 6 karakter dan berbeda dari password sebelumnya.".tr(),
                 fontSize = 13.sp,
                 color = Color.Gray,
                 lineHeight = 20.sp
@@ -76,7 +78,7 @@ fun ChangePasswordScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             // Old Password
-            Text("Password Lama", fontSize = 13.sp, color = Color.Gray, fontWeight = FontWeight.Medium)
+            Text("Password Lama".tr(), fontSize = 13.sp, color = Color.Gray, fontWeight = FontWeight.Medium)
             Spacer(modifier = Modifier.height(6.dp))
             OutlinedTextField(
                 value = oldPassword,
@@ -103,7 +105,7 @@ fun ChangePasswordScreen(
             Spacer(modifier = Modifier.height(18.dp))
 
             // New Password
-            Text("Password Baru", fontSize = 13.sp, color = Color.Gray, fontWeight = FontWeight.Medium)
+            Text("Password Baru".tr(), fontSize = 13.sp, color = Color.Gray, fontWeight = FontWeight.Medium)
             Spacer(modifier = Modifier.height(6.dp))
             OutlinedTextField(
                 value = newPassword,
@@ -130,7 +132,7 @@ fun ChangePasswordScreen(
             Spacer(modifier = Modifier.height(18.dp))
 
             // Confirm New Password
-            Text("Konfirmasi Password Baru", fontSize = 13.sp, color = Color.Gray, fontWeight = FontWeight.Medium)
+            Text("Konfirmasi Password Baru".tr(), fontSize = 13.sp, color = Color.Gray, fontWeight = FontWeight.Medium)
             Spacer(modifier = Modifier.height(6.dp))
             OutlinedTextField(
                 value = confirmPassword,
@@ -157,11 +159,11 @@ fun ChangePasswordScreen(
             Spacer(modifier = Modifier.height(32.dp))
 
             WhooshButton(
-                text = if (viewModel.isLoading) "Memproses..." else "Ubah Password",
+                text = if (viewModel.isLoading) "Memproses...".tr() else "Ubah Password".tr(),
                 onClick = {
                     viewModel.changePassword(oldPassword, newPassword, confirmPassword) { error ->
                         if (error == null) {
-                            Toast.makeText(context, "Password berhasil diubah", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "Password berhasil diubah".trStr(viewModel.currentLanguage.value), Toast.LENGTH_SHORT).show()
                             onBack()
                         } else {
                             Toast.makeText(context, error, Toast.LENGTH_SHORT).show()

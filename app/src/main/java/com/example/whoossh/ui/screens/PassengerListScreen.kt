@@ -28,6 +28,7 @@ import com.example.whoossh.ui.components.WhooshTopBar
 import com.example.whoossh.ui.theme.WhooshRed
 import com.example.whoossh.ui.theme.WhooshTextSecondary
 import com.example.whoossh.viewmodel.BookingViewModel
+import com.example.whoossh.utils.tr
 
 @Composable
 fun PassengerListScreen(
@@ -49,7 +50,7 @@ fun PassengerListScreen(
     Scaffold(
         topBar = {
             WhooshTopBar(
-                title = "Passenger",
+                title = "Passenger".tr(),
                 onBack = onBack
             )
         }
@@ -70,7 +71,7 @@ fun PassengerListScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "${selectedPassengers.size}/$maxPassengers penumpang",
+                    text = "${selectedPassengers.size}/$maxPassengers penumpang".tr(),
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = WhooshRed,
@@ -88,7 +89,7 @@ fun PassengerListScreen(
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp)
                 ) {
                     Text(
-                        text = "Done",
+                        text = "Done".tr(),
                         color = Color.White,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 12.sp
@@ -134,7 +135,7 @@ fun PassengerListScreen(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "Add Passenger",
+                                text = "Add Passenger".tr(),
                                 color = WhooshRed,
                                 fontWeight = FontWeight.SemiBold,
                                 fontSize = 15.sp
@@ -246,8 +247,7 @@ private fun PassengerCard(
                             )
                             .padding(horizontal = 6.dp, vertical = 2.dp)
                     ) {
-                        Text(
-                            text = passenger.passengerType,
+                        Text(text = passenger.passengerType.tr(),
                             fontSize = 10.sp,
                             color = WhooshTextSecondary
                         )
@@ -255,7 +255,7 @@ private fun PassengerCard(
                 }
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "Identity No.  ${passenger.identityNo.take(4)}****${passenger.identityNo.takeLast(2)}",
+                    text = "Identity No. ".tr() + " ${passenger.identityNo.take(4)}****${passenger.identityNo.takeLast(2)}".tr(),
                     fontSize = 13.sp,
                     color = WhooshTextSecondary
                 )
@@ -277,7 +277,7 @@ private fun PassengerCard(
                     onDismissRequest = { showMenu = false }
                 ) {
                     DropdownMenuItem(
-                        text = { Text("Edit") },
+                        text = { Text("Edit".tr()) },
                         onClick = {
                             showMenu = false
                             onEdit()
@@ -287,7 +287,7 @@ private fun PassengerCard(
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("Delete", color = Color.Red) },
+                        text = { Text("Delete".tr(), color = Color.Red) },
                         onClick = {
                             showMenu = false
                             onDelete()

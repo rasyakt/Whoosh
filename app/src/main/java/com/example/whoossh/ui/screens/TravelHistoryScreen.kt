@@ -47,6 +47,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import androidx.compose.runtime.LaunchedEffect
+import com.example.whoossh.utils.tr
 
 @Composable
 fun TravelHistoryScreen(
@@ -61,7 +62,7 @@ fun TravelHistoryScreen(
 
     Scaffold(
         topBar = {
-            WhooshTopBar(title = "Riwayat Perjalanan", onBack = onBack)
+            WhooshTopBar(title = "Riwayat Perjalanan".tr(), onBack = onBack)
         }
     ) { paddingValues ->
         if (allTickets.isEmpty()) {
@@ -80,13 +81,13 @@ fun TravelHistoryScreen(
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = "Belum ada riwayat perjalanan",
+                        text = "Belum ada riwayat perjalanan".tr(),
                         fontSize = 16.sp,
                         color = WhooshTextSecondary,
                         fontWeight = FontWeight.Medium
                     )
                     Text(
-                        text = "Riwayat perjalanan Anda akan\nmuncul di sini",
+                        text = "Riwayat perjalanan Anda akan\nmuncul di sini".tr(),
                         fontSize = 13.sp,
                         color = Color.LightGray,
                         textAlign = TextAlign.Center,
@@ -146,8 +147,7 @@ private fun HistoryTicketCard(ticket: BookingData) {
                         .background(statusBg, RoundedCornerShape(6.dp))
                         .padding(horizontal = 8.dp, vertical = 3.dp)
                 ) {
-                    Text(
-                        text = statusText,
+                    Text(text = statusText.tr(),
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
                         color = statusColor
@@ -170,12 +170,12 @@ private fun HistoryTicketCard(ticket: BookingData) {
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
                     Text(
-                        text = "${ticket.originStation} → ${ticket.destinationStation}",
+                        text = "${ticket.originStation} → ${ticket.destinationStation}".tr(),
                         fontSize = 15.sp,
                         fontWeight = FontWeight.SemiBold
                     )
                     Text(
-                        text = "${ticket.departureDate} • ${ticket.departureTime} - ${ticket.arrivalTime}",
+                        text = "${ticket.departureDate} • ${ticket.departureTime} - ${ticket.arrivalTime}".tr(),
                         fontSize = 12.sp,
                         color = WhooshTextSecondary
                     )
@@ -191,8 +191,8 @@ private fun HistoryTicketCard(ticket: BookingData) {
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Column {
-                    Text("${ticket.ticketCount} tiket • ${ticket.coachClass.displayName}", fontSize = 12.sp, color = WhooshTextSecondary)
-                    Text("Dipesan: $bookingDate", fontSize = 11.sp, color = Color.LightGray)
+                    Text("${ticket.ticketCount} tiket • ${ticket.coachClass.displayName}".tr(), fontSize = 12.sp, color = WhooshTextSecondary)
+                    Text("Dipesan: $bookingDate".tr(), fontSize = 11.sp, color = Color.LightGray)
                 }
                 Text(
                     text = TicketUtils.formatRupiah(ticket.totalPrice),

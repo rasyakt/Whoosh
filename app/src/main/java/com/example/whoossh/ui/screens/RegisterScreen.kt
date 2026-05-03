@@ -71,6 +71,8 @@ import com.example.whoossh.ui.theme.WhooshRedLight
 import com.example.whoossh.ui.theme.WhooshWhite
 import com.example.whoossh.viewmodel.BookingViewModel
 import kotlinx.coroutines.launch
+import com.example.whoossh.utils.tr
+import com.example.whoossh.utils.trStr
 
 @Composable
 fun RegisterScreen(
@@ -99,7 +101,7 @@ fun RegisterScreen(
     LaunchedEffect(viewModel.registerError) {
         viewModel.registerError?.let {
             scope.launch {
-                snackbarHostState.showSnackbar(it)
+                snackbarHostState.showSnackbar(it.trStr(viewModel.currentLanguage.value))
                 viewModel.clearRegisterError()
             }
         }
@@ -154,14 +156,14 @@ fun RegisterScreen(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    text = "Buat Akun Baru",
+                    text = "Buat Akun Baru".tr(),
                     fontSize = 26.sp,
                     fontWeight = FontWeight.Bold,
                     color = WhooshWhite
                 )
 
                 Text(
-                    text = "Daftar untuk mulai memesan tiket",
+                    text = "Daftar untuk mulai memesan tiket".tr(),
                     fontSize = 14.sp,
                     color = WhooshWhite.copy(alpha = 0.8f),
                     modifier = Modifier.padding(top = 4.dp)
@@ -182,7 +184,7 @@ fun RegisterScreen(
                 ) {
                     Column {
                         Text(
-                            text = "Registrasi",
+                            text = "Registrasi".tr(),
                             style = MaterialTheme.typography.headlineMedium,
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.padding(bottom = 20.dp)
@@ -192,7 +194,7 @@ fun RegisterScreen(
                         OutlinedTextField(
                             value = name,
                             onValueChange = { name = it },
-                            label = { Text("Nama Lengkap") },
+                            label = { Text("Nama Lengkap".tr()) },
                             leadingIcon = {
                                 Icon(Icons.Filled.Person, contentDescription = null, tint = WhooshRed)
                             },
@@ -219,7 +221,7 @@ fun RegisterScreen(
                         OutlinedTextField(
                             value = email,
                             onValueChange = { email = it },
-                            label = { Text("Email") },
+                            label = { Text("Email".tr()) },
                             leadingIcon = {
                                 Icon(Icons.Filled.Email, contentDescription = null, tint = WhooshRed)
                             },
@@ -246,7 +248,7 @@ fun RegisterScreen(
                         OutlinedTextField(
                             value = phone,
                             onValueChange = { phone = it.filter { c -> c.isDigit() } },
-                            label = { Text("Nomor HP") },
+                            label = { Text("Nomor HP".tr()) },
                             leadingIcon = {
                                 Icon(Icons.Filled.Phone, contentDescription = null, tint = WhooshRed)
                             },
@@ -273,7 +275,7 @@ fun RegisterScreen(
                         OutlinedTextField(
                             value = password,
                             onValueChange = { password = it },
-                            label = { Text("Password") },
+                            label = { Text("Password".tr()) },
                             leadingIcon = {
                                 Icon(Icons.Filled.Lock, contentDescription = null, tint = WhooshRed)
                             },
@@ -312,7 +314,7 @@ fun RegisterScreen(
                         OutlinedTextField(
                             value = confirmPassword,
                             onValueChange = { confirmPassword = it },
-                            label = { Text("Konfirmasi Password") },
+                            label = { Text("Konfirmasi Password".tr()) },
                             leadingIcon = {
                                 Icon(Icons.Filled.Lock, contentDescription = null, tint = WhooshRed)
                             },
@@ -370,7 +372,7 @@ fun RegisterScreen(
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Text(
-                                text = "Sudah punya akun? Masuk di sini",
+                                text = "Sudah punya akun? Masuk di sini".tr(),
                                 color = WhooshRed,
                                 fontSize = 14.sp,
                                 textAlign = TextAlign.Center

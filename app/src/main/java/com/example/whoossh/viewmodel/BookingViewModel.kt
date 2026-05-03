@@ -2090,8 +2090,19 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
     fun setNotifUpdate(v: Boolean) = userPreferences.setNotifUpdate(v)
     fun getNotifEmail(): Boolean = userPreferences.getNotifEmail()
     fun setNotifEmail(v: Boolean) = userPreferences.setNotifEmail(v)
+    
+    // Language State
+    private val _currentLanguage = MutableStateFlow(userPreferences.getLanguage())
+    val currentLanguage: StateFlow<String> = _currentLanguage.asStateFlow()
+
     fun getLanguage(): String = userPreferences.getLanguage()
-    fun setLanguage(v: String) = userPreferences.setLanguage(v)
+    
+    fun setLanguage(lang: String) {
+        userPreferences.setLanguage(lang)
+        _currentLanguage.value = lang
+    }
+
+    
     fun getBiometric(): Boolean = userPreferences.getBiometric()
     fun setBiometric(v: Boolean) = userPreferences.setBiometric(v)
     fun getSaveLogin(): Boolean = userPreferences.getSaveLogin()

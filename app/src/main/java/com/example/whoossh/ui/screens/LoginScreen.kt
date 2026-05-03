@@ -70,6 +70,8 @@ import com.example.whoossh.ui.theme.WhooshRedLight
 import com.example.whoossh.ui.theme.WhooshWhite
 import com.example.whoossh.viewmodel.BookingViewModel
 import kotlinx.coroutines.launch
+import com.example.whoossh.utils.tr
+import com.example.whoossh.utils.trStr
 
 @Composable
 fun LoginScreen(
@@ -93,7 +95,7 @@ fun LoginScreen(
     LaunchedEffect(viewModel.loginError) {
         viewModel.loginError?.let {
             scope.launch {
-                snackbarHostState.showSnackbar(it)
+                snackbarHostState.showSnackbar(it.trStr(viewModel.currentLanguage.value))
                 viewModel.clearLoginError()
             }
         }
@@ -152,7 +154,7 @@ fun LoginScreen(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
-                    text = "Kereta Cepat Indonesia",
+                    text = "Kereta Cepat Indonesia".tr(),
                     fontSize = 12.sp,
                     color = WhooshWhite.copy(alpha = 0.6f),
                     letterSpacing = 2.sp
@@ -173,13 +175,13 @@ fun LoginScreen(
                 ) {
                     Column {
                         Text(
-                            text = "Selamat Datang!",
+                            text = "Selamat Datang!".tr(),
                             style = MaterialTheme.typography.headlineMedium,
                             fontWeight = FontWeight.Bold
                         )
 
                         Text(
-                            text = "Masuk untuk melanjutkan",
+                            text = "Masuk untuk melanjutkan".tr(),
                             style = MaterialTheme.typography.bodyMedium,
                             color = Color.Gray,
                             modifier = Modifier.padding(top = 4.dp, bottom = 24.dp)
@@ -189,7 +191,7 @@ fun LoginScreen(
                         OutlinedTextField(
                             value = email,
                             onValueChange = { email = it },
-                            label = { Text("Email") },
+                            label = { Text("Email".tr()) },
                             leadingIcon = {
                                 Icon(
                                     Icons.Filled.Email,
@@ -221,7 +223,7 @@ fun LoginScreen(
                         OutlinedTextField(
                             value = password,
                             onValueChange = { password = it },
-                            label = { Text("Password") },
+                            label = { Text("Password".tr()) },
                             leadingIcon = {
                                 Icon(
                                     Icons.Filled.Lock,
@@ -286,7 +288,7 @@ fun LoginScreen(
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Text(
-                                text = "Belum punya akun? Daftar di sini",
+                                text = "Belum punya akun? Daftar di sini".tr(),
                                 color = WhooshRed,
                                 fontSize = 14.sp,
                                 textAlign = TextAlign.Center
