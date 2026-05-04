@@ -38,6 +38,10 @@ class UserPreferences(context: Context) {
         private const val KEY_BANK_NAME = "bank_name"
         private const val KEY_ACCOUNT_NO = "account_no"
         private const val KEY_ACCOUNT_HOLDER = "account_holder"
+        
+        // Biometric Login Credentials
+        private const val KEY_BIOMETRIC_EMAIL = "biometric_email"
+        private const val KEY_BIOMETRIC_PASSWORD = "biometric_password"
     }
 
     // ── USER SESSION CACHE ──────────────────────────────────────────────────
@@ -201,4 +205,32 @@ class UserPreferences(context: Context) {
 
     fun setSaveLogin(enabled: Boolean) { prefs.edit().putBoolean(KEY_SAVE_LOGIN, enabled).apply() }
     fun getSaveLogin(): Boolean = prefs.getBoolean(KEY_SAVE_LOGIN, true)
+    
+    // ── BIOMETRIC LOGIN CREDENTIALS ──────────────────────────────────────────
+    
+    /**
+     * Simpan kredensial login untuk biometrik
+     * CATATAN: Ini adalah implementasi sederhana. Untuk produksi, gunakan Android Keystore
+     * untuk enkripsi yang lebih aman.
+     */
+    fun saveBiometricCredentials(email: String, password: String) {
+        prefs.edit()
+            .putString(KEY_BIOMETRIC_EMAIL, email)
+            .putString(KEY_BIOMETRIC_PASSWORD, password)
+            .apply()
+    }
+    
+    fun getBiometricEmail(): String? = prefs.getString(KEY_BIOMETRIC_EMAIL, null)
+    fun getBiometricPassword(): String? = prefs.getString(KEY_BIOMETRIC_PASSWORD, null)
+    
+    fun hasBiometricCredentials(): Boolean {
+        return !getBiometricEmail().isNullOrEmpty() && !getBiometricPassword().isNullOrEmpty()
+    }
+    
+    fun clearBiometricCredentials() {
+        prefs.edit()
+            .remove(KEY_BIOMETRIC_EMAIL)
+            .remove(KEY_BIOMETRIC_PASSWORD)
+            .apply()
+    }
 }

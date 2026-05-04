@@ -4,6 +4,7 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -20,8 +21,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Train
 import androidx.compose.material.icons.filled.Visibility
@@ -50,6 +53,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -61,6 +65,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.fragment.app.FragmentActivity
 import com.example.whoossh.ui.components.WhooshButton
 import com.example.whoossh.ui.theme.WhooshGradientDark
 import com.example.whoossh.ui.theme.WhooshGradientEnd
@@ -72,6 +77,7 @@ import com.example.whoossh.viewmodel.BookingViewModel
 import kotlinx.coroutines.launch
 import com.example.whoossh.utils.tr
 import com.example.whoossh.utils.trStr
+import com.example.whoossh.utils.BiometricHelper
 
 @Composable
 fun LoginScreen(
@@ -85,8 +91,25 @@ fun LoginScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val focusManager = LocalFocusManager.current
+    val context = LocalContext.current
+    val activity = context as? FragmentActivity
 
     val fadeAnim = remember { Animatable(0f) }
+    
+    // ✅ FIX: Gunakan state yang reactive, bukan remember static
+    val isBiometricAvailable = BiometricHelper.isBiometricAvailable(context)
+    val isBiometricEnabled = viewModel.getBiometric()
+    val hasBiometricCredentials = viewModel.hasBiometricCredentials()
+    
+    // Debug logging
+    LaunchedEffect(isBiometricEnabled, hasBiometricCredentials) {
+        android.util.Log.d("LoginScreen", "Biometric available: $isBiometricAvailable")
+        android.util.Log.d("LoginScreen", "Biometric enabled: $isBiometricEnabled")
+        android.util.Log.d("LoginScreen", "Has credentials: $hasBiometricCredentials")
+        android.util.Log.d("LoginScreen", "Show button: ${isBiometricAvailable && hasBiometricCredentials && isBiometricEnabled}")
+    }
+    
+    val showBiometricButton = isBiometricAvailable && hasBiometricCredentials && isBiometricEnabled
 
     LaunchedEffect(Unit) {
         fadeAnim.animateTo(1f, animationSpec = tween(600))
@@ -97,6 +120,59 @@ fun LoginScreen(
             scope.launch {
                 snackbarHostState.showSnackbar(it.trStr(viewModel.currentLanguage.value))
                 viewModel.clearLoginError()
+            }
+        }
+    }
+    
+    // ✅ FIX: Fungsi login yang konsisten untuk semua cara login
+    val performLogin: () -> Unit = {
+        focusManager.clearFocus()
+        android.util.Log.d("LoginScreen", "Performing login with email: ${email.take(3)}***")
+        viewModel.login(email, password) { success ->
+            if (success) {
+                android.util.Log.d("LoginScreen", "Login successful")
+                // Simpan kredensial untuk biometrik jika diaktifkan
+                if (viewModel.getBiometric()) {
+                    android.util.Log.d("LoginScreen", "Biometric enabled, saving credentials")
+                    viewModel.saveBiometricCredentials(email, password)
+                } else {
+                    android.util.Log.d("LoginScreen", "Biometric not enabled, skipping credential save")
+                }
+                onLoginSuccess()
+            } else {
+                android.util.Log.e("LoginScreen", "Login failed")
+            }
+        }
+    }
+    
+    // Fungsi untuk handle login biometrik
+    val handleBiometricLogin: () -> Unit = {
+        android.util.Log.d("LoginScreen", "Biometric login button clicked")
+        if (activity != null) {
+            BiometricHelper.showBiometricPromptForLogin(
+                activity = activity,
+                onSuccess = {
+                    android.util.Log.d("LoginScreen", "Biometric auth success, logging in...")
+                    viewModel.loginWithBiometric { success ->
+                        if (success) {
+                            android.util.Log.d("LoginScreen", "Login successful")
+                            onLoginSuccess()
+                        } else {
+                            android.util.Log.e("LoginScreen", "Login failed")
+                        }
+                    }
+                },
+                onError = { errorMsg ->
+                    android.util.Log.e("LoginScreen", "Biometric auth error: $errorMsg")
+                    scope.launch {
+                        snackbarHostState.showSnackbar(errorMsg)
+                    }
+                }
+            )
+        } else {
+            android.util.Log.e("LoginScreen", "Activity is null, cannot show biometric prompt")
+            scope.launch {
+                snackbarHostState.showSnackbar("Tidak dapat menampilkan prompt biometrik")
             }
         }
     }
@@ -118,21 +194,26 @@ fun LoginScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // Top gradient background
+            // Top background with train image
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(320.dp)
-                    .background(
-                        brush = Brush.verticalGradient(
-                            colors = listOf(
-                                WhooshGradientDark,
-                                WhooshGradientStart,
-                                WhooshGradientEnd
-                            )
-                        )
-                    )
-            )
+            ) {
+                // Background image
+                Image(
+                    painter = painterResource(id = R.drawable.whoosh_train_bg),
+                    contentDescription = "Whoosh Train Background",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+                // Dark overlay for better text visibility
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.3f))
+                )
+            }
 
             Column(
                 modifier = Modifier
@@ -253,10 +334,7 @@ fun LoginScreen(
                             ),
                             keyboardActions = KeyboardActions(
                                 onDone = {
-                                    focusManager.clearFocus()
-                                    viewModel.login(email, password) { success ->
-                                        if (success) onLoginSuccess()
-                                    }
+                                    performLogin()
                                 }
                             ),
                             colors = OutlinedTextFieldDefaults.colors(
@@ -268,17 +346,52 @@ fun LoginScreen(
 
                         Spacer(modifier = Modifier.height(24.dp))
 
-                        // Login Button
-                        WhooshButton(
-                            text = if (viewModel.isLoading) "Memuat..." else "Masuk",
-                            onClick = {
-                                focusManager.clearFocus()
-                                viewModel.login(email, password) { success ->
-                                    if (success) onLoginSuccess()
+                        // Login Button with Biometric Icon
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // Main Login Button
+                            WhooshButton(
+                                text = if (viewModel.isLoading) "Memuat..." else "Masuk",
+                                onClick = performLogin,
+                                enabled = !viewModel.isLoading,
+                                modifier = Modifier.weight(1f)
+                            )
+                            
+                            // Biometric Icon Button (Always visible if biometric available)
+                            if (isBiometricAvailable && isBiometricEnabled) {
+                                androidx.compose.material3.Surface(
+                                    modifier = Modifier.size(54.dp),
+                                    shape = RoundedCornerShape(16.dp),
+                                    color = if (hasBiometricCredentials) WhooshRed else Color.LightGray,
+                                    onClick = {
+                                        if (hasBiometricCredentials) {
+                                            handleBiometricLogin()
+                                        } else {
+                                            scope.launch {
+                                                snackbarHostState.showSnackbar(
+                                                    "Login sekali dengan email/password untuk menyimpan kredensial biometrik"
+                                                )
+                                            }
+                                        }
+                                    }
+                                ) {
+                                    Box(
+                                        contentAlignment = Alignment.Center,
+                                        modifier = Modifier.fillMaxSize()
+                                    ) {
+                                        Icon(
+                                            Icons.Filled.Fingerprint,
+                                            contentDescription = "Login dengan Biometrik",
+                                            tint = WhooshWhite,
+                                            modifier = Modifier.size(28.dp)
+                                        )
+                                    }
                                 }
-                            },
-                            enabled = !viewModel.isLoading
-                        )
+                            }
+                        }
 
                         Spacer(modifier = Modifier.height(12.dp))
 

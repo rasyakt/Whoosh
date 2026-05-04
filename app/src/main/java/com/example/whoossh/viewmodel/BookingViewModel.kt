@@ -141,6 +141,8 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
             Log.i("BookingViewModel", "Restored session: userId=$userId, name=$userName")
             refreshTickets()
             refreshSavedPassengers()
+            // ✅ FIX: Reload data rekening bank saat restore session
+            reloadBankAccountData()
         } else if (savedUser != null && savedUserId <= 0) {
             // Cache lama dari sebelum migrasi, userId tidak valid
             // Paksa user login ulang agar mendapat userId dari server
@@ -220,6 +222,8 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
                         )
                         refreshTickets()
                         refreshSavedPassengers()
+                        // ✅ FIX: Reload data rekening bank dari SharedPreferences
+                        reloadBankAccountData()
                         onResult(true)
                     } else {
                         loginError = "Server response invalid (missing user data)"
@@ -295,6 +299,8 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
                             user.id
                         )
                         refreshSavedPassengers()
+                        // ✅ FIX: Reload data rekening bank (jika ada dari sebelumnya)
+                        reloadBankAccountData()
                         onResult(true)
                     } else {
                         registerError = "Server response invalid (missing user data)"
@@ -324,12 +330,14 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
         userPreferences.clearPaidTicketsCache() // Bersihkan cache tiket yang sudah dibayar
         userPreferences.clearCancelledTicketsCache() // Bersihkan cache tiket yang dibatalkan
         userPreferences.clearRefundedTicketsCache() // Bersihkan cache tiket yang direfund
-        clearUserBankAccount() // Bersihkan info rekening bank (state + prefs)
+        // ✅ FIX: JANGAN hapus data rekening bank saat logout
+        // Data rekening adalah data pribadi user yang harus persisten
+        // clearUserBankAccount() // ← DIHAPUS
         resetBooking()
         activeTickets = emptyList()
         historyTickets = emptyList()
         _savedPassengers.value = emptyList()
-        Log.i("BookingViewModel", "User logged out, all caches cleared")
+        Log.i("BookingViewModel", "User logged out, all caches cleared (bank account preserved)")
     }
 
     // ── PROFILE ──────────────────────────────────────────────────────────────
@@ -2038,6 +2046,17 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
         savedAccountNo = ""
         savedAccountHolder = ""
     }
+    
+    /**
+     * Reload data rekening bank dari SharedPreferences
+     * Dipanggil saat login untuk restore data yang tersimpan
+     */
+    fun reloadBankAccountData() {
+        savedBankName = userPreferences.getBankName()
+        savedAccountNo = userPreferences.getAccountNo()
+        savedAccountHolder = userPreferences.getAccountHolder()
+        Log.d("BookingViewModel", "Bank account data reloaded: ${if (savedBankName.isNotEmpty()) "Found" else "Empty"}")
+    }
 
     fun resetBooking() {
         originStation = ""
@@ -2174,6 +2193,56 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
     fun setBiometric(v: Boolean) = userPreferences.setBiometric(v)
     fun getSaveLogin(): Boolean = userPreferences.getSaveLogin()
     fun setSaveLogin(v: Boolean) = userPreferences.setSaveLogin(v)
+    
+    // ── BIOMETRIC LOGIN ──────────────────────────────────────────────────────
+    
+    /**
+     * Simpan kredensial untuk login biometrik
+     */
+    fun saveBiometricCredentials(email: String, password: String) {
+        Log.d("BookingViewModel", "Saving biometric credentials for: $email")
+        userPreferences.saveBiometricCredentials(email, password)
+        Log.d("BookingViewModel", "Credentials saved. Has credentials: ${hasBiometricCredentials()}")
+    }
+    
+    /**
+     * Cek apakah ada kredensial biometrik tersimpan
+     */
+    fun hasBiometricCredentials(): Boolean {
+        val hasCredentials = userPreferences.hasBiometricCredentials()
+        Log.d("BookingViewModel", "hasBiometricCredentials: $hasCredentials")
+        return hasCredentials
+    }
+    
+    /**
+     * Login menggunakan kredensial biometrik yang tersimpan
+     */
+    fun loginWithBiometric(onResult: (Boolean) -> Unit) {
+        Log.d("BookingViewModel", "loginWithBiometric called")
+        val email = userPreferences.getBiometricEmail()
+        val password = userPreferences.getBiometricPassword()
+        
+        Log.d("BookingViewModel", "Retrieved email: ${email?.take(3)}***, password length: ${password?.length ?: 0}")
+        
+        if (email.isNullOrEmpty() || password.isNullOrEmpty()) {
+            Log.e("BookingViewModel", "Biometric credentials not found or empty")
+            loginError = "Kredensial biometrik tidak ditemukan"
+            onResult(false)
+            return
+        }
+        
+        Log.d("BookingViewModel", "Calling login with biometric credentials...")
+        // Gunakan fungsi login yang sudah ada
+        login(email, password, onResult)
+    }
+    
+    /**
+     * Hapus kredensial biometrik
+     */
+    fun clearBiometricCredentials() {
+        Log.d("BookingViewModel", "Clearing biometric credentials")
+        userPreferences.clearBiometricCredentials()
+    }
 
     fun clearLoginError() { loginError = null }
     fun clearRegisterError() { registerError = null }

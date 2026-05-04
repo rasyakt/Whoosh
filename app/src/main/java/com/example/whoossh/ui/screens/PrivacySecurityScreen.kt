@@ -1,5 +1,6 @@
 package com.example.whoossh.ui.screens
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -34,6 +35,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -42,6 +44,7 @@ import com.example.whoossh.ui.theme.WhooshBlue
 import com.example.whoossh.ui.theme.WhooshGreen
 import com.example.whoossh.ui.theme.WhooshRed
 import com.example.whoossh.ui.theme.WhooshTextSecondary
+import com.example.whoossh.utils.BiometricHelper
 import com.example.whoossh.viewmodel.BookingViewModel
 import com.example.whoossh.utils.tr
 
@@ -52,6 +55,12 @@ fun PrivacySecurityScreen(
 ) {
     var biometric by remember { mutableStateOf(viewModel.getBiometric()) }
     var saveLogin by remember { mutableStateOf(viewModel.getSaveLogin()) }
+    val context = LocalContext.current
+    
+    // Cek status biometrik di perangkat
+    val (isBiometricAvailable, biometricStatusMessage) = remember { 
+        BiometricHelper.getBiometricStatus(context) 
+    }
 
     Scaffold(
         topBar = {
@@ -84,11 +93,40 @@ fun PrivacySecurityScreen(
                     SecurityToggleRow(
                         icon = Icons.Filled.Fingerprint,
                         title = "Login Biometrik",
-                        description = "Gunakan sidik jari atau face ID untuk login",
+                        description = if (isBiometricAvailable) {
+                            "Gunakan sidik jari atau face ID untuk login"
+                        } else {
+                            biometricStatusMessage
+                        },
                         checked = biometric,
-                        onCheckedChange = {
-                            biometric = it
-                            viewModel.setBiometric(it)
+                        enabled = isBiometricAvailable,
+                        onCheckedChange = { newValue ->
+                            if (isBiometricAvailable) {
+                                biometric = newValue
+                                viewModel.setBiometric(newValue)
+                                
+                                if (newValue) {
+                                    Toast.makeText(
+                                        context,
+                                        "Login biometrik diaktifkan. Login sekali dengan email/password untuk menyimpan kredensial.",
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                } else {
+                                    // Hapus kredensial biometrik saat dinonaktifkan
+                                    viewModel.clearBiometricCredentials()
+                                    Toast.makeText(
+                                        context,
+                                        "Login biometrik dinonaktifkan. Kredensial dihapus.",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            } else {
+                                Toast.makeText(
+                                    context,
+                                    biometricStatusMessage,
+                                    Toast.LENGTH_LONG
+                                ).show()
+                            }
                         }
                     )
                     HorizontalDivider(color = Color(0xFFF5F5F5))
@@ -97,9 +135,17 @@ fun PrivacySecurityScreen(
                         title = "Simpan Data Login",
                         description = "Tetap login meskipun aplikasi ditutup",
                         checked = saveLogin,
+                        enabled = true,
                         onCheckedChange = {
                             saveLogin = it
                             viewModel.setSaveLogin(it)
+                            
+                            val message = if (it) {
+                                "Data login akan disimpan"
+                            } else {
+                                "Data login tidak akan disimpan"
+                            }
+                            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
                         }
                     )
                 }
@@ -167,6 +213,7 @@ private fun SecurityToggleRow(
     title: String,
     description: String,
     checked: Boolean,
+    enabled: Boolean = true,
     onCheckedChange: (Boolean) -> Unit
 ) {
     Row(
@@ -178,21 +225,36 @@ private fun SecurityToggleRow(
         Icon(
             icon,
             contentDescription = null,
-            tint = WhooshRed,
+            tint = if (enabled) WhooshRed else Color.Gray,
             modifier = Modifier.padding(end = 12.dp)
         )
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = title.tr(), fontSize = 15.sp, fontWeight = FontWeight.Medium)
-            Text(text = description.tr(), fontSize = 12.sp, color = WhooshTextSecondary, modifier = Modifier.padding(top = 2.dp))
+            Text(
+                text = title.tr(), 
+                fontSize = 15.sp, 
+                fontWeight = FontWeight.Medium,
+                color = if (enabled) Color.Black else Color.Gray
+            )
+            Text(
+                text = description.tr(), 
+                fontSize = 12.sp, 
+                color = if (enabled) WhooshTextSecondary else Color.LightGray, 
+                modifier = Modifier.padding(top = 2.dp)
+            )
         }
         Switch(
             checked = checked,
             onCheckedChange = onCheckedChange,
+            enabled = enabled,
             colors = SwitchDefaults.colors(
                 checkedThumbColor = Color.White,
                 checkedTrackColor = WhooshRed,
                 uncheckedThumbColor = Color.White,
-                uncheckedTrackColor = Color.LightGray
+                uncheckedTrackColor = Color.LightGray,
+                disabledCheckedThumbColor = Color.White,
+                disabledCheckedTrackColor = Color.Gray,
+                disabledUncheckedThumbColor = Color.White,
+                disabledUncheckedTrackColor = Color.LightGray
             )
         )
     }

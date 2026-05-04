@@ -44,6 +44,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.fragment.app.FragmentActivity
 import com.example.whoossh.R
 import com.example.whoossh.model.Schedule
 import com.example.whoossh.ui.components.InfoRow
@@ -55,6 +56,7 @@ import com.example.whoossh.ui.theme.WhooshGradientStart
 import com.example.whoossh.ui.theme.WhooshRed
 import com.example.whoossh.ui.theme.WhooshTextSecondary
 import com.example.whoossh.ui.theme.WhooshWhite
+import com.example.whoossh.utils.BiometricHelper
 import com.example.whoossh.utils.QrCodeUtils
 import com.example.whoossh.utils.TicketUtils
 import com.example.whoossh.viewmodel.BookingViewModel
@@ -581,6 +583,10 @@ fun ETicketScreen(
     // RESCHEDULE DIALOG
     if (showRescheduleDialog && booking != null) {
         val (canReschedule, errorMsg) = viewModel.canReschedule(booking)
+        val activity = context as? FragmentActivity
+        val isBiometricEnabled = viewModel.getBiometric()
+        val isBiometricAvailable = BiometricHelper.isBiometricAvailable(context)
+        val shouldUseBiometric = isBiometricEnabled && isBiometricAvailable
         
         if (!canReschedule) {
             AlertDialog(
@@ -709,23 +715,53 @@ fun ETicketScreen(
                             color = WhooshTextSecondary,
                             lineHeight = 14.sp
                         )
+                        
+                        if (shouldUseBiometric) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                "🔒 Biometric authentication required".tr(),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = WhooshRed
+                            )
+                        }
                     }
                 },
                 confirmButton = {
                     Button(
                         onClick = {
                             if (selectedNewSchedule != null) {
-                                viewModel.rescheduleTicket(
-                                    booking = booking,
-                                    newDate = rescheduleDate,
-                                    newSchedule = selectedNewSchedule!!
-                                ) { success, message ->
-                                    Toast.makeText(context, message, Toast.LENGTH_LONG).show()
-                                    if (success) {
-                                        showRescheduleDialog = false
-                                        rescheduleDate = ""
-                                        selectedNewSchedule = null
+                                val executeReschedule = {
+                                    viewModel.rescheduleTicket(
+                                        booking = booking,
+                                        newDate = rescheduleDate,
+                                        newSchedule = selectedNewSchedule!!
+                                    ) { success, message ->
+                                        Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                                        if (success) {
+                                            showRescheduleDialog = false
+                                            rescheduleDate = ""
+                                            selectedNewSchedule = null
+                                        }
                                     }
+                                }
+                                
+                                // Jika biometrik diaktifkan, minta konfirmasi biometrik
+                                if (shouldUseBiometric && activity != null) {
+                                    BiometricHelper.showBiometricPromptForReschedule(
+                                        activity = activity,
+                                        bookingCode = booking.bookingCode,
+                                        newDate = rescheduleDate,
+                                        onSuccess = {
+                                            executeReschedule()
+                                        },
+                                        onError = { errorMsg ->
+                                            Toast.makeText(context, errorMsg, Toast.LENGTH_SHORT).show()
+                                        }
+                                    )
+                                } else {
+                                    // Langsung eksekusi jika biometrik tidak diaktifkan
+                                    executeReschedule()
                                 }
                             } else {
                                 Toast.makeText(context, "Please select a new schedule".trStr(viewModel.currentLanguage.value), Toast.LENGTH_SHORT).show()
@@ -783,6 +819,10 @@ fun ETicketScreen(
     // REFUND DIALOG
     if (showRefundDialog && booking != null) {
         val (canRefund, errorMsg) = viewModel.canRefund(booking)
+        val activity = context as? FragmentActivity
+        val isBiometricEnabled = viewModel.getBiometric()
+        val isBiometricAvailable = BiometricHelper.isBiometricAvailable(context)
+        val shouldUseBiometric = isBiometricEnabled && isBiometricAvailable
         
         LaunchedEffect(Unit) {
             if (canRefund) {
@@ -895,30 +935,58 @@ fun ETicketScreen(
                             color = WhooshTextSecondary,
                             lineHeight = 16.sp
                         )
+                        
+                        if (shouldUseBiometric) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text(
+                                "🔒 Biometric authentication required".tr(),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = WhooshRed
+                            )
+                        }
                     }
                 },
                 confirmButton = {
                     Button(
                         onClick = {
-                            // ✅ FIX: Pass semua data bank secara eksplisit termasuk accountHolder
-                            viewModel.refundTicket(
-                                booking = booking,
-                                bankName = viewModel.savedBankName,
-                                accountNo = viewModel.savedAccountNo,
-                                accountHolder = viewModel.savedAccountHolder
-                            ) { success, message, amount ->
-                                if (success) {
-                                    Toast.makeText(
-                                        context,
-                                        "Refund request submitted. You will receive ".trStr(viewModel.currentLanguage.value) + TicketUtils.formatRupiah(amount),
-                                        Toast.LENGTH_LONG
-                                    ).show()
-                                    showRefundDialog = false
-                                    // Navigate back to dashboard after refund
-                                    onBackToDashboard()
-                                } else {
-                                    Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                            val executeRefund = {
+                                viewModel.refundTicket(
+                                    booking = booking,
+                                    bankName = viewModel.savedBankName,
+                                    accountNo = viewModel.savedAccountNo,
+                                    accountHolder = viewModel.savedAccountHolder
+                                ) { success, message, amount ->
+                                    if (success) {
+                                        Toast.makeText(
+                                            context,
+                                            "Refund request submitted. You will receive ".trStr(viewModel.currentLanguage.value) + TicketUtils.formatRupiah(amount),
+                                            Toast.LENGTH_LONG
+                                        ).show()
+                                        showRefundDialog = false
+                                        onBackToDashboard()
+                                    } else {
+                                        Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                                    }
                                 }
+                            }
+                            
+                            // Jika biometrik diaktifkan, minta konfirmasi biometrik
+                            if (shouldUseBiometric && activity != null) {
+                                BiometricHelper.showBiometricPromptForRefund(
+                                    activity = activity,
+                                    bookingCode = booking.bookingCode,
+                                    amount = TicketUtils.formatRupiah(refundAmount),
+                                    onSuccess = {
+                                        executeRefund()
+                                    },
+                                    onError = { errorMsg ->
+                                        Toast.makeText(context, errorMsg, Toast.LENGTH_SHORT).show()
+                                    }
+                                )
+                            } else {
+                                // Langsung eksekusi jika biometrik tidak diaktifkan
+                                executeRefund()
                             }
                         },
                         enabled = !viewModel.isLoading,

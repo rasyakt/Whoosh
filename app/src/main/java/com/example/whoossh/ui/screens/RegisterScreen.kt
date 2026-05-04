@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Email
@@ -124,17 +125,26 @@ fun RegisterScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // Top gradient header
+            // Top background with train image
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(260.dp)
-                    .background(
-                        brush = Brush.verticalGradient(
-                            colors = listOf(WhooshGradientStart, WhooshGradientEnd)
-                        )
-                    )
-            )
+            ) {
+                // Background image
+                Image(
+                    painter = painterResource(id = R.drawable.whoosh_train_bg),
+                    contentDescription = "Whoosh Train Background",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+                // Dark overlay for better text visibility
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.3f))
+                )
+            }
 
             Column(
                 modifier = Modifier
