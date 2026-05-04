@@ -149,6 +149,10 @@ class UserPreferences(context: Context) {
         prefs.edit().putStringSet(KEY_REFUNDED_TICKETS, refunded).apply()
     }
 
+    fun clearRefundedTicketsCache() {
+        prefs.edit().remove(KEY_REFUNDED_TICKETS).apply()
+    }
+
     // ── BANK ACCOUNT INFO ────────────────────────────────────────────────────
     
     fun saveBankAccount(bankName: String, accountNo: String, accountHolder: String) {

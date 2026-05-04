@@ -323,9 +323,12 @@ class BookingViewModel(application: Application) : AndroidViewModel(application)
         userPreferences.clearLoggedInUser()
         userPreferences.clearPaidTicketsCache() // Bersihkan cache tiket yang sudah dibayar
         userPreferences.clearCancelledTicketsCache() // Bersihkan cache tiket yang dibatalkan
+        userPreferences.clearRefundedTicketsCache() // Bersihkan cache tiket yang direfund
+        clearUserBankAccount() // Bersihkan info rekening bank (state + prefs)
         resetBooking()
         activeTickets = emptyList()
         historyTickets = emptyList()
+        _savedPassengers.value = emptyList()
         Log.i("BookingViewModel", "User logged out, all caches cleared")
     }
 
