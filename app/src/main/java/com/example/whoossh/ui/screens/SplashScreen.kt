@@ -152,5 +152,20 @@ fun SplashScreen(
                 modifier = Modifier.alpha(textAlpha.value)
             )
         }
+
+        // Copyright at the bottom
+        Text(
+            text = "CopyRight©2026 Rasya Project, All Rights Reserved",
+            style = MaterialTheme.typography.labelSmall.copy(
+                fontWeight = FontWeight.Normal,
+                letterSpacing = 0.5.sp
+            ),
+            color = WhooshWhite.copy(alpha = 0.6f),
+            maxLines = 1,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 56.dp)
+                .alpha(textAlpha.value)
+        )
     }
 }
