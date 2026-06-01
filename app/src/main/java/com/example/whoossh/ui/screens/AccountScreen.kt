@@ -366,9 +366,9 @@ fun AccountScreen(
         Spacer(modifier = Modifier.height(24.dp))
 
         Text(
-            text = "Aplikasi Tiket Whoosh v1.0.0".tr(),
-            fontSize = 12.sp,
-            color = Color.LightGray,
+            text = "${"Aplikasi Tiket Whoosh v1.0.0".tr()}\nCopyright © 2026 Rasya Project • All Rights Reserved",
+            fontSize = 11.sp,
+            color = Color.Gray.copy(alpha = 0.6f),
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 24.dp),
