@@ -3,6 +3,7 @@ package com.example.whoossh.ui.screens
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -10,10 +11,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Train
-import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -22,15 +22,21 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.whoossh.R
 import com.example.whoossh.ui.theme.WhooshGradientDark
 import com.example.whoossh.ui.theme.WhooshGradientEnd
 import com.example.whoossh.ui.theme.WhooshGradientStart
 import com.example.whoossh.ui.theme.WhooshWhite
 import kotlinx.coroutines.delay
+import com.example.whoossh.utils.tr
 
 @Composable
 fun SplashScreen(
@@ -41,32 +47,38 @@ fun SplashScreen(
     val textAlpha = remember { Animatable(0f) }
 
     LaunchedEffect(Unit) {
-        // Animate icon scale
+        // Animate icon scale with Overshoot effect
         scale.animateTo(
             targetValue = 1f,
-            animationSpec = tween(800, easing = FastOutSlowInEasing)
+            animationSpec = tween(
+                durationMillis = 1000,
+                easing = { fraction ->
+                    val tension = 2f
+                    val s = fraction - 1.0f
+                    s * s * ((tension + 1.0f) * s + tension) + 1.0f
+                }
+            )
         )
     }
 
     LaunchedEffect(Unit) {
-        // Animate icon alpha
+        // Smooth icon alpha
         alpha.animateTo(
             targetValue = 1f,
-            animationSpec = tween(600)
+            animationSpec = tween(800)
         )
     }
 
     LaunchedEffect(Unit) {
-        delay(400)
-        // Animate text
+        delay(600) // Start text animation slightly after logo
         textAlpha.animateTo(
             targetValue = 1f,
-            animationSpec = tween(600)
+            animationSpec = tween(1000)
         )
     }
 
     LaunchedEffect(Unit) {
-        delay(2500)
+        delay(3500) // Slightly longer stay for professional feel
         onSplashFinished()
     }
 
@@ -81,56 +93,79 @@ fun SplashScreen(
                         WhooshGradientEnd
                     )
                 )
-            ),
-        contentAlignment = Alignment.Center
+            )
     ) {
+        // Main Branding Content
         Column(
+            modifier = Modifier.align(Alignment.Center),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // Train Icon
-            Icon(
-                imageVector = Icons.Filled.Train,
-                contentDescription = "Whoosh Logo",
-                tint = WhooshWhite,
+            // Refined Logo Container
+            Box(
                 modifier = Modifier
-                    .size(100.dp)
+                    .size(280.dp)
                     .scale(scale.value)
-                    .alpha(alpha.value)
-            )
+                    .alpha(alpha.value),
+                contentAlignment = Alignment.Center
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.logo_white),
+                    contentDescription = "Whoosh Logo",
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(48.dp))
 
-            // App Name
+            // Professional Branding Hierarchy
             Text(
-                text = "Whoosh",
-                fontSize = 42.sp,
-                fontWeight = FontWeight.Bold,
-                color = WhooshWhite,
+                text = "TICKET".tr(),
+                style = MaterialTheme.typography.displaySmall.copy(
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 14.sp,
+                    shadow = Shadow(
+                        color = Color.Black.copy(alpha = 0.3f),
+                        offset = Offset(0f, 8f),
+                        blurRadius = 15f
+                    ),
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            WhooshWhite,
+                            WhooshWhite.copy(alpha = 0.7f)
+                        )
+                    )
+                ),
                 modifier = Modifier.alpha(textAlpha.value)
             )
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
+            // Professional Footer/Company Name
             Text(
-                text = "Ticket",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Light,
-                color = WhooshWhite.copy(alpha = 0.85f),
-                letterSpacing = 8.sp,
-                modifier = Modifier.alpha(textAlpha.value)
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = "Kereta Cepat Indonesia",
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Normal,
-                color = WhooshWhite.copy(alpha = 0.6f),
-                letterSpacing = 2.sp,
+                text = "KERETA CEPAT INDONESIA".tr(),
+                style = MaterialTheme.typography.labelLarge.copy(
+                    fontWeight = FontWeight.SemiBold,
+                    letterSpacing = 6.sp
+                ),
+                color = WhooshWhite.copy(alpha = 0.5f),
                 modifier = Modifier.alpha(textAlpha.value)
             )
         }
+
+        // Copyright at the bottom
+        Text(
+            text = "CopyRight©2026 Rasya Project, All Rights Reserved",
+            style = MaterialTheme.typography.labelSmall.copy(
+                fontWeight = FontWeight.Normal,
+                letterSpacing = 0.5.sp
+            ),
+            color = WhooshWhite.copy(alpha = 0.6f),
+            maxLines = 1,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 56.dp)
+                .alpha(textAlpha.value)
+        )
     }
 }

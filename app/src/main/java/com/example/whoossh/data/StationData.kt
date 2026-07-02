@@ -3,28 +3,21 @@ package com.example.whoossh.data
 import com.example.whoossh.model.Station
 
 object StationData {
-    val stations = listOf(
+    var stations = listOf(
         Station(1, "Tegalluar"),
         Station(2, "Padalarang"),
         Station(3, "Karawang"),
         Station(4, "Halim")
     )
+        private set
 
-    // Duration matrix in minutes
-    // Index corresponds to station ID - 1
-    // Order: Tegalluar(0), Padalarang(1), Karawang(2), Halim(3)
-    private val durationMatrix = arrayOf(
-        intArrayOf(0, 17, 35, 52),   // From Tegalluar
-        intArrayOf(17, 0, 18, 35),   // From Padalarang
-        intArrayOf(35, 18, 0, 11),   // From Karawang (reversed + calculated)
-        intArrayOf(52, 30, 11, 0)    // From Halim
-    )
+    fun updateStations(newStations: List<Station>) {
+        stations = newStations
+    }
 
     fun getDuration(from: String, to: String): Int {
-        val fromIndex = stations.indexOfFirst { it.name == from }
-        val toIndex = stations.indexOfFirst { it.name == to }
-        if (fromIndex == -1 || toIndex == -1) return 0
-        return durationMatrix[fromIndex][toIndex]
+        // Now delegating to TicketUtils for smart, asymmetric durations
+        return com.example.whoossh.utils.TicketUtils.getActualDuration("06:25", from, to)
     }
 
     fun getStationNames(): List<String> = stations.map { it.name }

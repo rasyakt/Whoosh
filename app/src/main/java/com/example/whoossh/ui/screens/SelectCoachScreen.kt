@@ -1,211 +1,288 @@
 package com.example.whoossh.ui.screens
 
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AirlineSeatReclineExtra
-import androidx.compose.material.icons.filled.AirlineSeatReclineNormal
-import androidx.compose.material.icons.filled.EventSeat
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.whoossh.model.CoachClass
 import com.example.whoossh.ui.components.WhooshButton
 import com.example.whoossh.ui.components.WhooshTopBar
 import com.example.whoossh.ui.theme.WhooshRed
-import com.example.whoossh.ui.theme.WhooshRedLight
 import com.example.whoossh.ui.theme.WhooshTextSecondary
-import com.example.whoossh.ui.theme.WhooshWhite
 import com.example.whoossh.utils.TicketUtils
 import com.example.whoossh.viewmodel.BookingViewModel
+import com.example.whoossh.utils.tr
 
 @Composable
 fun SelectCoachScreen(
     viewModel: BookingViewModel,
     onCoachSelected: () -> Unit,
+    onManagePassengers: () -> Unit,
     onBack: () -> Unit
 ) {
+    val selectedPassengers by viewModel.selectedPassengers.collectAsState()
+    
     Scaffold(
         topBar = {
-            WhooshTopBar(title = "Pilih Gerbong", onBack = onBack)
+            WhooshTopBar(title = "Book".tr(), onBack = onBack)
         }
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .background(MaterialTheme.colorScheme.background)
+                .background(Color(0xFFFAFAFA))
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 16.dp)
         ) {
-            Text(
-                text = "Pilih Jenis Gerbong",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold
-            )
-
-            Text(
-                text = "Untuk ${viewModel.ticketCount} tiket",
-                style = MaterialTheme.typography.bodyMedium,
-                color = WhooshTextSecondary,
-                modifier = Modifier.padding(top = 4.dp)
-            )
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // Ekonomi
-            CoachClassCard(
-                coachClass = CoachClass.EKONOMI,
-                icon = Icons.Filled.EventSeat,
-                features = listOf("Kursi standar dengan AC", "Colokan listrik", "Tempat bagasi"),
-                price = viewModel.getPriceForClass(CoachClass.EKONOMI),
-                isSelected = viewModel.selectedCoachClass == CoachClass.EKONOMI,
-                onClick = { viewModel.selectCoachClass(CoachClass.EKONOMI) }
-            )
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // Bisnis
-            CoachClassCard(
-                coachClass = CoachClass.BISNIS,
-                icon = Icons.Filled.AirlineSeatReclineNormal,
-                features = listOf("Kursi lebih lebar", "Sandaran kaki", "Snack box gratis"),
-                price = viewModel.getPriceForClass(CoachClass.BISNIS),
-                isSelected = viewModel.selectedCoachClass == CoachClass.BISNIS,
-                onClick = { viewModel.selectCoachClass(CoachClass.BISNIS) }
-            )
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // VIP
-            CoachClassCard(
-                coachClass = CoachClass.VIP,
-                icon = Icons.Filled.AirlineSeatReclineExtra,
-                features = listOf("Kursi premium reclining", "Makanan lengkap", "WiFi premium"),
-                price = viewModel.getPriceForClass(CoachClass.VIP),
-                isSelected = viewModel.selectedCoachClass == CoachClass.VIP,
-                onClick = { viewModel.selectCoachClass(CoachClass.VIP) },
-                isBest = true
-            )
-
-            Spacer(modifier = Modifier.height(28.dp))
-
-            WhooshButton(
-                text = "Lanjutkan",
-                onClick = onCoachSelected,
-                enabled = viewModel.selectedCoachClass != null
-            )
-
-            Spacer(modifier = Modifier.height(20.dp))
-        }
-    }
-}
-
-@Composable
-private fun CoachClassCard(
-    coachClass: CoachClass,
-    icon: ImageVector,
-    features: List<String>,
-    price: Int,
-    isSelected: Boolean,
-    onClick: () -> Unit,
-    isBest: Boolean = false
-) {
-    val borderColor by animateColorAsState(
-        targetValue = if (isSelected) WhooshRed else Color(0xFFEEEEEE),
-        animationSpec = tween(300),
-        label = "border_color"
-    )
-    val bgColor by animateColorAsState(
-        targetValue = if (isSelected) WhooshRed.copy(alpha = 0.04f) else Color.White,
-        animationSpec = tween(300),
-        label = "bg_color"
-    )
-
-    Card(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = bgColor),
-        border = BorderStroke(
-            width = if (isSelected) 1.5.dp else 1.dp,
-            color = borderColor
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
+            // Schedule Info Card
+            viewModel.selectedSchedule?.let { schedule ->
+                Card(
                     modifier = Modifier
-                        .size(42.dp)
-                        .background(
-                            color = if (isSelected) WhooshRed else Color(0xFFF5F5F5),
-                            shape = RoundedCornerShape(10.dp)
-                        ),
-                    contentAlignment = Alignment.Center
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                 ) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        tint = if (isSelected) Color.White else Color.Gray,
-                        modifier = Modifier.size(20.dp)
-                    )
+                    Column(modifier = Modifier.padding(20.dp)) {
+                        Text(
+                            text = viewModel.departureDate,
+                            fontSize = 12.sp,
+                            color = WhooshTextSecondary,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = schedule.departureTime,
+                                    fontSize = 22.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.Black
+                                )
+                                Text(
+                                    text = schedule.originStation,
+                                    fontSize = 13.sp,
+                                    color = WhooshTextSecondary,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                            
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(
+                                    text = schedule.trainCode,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = WhooshRed
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .width(50.dp)
+                                        .height(1.5.dp)
+                                        .background(Color(0xFFE0E0E0))
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.AccessTime,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(13.dp),
+                                        tint = WhooshTextSecondary
+                                    )
+                                    Spacer(modifier = Modifier.width(3.dp))
+                                    Text(
+                                        text = "${schedule.duration}m".tr(),
+                                        fontSize = 11.sp,
+                                        color = WhooshTextSecondary,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
+                            }
+                            
+                            Column(
+                                horizontalAlignment = Alignment.End,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(
+                                    text = schedule.arrivalTime,
+                                    fontSize = 22.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.Black
+                                )
+                                Text(
+                                    text = schedule.destinationStation,
+                                    fontSize = 13.sp,
+                                    color = WhooshTextSecondary,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                        }
+                    }
                 }
-                Spacer(modifier = Modifier.width(12.dp))
-                
+            }
+
+            // Coach Class Selection
+            Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                 Text(
-                    text = coachClass.displayName,
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = if (isSelected) WhooshRed else Color.Black
+                    text = "Pilih Jenis Gerbong".tr(),
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.Black,
+                    modifier = Modifier.padding(top = 8.dp, bottom = 12.dp)
+                )
+
+                val schedule = viewModel.selectedSchedule
+                val availableClasses = remember(schedule) {
+                    if (schedule != null) {
+                        TicketUtils.getAvailableClasses(schedule.originStation, schedule.destinationStation)
+                    } else {
+                        CoachClass.values().toList()
+                    }
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    if (availableClasses.contains(CoachClass.VIP)) {
+                        CoachClassOption(
+                            title = CoachClass.VIP.displayName,
+                            price = viewModel.getPriceForClass(CoachClass.VIP),
+                            isSelected = viewModel.selectedCoachClass == CoachClass.VIP,
+                            onClick = { viewModel.selectCoachClass(CoachClass.VIP) },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                    if (availableClasses.contains(CoachClass.BISNIS)) {
+                        CoachClassOption(
+                            title = CoachClass.BISNIS.displayName,
+                            price = viewModel.getPriceForClass(CoachClass.BISNIS),
+                            isSelected = viewModel.selectedCoachClass == CoachClass.BISNIS,
+                            onClick = { viewModel.selectCoachClass(CoachClass.BISNIS) },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                    if (availableClasses.contains(CoachClass.EKONOMI)) {
+                        CoachClassOption(
+                            title = CoachClass.EKONOMI.displayName,
+                            price = viewModel.getPriceForClass(CoachClass.EKONOMI),
+                            isSelected = viewModel.selectedCoachClass == CoachClass.EKONOMI,
+                            onClick = { viewModel.selectCoachClass(CoachClass.EKONOMI) },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // Passenger Section
+            Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                Text(
+                    text = "Penumpang".tr(),
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.Black,
+                    modifier = Modifier.padding(bottom = 10.dp)
                 )
                 
-                if (isBest) {
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Box(
+                Card(
+                    onClick = onManagePassengers,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (selectedPassengers.isEmpty()) Color.White else Color(0xFFFFF5F5)
+                    ),
+                    border = BorderStroke(
+                        width = 1.5.dp,
+                        color = if (selectedPassengers.isEmpty()) Color(0xFFE8E8E8) else WhooshRed.copy(alpha = 0.3f)
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                ) {
+                    Row(
                         modifier = Modifier
-                            .background(WhooshRed.copy(alpha = 0.1f), RoundedCornerShape(4.dp))
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                            .fillMaxWidth()
+                            .padding(14.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = "RECOMMENDED",
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = WhooshRed
+                        Column(modifier = Modifier.weight(1f)) {
+                            if (selectedPassengers.isEmpty()) {
+                                Text(
+                                    text = "Pilih Penumpang".tr(),
+                                    fontSize = 14.sp,
+                                    color = WhooshRed,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Text(
+                                    text = "Tambahkan penumpang (maks. 15)".tr(),
+                                    fontSize = 12.sp,
+                                    color = WhooshTextSecondary
+                                )
+                            } else {
+                                Text(
+                                    text = "${selectedPassengers.size}/15 Penumpang Terpilih".tr(),
+                                    fontSize = 14.sp,
+                                    color = Color.Black,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Column {
+                                    selectedPassengers.take(3).forEachIndexed { index, passenger ->
+                                        Text(
+                                            text = "${index + 1}. ${passenger.name}".tr(),
+                                            fontSize = 11.sp,
+                                            color = WhooshTextSecondary,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                    if (selectedPassengers.size > 3) {
+                                        Text(
+                                            text = "+${selectedPassengers.size - 3} lainnya".tr(),
+                                            fontSize = 11.sp,
+                                            color = WhooshRed,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                        Icon(
+                            imageVector = Icons.Default.KeyboardArrowRight,
+                            contentDescription = null,
+                            tint = WhooshRed,
+                            modifier = Modifier.size(20.dp)
                         )
                     }
                 }
@@ -213,42 +290,121 @@ private fun CoachClassCard(
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            // Ticket Detection & Cancel Condition
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(1.dp)
-                    .background(Color(0xFFF0F0F0))
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Bottom
+                    .padding(horizontal = 16.dp)
             ) {
-                Text(
-                    text = features.joinToString(" • "),
-                    fontSize = 12.sp,
-                    color = Color.Gray,
-                    modifier = Modifier.weight(1f).padding(end = 8.dp),
-                    lineHeight = 18.sp
-                )
-                
-                Column(horizontalAlignment = Alignment.End) {
-                    Text(
-                        text = TicketUtils.formatRupiah(price),
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = WhooshRed
+                Canvas(modifier = Modifier.matchParentSize()) {
+                    drawRoundRect(
+                        color = Color(0xFFE0E0E0),
+                        style = androidx.compose.ui.graphics.drawscope.Stroke(
+                            width = 2f,
+                            pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(
+                                floatArrayOf(10f, 10f), 0f
+                            )
+                        ),
+                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(12.dp.toPx())
                     )
+                }
+                Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        text = "/ tiket",
-                        fontSize = 11.sp,
-                        color = Color.Gray
+                        text = "Ticket Detection & Cancel Condition".tr(),
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 14.sp,
+                        color = Color.Black
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = ("1. BA baby under three\n" +
+                              "2. Adults 17 years of age or older\n" +
+                              "3. The name and identity number must be in accordance with that contained in the identity certificate (KTP/ Passport), when the passenger age below 17 years can be filled in with the date of birth of").tr(),
+                        fontSize = 12.sp,
+                        color = Color(0xFF666666),
+                        lineHeight = 18.sp
                     )
                 }
             }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Action Buttons
+            Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                WhooshButton(
+                    text = "Lanjutkan".tr(),
+                    onClick = onCoachSelected,
+                    enabled = viewModel.selectedCoachClass != null && selectedPassengers.isNotEmpty()
+                )
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+        }
+    }
+}
+
+@Composable
+private fun CoachClassOption(
+    title: String,
+    price: Int,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    isRecommended: Boolean = false
+) {
+    Card(
+        onClick = onClick,
+        modifier = modifier.height(115.dp),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isSelected) Color(0xFFFFF5F5) else Color.White
+        ),
+        border = BorderStroke(
+            width = if (isSelected) 2.dp else 1.dp,
+            color = if (isSelected) WhooshRed else Color(0xFFE0E0E0)
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = if (isSelected) 2.dp else 0.dp
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            // Price and Title
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = TicketUtils.formatRupiah(price),
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isSelected) WhooshRed else Color.Black,
+                    maxLines = 1,
+                    textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(text = title.tr(),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = if (isSelected) WhooshRed else Color(0xFF666666),
+                    textAlign = TextAlign.Center,
+                    maxLines = 1
+                )
+            }
+            
+            // Status
+            Text(
+                text = "Tersedia".tr(),
+                fontSize = 10.sp,
+                color = Color(0xFF999999),
+                fontWeight = FontWeight.Normal
+            )
         }
     }
 }

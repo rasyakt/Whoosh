@@ -25,7 +25,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccessTime
-import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.Button
@@ -70,6 +70,7 @@ import androidx.compose.material.icons.outlined.ArrowCircleRight
 import androidx.compose.material.icons.filled.Train
 
 import androidx.compose.foundation.layout.statusBarsPadding
+import com.example.whoossh.utils.tr
 
 @Composable
 fun SelectScheduleScreen(
@@ -227,7 +228,7 @@ fun SelectScheduleScreen(
                         val color = if (canGoPrev) Color(0xFF1A1A1A) else Color(0xFFCCCCCC)
                         Icon(Icons.Outlined.ArrowCircleLeft, null, tint = color, modifier = Modifier.size(22.dp))
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("Sebelumnya", fontSize = 12.sp, color = color)
+                        Text("Sebelumnya".tr(), fontSize = 12.sp, color = color)
                     }
 
                     // Selector
@@ -259,7 +260,7 @@ fun SelectScheduleScreen(
                         }
                     ) {
                         val color = if (canGoNext) Color(0xFF1A1A1A) else Color(0xFFCCCCCC)
-                        Text("Selanjutnya", fontSize = 12.sp, color = color)
+                        Text("Selanjutnya".tr(), fontSize = 12.sp, color = color)
                         Spacer(modifier = Modifier.width(6.dp))
                         Icon(Icons.Outlined.ArrowCircleRight, null, tint = color, modifier = Modifier.size(22.dp))
                     }
@@ -274,40 +275,69 @@ fun SelectScheduleScreen(
                 .padding(paddingValues)
                 .background(Color(0xFFF5F5F5))
         ) {
-            Text(
-                text = "${viewModel.schedules.size} jadwal tersedia",
-                style = MaterialTheme.typography.bodySmall,
-                color = WhooshTextSecondary,
-                modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)
-            )
-
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                    top = 4.dp,
-                    bottom = 20.dp
-                )
-            ) {
-                itemsIndexed(viewModel.schedules) { index, schedule ->
-                    val isVisible = index < visibleItems.size && visibleItems[index]
-                    AnimatedVisibility(
-                        visible = isVisible,
-                        enter = fadeIn() + slideInVertically(initialOffsetY = { it / 2 })
-                    ) {
-                        ScheduleCard(
-                            schedule = schedule,
-                            onSelect = {
-                                if (viewModel.isLoggedIn) {
-                                    viewModel.selectSchedule(schedule)
-                                    onScheduleSelected()
-                                } else {
-                                    onLoginRequired()
-                                }
-                            }
+            if (viewModel.isLoadingSchedules) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    androidx.compose.material3.CircularProgressIndicator(color = WhooshRed)
+                }
+            } else if (viewModel.schedules.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            Icons.Filled.Schedule,
+                            null,
+                            modifier = Modifier.size(64.dp),
+                            tint = Color.LightGray
                         )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = "Tidak ada jadwal tersedia".tr(),
+                            color = WhooshTextSecondary,
+                            fontSize = 16.sp
+                        )
+                    }
+                }
+            } else {
+                Text(
+                    text = "${viewModel.schedules.size} jadwal tersedia".tr(),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = WhooshTextSecondary,
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)
+                )
+
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                        top = 4.dp,
+                        bottom = 20.dp
+                    )
+                ) {
+                    itemsIndexed(viewModel.schedules) { index, schedule ->
+                        val isVisible = index < visibleItems.size && visibleItems[index]
+                        AnimatedVisibility(
+                            visible = isVisible,
+                            enter = fadeIn() + slideInVertically(initialOffsetY = { it / 2 })
+                        ) {
+                            ScheduleCard(
+                                schedule = schedule,
+                                onSelect = {
+                                    if (viewModel.isLoggedIn) {
+                                        viewModel.selectSchedule(schedule)
+                                        onScheduleSelected()
+                                    } else {
+                                        onLoginRequired()
+                                    }
+                                }
+                            )
+                        }
                     }
                 }
             }
@@ -358,7 +388,7 @@ private fun ScheduleCard(
                         )
                         Spacer(modifier = Modifier.width(2.dp))
                         Text(
-                            text = "WIB",
+                            text = "WIB".tr(),
                             fontSize = 9.sp,
                             color = Color.Gray,
                             modifier = Modifier.padding(top = 2.dp)
@@ -380,7 +410,7 @@ private fun ScheduleCard(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = "${schedule.duration} mnt",
+                        text = "${schedule.duration} mnt".tr(),
                         fontSize = 10.sp,
                         color = Color.Gray,
                         fontWeight = FontWeight.Medium
@@ -391,7 +421,7 @@ private fun ScheduleCard(
                     ) {
                         Box(modifier = Modifier.size(6.dp).clip(CircleShape).border(1.dp, Color.LightGray, CircleShape))
                         HorizontalDivider(modifier = Modifier.weight(1f), color = Color(0xFFE0E0E0), thickness = 1.dp)
-                        Icon(Icons.Filled.ArrowForward, null, tint = Color.LightGray, modifier = Modifier.size(12.dp))
+                        Icon(Icons.AutoMirrored.Filled.ArrowForward, null, tint = Color.LightGray, modifier = Modifier.size(12.dp))
                     }
                 }
 
@@ -406,7 +436,7 @@ private fun ScheduleCard(
                         )
                         Spacer(modifier = Modifier.width(2.dp))
                         Text(
-                            text = "WIB",
+                            text = "WIB".tr(),
                             fontSize = 9.sp,
                             color = Color.Gray,
                             modifier = Modifier.padding(top = 2.dp)
@@ -433,7 +463,7 @@ private fun ScheduleCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Stasiun Pemberhentian", 
+                    text = "Stasiun Pemberhentian".tr(), 
                     fontSize = 10.sp, 
                     color = WhooshRed, 
                     fontWeight = FontWeight.SemiBold
@@ -456,10 +486,10 @@ private fun ScheduleCard(
                         .padding(10.dp)
                 ) {
                     Row(modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp)) {
-                        Text("Stasiun", fontSize = 9.sp, color = Color.Gray, modifier = Modifier.weight(2f))
-                        Text("Tiba", fontSize = 9.sp, color = Color.Gray, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
-                        Text("Keluar", fontSize = 9.sp, color = Color.Gray, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
-                        Text("Berhenti", fontSize = 9.sp, color = Color.Gray, modifier = Modifier.weight(1f), textAlign = TextAlign.End)
+                        Text("Stasiun".tr(), fontSize = 9.sp, color = Color.Gray, modifier = Modifier.weight(2f))
+                        Text("Tiba".tr(), fontSize = 9.sp, color = Color.Gray, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
+                        Text("Berangkat".tr(), fontSize = 9.sp, color = Color.Gray, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
+                        Text("Berhenti".tr(), fontSize = 9.sp, color = Color.Gray, modifier = Modifier.weight(1f), textAlign = TextAlign.End)
                     }
                     HorizontalDivider(color = WhooshRed.copy(0.08f))
                     
@@ -487,7 +517,7 @@ private fun ScheduleCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text(text = "Mulai dari", fontSize = 10.sp, color = WhooshTextSecondary)
+                    Text(text = "Mulai dari".tr(), fontSize = 10.sp, color = WhooshTextSecondary)
                     Text(
                         text = com.example.whoossh.utils.TicketUtils.formatRupiah(schedule.price),
                         fontSize = 16.sp,
@@ -503,7 +533,7 @@ private fun ScheduleCard(
                     colors = ButtonDefaults.buttonColors(containerColor = WhooshRed),
                     contentPadding = PaddingValues(0.dp)
                 ) {
-                    Text(text = "Pilih", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Text(text = "Pilih".tr(), fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 }
             }
         }

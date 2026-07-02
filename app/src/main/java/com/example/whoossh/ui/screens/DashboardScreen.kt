@@ -1,7 +1,12 @@
 package com.example.whoossh.ui.screens
 
 import android.app.DatePickerDialog
+import android.widget.Toast
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -16,6 +21,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -24,6 +30,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.ConfirmationNumber
 import androidx.compose.material.icons.filled.Help
 import androidx.compose.material.icons.filled.History
@@ -39,7 +46,12 @@ import androidx.compose.material.icons.filled.Train
 import androidx.compose.material.icons.filled.EventSeat
 import androidx.compose.material.icons.filled.ArrowBackIosNew
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.outlined.ConfirmationNumber
+import androidx.compose.material.icons.outlined.DirectionsTransit
+import androidx.compose.material.icons.outlined.HelpOutline
+import androidx.compose.material.icons.outlined.LocalOffer
 import androidx.compose.foundation.layout.offset
+import androidx.compose.material.icons.outlined.History
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -65,16 +77,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.whoossh.R
 import com.example.whoossh.data.StationData
 import com.example.whoossh.ui.theme.WhooshBackground
 import com.example.whoossh.ui.theme.WhooshGradientEnd
@@ -87,6 +102,8 @@ import kotlinx.coroutines.launch
 import java.util.Calendar
 import java.util.Locale
 import java.text.SimpleDateFormat
+import com.example.whoossh.utils.tr
+import com.example.whoossh.utils.trStr
 
 private data class QuickAction(val icon: ImageVector, val label: String, val action: () -> Unit)
 
@@ -96,11 +113,38 @@ fun DashboardScreen(
     viewModel: BookingViewModel,
     onSearchSchedule: () -> Unit,
     onLoginRequired: () -> Unit,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    onNavigateToEditProfile: () -> Unit = {},
+    onNavigateToHistory: () -> Unit = {},
+    onNavigateToPromo: () -> Unit = {},
+    onNavigateToNotifications: () -> Unit = {},
+    onNavigateToLanguage: () -> Unit = {},
+    onNavigateToPrivacy: () -> Unit = {},
+    onNavigateToChangePassword: () -> Unit = {},
+    onNavigateToHelpCenter: () -> Unit = {},
+    onNavigateToPassengerList: () -> Unit = {},
+    onNavigateToETicket: () -> Unit = {},
+    onNavigateToUnpaidTicket: () -> Unit = {}
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     var selectedBottomNav by remember { mutableIntStateOf(0) }
+    val context = LocalContext.current
+    var lastBackPressTime by remember { mutableStateOf(0L) }
+
+    BackHandler {
+        if (selectedBottomNav != 0) {
+            selectedBottomNav = 0
+        } else {
+            val currentTime = System.currentTimeMillis()
+            if (currentTime - lastBackPressTime < 2000) {
+                (context as? ComponentActivity)?.finish()
+            } else {
+                lastBackPressTime = currentTime
+                Toast.makeText(context, "Tekan sekali lagi untuk keluar".trStr(viewModel.currentLanguage.value), Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 
     Scaffold(
         containerColor = WhooshBackground,
@@ -146,11 +190,36 @@ fun DashboardScreen(
                         } else {
                             selectedBottomNav = index
                         }
+                    },
+                    onNavigateToPromo = onNavigateToPromo,
+                    onNavigateToHelpCenter = onNavigateToHelpCenter,
+                    onNavigateToHistory = onNavigateToHistory
+                )
+                1 -> TicketsScreen(
+                    viewModel = viewModel,
+                    onTicketClick = { ticket ->
+                        viewModel.viewTicket(ticket)
+                        if (ticket.isPaid) {
+                            onNavigateToETicket()
+                        } else {
+                            onNavigateToUnpaidTicket()
+                        }
                     }
                 )
-                1 -> TicketsScreen(viewModel = viewModel)
                 2 -> SchedulesScreen()
-                3 -> AccountScreen(viewModel = viewModel, onLogout = onLogout)
+                3 -> AccountScreen(
+                    viewModel = viewModel,
+                    onNavigateToEditProfile = onNavigateToEditProfile,
+                    onNavigateToHistory = onNavigateToHistory,
+                    onNavigateToPromo = onNavigateToPromo,
+                    onNavigateToNotifications = onNavigateToNotifications,
+                    onNavigateToLanguage = onNavigateToLanguage,
+                    onNavigateToPrivacy = onNavigateToPrivacy,
+                    onNavigateToChangePassword = onNavigateToChangePassword,
+                    onNavigateToHelpCenter = onNavigateToHelpCenter,
+                    onNavigateToPassengerList = onNavigateToPassengerList,
+                    onLogout = onLogout
+                )
             }
         }
     }
@@ -166,7 +235,10 @@ private fun HomeContent(
     onLogout: () -> Unit,
     snackbarHostState: SnackbarHostState,
     scope: kotlinx.coroutines.CoroutineScope,
-    onNavigateToTab: (Int) -> Unit
+    onNavigateToTab: (Int) -> Unit,
+    onNavigateToPromo: () -> Unit = {},
+    onNavigateToHelpCenter: () -> Unit = {},
+    onNavigateToHistory: () -> Unit = {}
 ) {
     val context = LocalContext.current
     var showMoreInfo by remember { mutableStateOf(false) }
@@ -189,20 +261,16 @@ private fun HomeContent(
     val stationNames = StationData.getStationNames()
 
     val quickActions = listOf(
-        QuickAction(Icons.Filled.ConfirmationNumber, "Tiket Saya") { onNavigateToTab(1) },
-        QuickAction(Icons.Filled.History, "Riwayat") { onNavigateToTab(3) },
-        QuickAction(Icons.Filled.LocalOffer, "Promo") {
-            scope.launch { snackbarHostState.showSnackbar("Promo segera hadir!") }
-        },
-        QuickAction(Icons.Filled.Help, "Bantuan") {
-            scope.launch { snackbarHostState.showSnackbar("Hubungi kami di bantuan@whoosh.id") }
-        }
+        QuickAction(Icons.Outlined.ConfirmationNumber, "Tiket Saya") { onNavigateToTab(1) },
+        QuickAction(Icons.Outlined.History, "Riwayat") { onNavigateToHistory() },
+        QuickAction(Icons.Outlined.LocalOffer, "Promo") { onNavigateToPromo() },
+        QuickAction(Icons.Outlined.HelpOutline, "Bantuan") { onNavigateToHelpCenter() }
     )
 
     LaunchedEffect(viewModel.formError) {
         viewModel.formError?.let {
             scope.launch {
-                snackbarHostState.showSnackbar(it)
+                snackbarHostState.showSnackbar(it.trStr(viewModel.currentLanguage.value))
                 viewModel.clearFormError()
             }
         }
@@ -220,28 +288,71 @@ private fun HomeContent(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(210.dp)
-                    .background(brush = Brush.verticalGradient(listOf(WhooshGradientStart, WhooshGradientEnd)))
-                    .padding(start = 24.dp, end = 24.dp, top = 28.dp, bottom = 16.dp)
+                    .clip(RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp))
             ) {
-                Column {
-                    // Logo row
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Filled.Train, null, tint = WhooshWhite, modifier = Modifier.size(24.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            "Whoosh",
-                            color = WhooshWhite,
-                            fontSize = 17.sp,
-                            fontWeight = FontWeight.Bold,
-                            fontStyle = FontStyle.Italic
-                        )
+                val carouselImages = listOf(
+                    R.drawable.carousel_1,
+                    R.drawable.carousel_2,
+                    R.drawable.carousel_3,
+                    R.drawable.carousel_4,
+                    R.drawable.carousel_5
+                )
+                val pagerState = androidx.compose.foundation.pager.rememberPagerState(pageCount = { carouselImages.size })
+
+                LaunchedEffect(pagerState) {
+                    while (true) {
+                        kotlinx.coroutines.delay(3000)
+                        if (carouselImages.isNotEmpty()) {
+                            val nextPage = (pagerState.currentPage + 1) % carouselImages.size
+                            pagerState.animateScrollToPage(nextPage)
+                        }
                     }
-                    Spacer(modifier = Modifier.height(10.dp))
-                    // Slogans
-                    Text("CONNECTING", color = WhooshWhite.copy(alpha = 0.95f), fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, fontStyle = FontStyle.Italic, lineHeight = 28.sp)
-                    Text("SHARING", color = WhooshWhite.copy(alpha = 0.95f), fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, fontStyle = FontStyle.Italic, lineHeight = 28.sp)
-                    Text("GROWTH", color = WhooshWhite.copy(alpha = 0.95f), fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, fontStyle = FontStyle.Italic, lineHeight = 28.sp)
+                }
+
+                androidx.compose.foundation.pager.HorizontalPager(
+                    state = pagerState,
+                    modifier = Modifier.fillMaxWidth().wrapContentHeight()
+                ) { page ->
+                    Image(
+                        painter = painterResource(id = carouselImages[page]),
+                        contentDescription = "Carousel Image $page",
+                        contentScale = androidx.compose.ui.layout.ContentScale.FillWidth,
+                        modifier = Modifier.fillMaxWidth().wrapContentHeight()
+                    )
+                }
+                
+                // Foreground Content
+                Box(
+                    modifier = Modifier.matchParentSize()
+                ) {
+
+                    // Carousel Dots Indicator
+                    Row(
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .padding(top = 135.dp), // Berada tepat di atas form modal booking
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        repeat(carouselImages.size) { iteration ->
+                            val isSelected = pagerState.currentPage == iteration
+                            val color = if (isSelected) WhooshWhite else WhooshWhite.copy(alpha = 0.5f)
+                            val width = if (isSelected) 18.dp else 8.dp
+                            val animatedWidth by androidx.compose.animation.core.animateDpAsState(
+                                targetValue = width,
+                                animationSpec = androidx.compose.animation.core.tween(300),
+                                label = "width"
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .padding(horizontal = 4.dp)
+                                    .height(8.dp)
+                                    .width(animatedWidth)
+                                    .clip(CircleShape)
+                                    .background(color)
+                            )
+                        }
+                    }
                 }
             }
 
@@ -264,7 +375,7 @@ private fun HomeContent(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            "Dari",
+                            "Dari".tr(),
                             color = WhooshRed,
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
@@ -284,7 +395,7 @@ private fun HomeContent(
                         modifier = Modifier.padding(horizontal = 6.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text(" ", fontSize = 10.sp) // invisible placeholder for 'Dari'/'Ke' label height
+                        Text(" ".tr(), fontSize = 10.sp) // invisible placeholder for 'Dari'/'Ke' label height
                         Spacer(modifier = Modifier.height(4.dp))
                         Box(
                             modifier = Modifier
@@ -302,7 +413,7 @@ private fun HomeContent(
 
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            "Ke",
+                            "Ke".tr(),
                             color = WhooshRed,
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
@@ -327,7 +438,7 @@ private fun HomeContent(
                 )
 
                 Text(
-                    "Tanggal Berangkat",
+                    "Tanggal Berangkat".tr(),
                     color = WhooshTextSecondary,
                     fontSize = 10.sp,
                     fontWeight = FontWeight.SemiBold,
@@ -354,60 +465,7 @@ private fun HomeContent(
                     Icon(Icons.Filled.CalendarMonth, null, tint = WhooshRed.copy(alpha = 0.6f), modifier = Modifier.size(18.dp))
                 }
 
-                HorizontalDivider(
-                    modifier = Modifier.padding(vertical = 12.dp),
-                    color = Color(0xFFEEEEEE),
-                    thickness = 1.dp
-                )
 
-                // ── PASSENGERS ────────────────────────────────────────────────
-                Text(
-                    "Penumpang",
-                    color = WhooshTextSecondary,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    letterSpacing = 0.5.sp
-                )
-                Spacer(modifier = Modifier.height(6.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        "${viewModel.ticketCount} Orang",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF1A1A1A)
-                    )
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        // Minus
-                        Box(
-                            modifier = Modifier
-                                .size(34.dp)
-                                .clip(CircleShape)
-                                .border(1.dp, if (viewModel.ticketCount > 1) WhooshRed.copy(0.3f) else Color(0xFFDDDDDD), CircleShape)
-                                .background(if (viewModel.ticketCount > 1) WhooshRed.copy(0.06f) else Color(0xFFF5F5F5))
-                                .clickable { viewModel.decrementTicket() },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(Icons.Filled.Remove, "Kurangi", tint = if (viewModel.ticketCount > 1) WhooshRed else Color(0xFFCCCCCC), modifier = Modifier.size(16.dp))
-                        }
-                        Spacer(modifier = Modifier.width(12.dp))
-                        // Plus
-                        Box(
-                            modifier = Modifier
-                                .size(34.dp)
-                                .clip(CircleShape)
-                                .border(1.dp, if (viewModel.ticketCount < 10) WhooshRed.copy(0.3f) else Color(0xFFDDDDDD), CircleShape)
-                                .background(if (viewModel.ticketCount < 10) WhooshRed.copy(0.06f) else Color(0xFFF5F5F5))
-                                .clickable { viewModel.incrementTicket() },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(Icons.Filled.Add, "Tambah", tint = if (viewModel.ticketCount < 10) WhooshRed else Color(0xFFCCCCCC), modifier = Modifier.size(16.dp))
-                        }
-                    }
-                }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -422,7 +480,7 @@ private fun HomeContent(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        "Cari Tiket",
+                        "Cari Tiket".tr(),
                         color = WhooshWhite,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
@@ -433,7 +491,38 @@ private fun HomeContent(
         }
         } // Close the Hero & Booking Form overlapping Box
 
-        Spacer(modifier = Modifier.height(16.dp))
+        // ── RUNNING TEXT (MARQUEE) ───────────────────────────────────────────
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 6.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(Color(0xFFFFF5F5))
+                .padding(horizontal = 12.dp, vertical = 10.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.Campaign, 
+                    contentDescription = null, 
+                    tint = WhooshRed, 
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(10.dp))
+                Text(
+                    text = "Pengembalian Dana / Perubahan Jadwal Mohon cek kembali jadwal perjalanan Anda. Proses memberikan izin kepada pelanggan atau calon penumpang untuk masuk stasiun atau naik Kereta Cepat".tr(),
+                    fontSize = 12.sp,
+                    color = Color(0xFF333333),
+                    maxLines = 1,
+                    modifier = Modifier.basicMarquee(
+                        iterations = Int.MAX_VALUE,
+                        initialDelayMillis = 1000,
+                        velocity = 45.dp
+                    )
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
 
         // ── QUICK ACTIONS ─────────────────────────────────────────────────────
         Card(
@@ -446,7 +535,7 @@ private fun HomeContent(
         ) {
             Column(modifier = Modifier.padding(vertical = 16.dp, horizontal = 8.dp)) {
                 Text(
-                    "Layanan",
+                    "Layanan".tr(),
                     color = Color(0xFF1A1A1A),
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
@@ -466,15 +555,20 @@ private fun HomeContent(
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(50.dp)
-                                    .background(Color(0xFFF5F5F5), CircleShape),
+                                    .size(52.dp)
+                                    .background(Color(0xFFF9F9F9), CircleShape)
+                                    .border(1.dp, Color(0xFFEEEEEE), CircleShape),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Icon(action.icon, action.label, tint = WhooshRed, modifier = Modifier.size(24.dp))
+                                Icon(
+                                    imageVector = action.icon, 
+                                    contentDescription = action.label, 
+                                    tint = WhooshRed, 
+                                    modifier = Modifier.size(24.dp)
+                                )
                             }
                             Spacer(modifier = Modifier.height(7.dp))
-                            Text(
-                                action.label,
+                            Text(action.label.tr(),
                                 fontSize = 11.sp,
                                 color = Color(0xFF444444),
                                 fontWeight = FontWeight.Medium,
@@ -497,13 +591,13 @@ private fun HomeContent(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                "Ketentuan Layanan",
+                "Ketentuan Layanan".tr(),
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color(0xFF1A1A1A)
             )
             Text(
-                "Lebih banyak",
+                "Lebih banyak".tr(),
                 fontSize = 12.sp,
                 color = Color(0xFF7A8D9C),
                 modifier = Modifier.clickable { showMoreInfo = true }
@@ -512,16 +606,43 @@ private fun HomeContent(
         Spacer(modifier = Modifier.height(14.dp))
 
         // Cards List
+        var showKetentuanDetail by remember { mutableStateOf<Triple<String, String, (() -> Unit)?>?>(null) }
+        
+        if (showKetentuanDetail != null) {
+            KetentuanDetailDialog(
+                title = showKetentuanDetail!!.first,
+                content = showKetentuanDetail!!.second,
+                actionLabel = if (showKetentuanDetail!!.first.contains("Jadwal")) "Lihat Jadwal" else null,
+                onActionClick = showKetentuanDetail!!.third,
+                onDismiss = { showKetentuanDetail = null }
+            )
+        }
+
         val ketentuanItems = listOf(
-            Pair("Jadwal Whoosh & KA Feeder", "Jadwal perjalanan Kereta Cepat Whoosh dan Integrasinya dengan KA Feeder Kereta Cepat"),
-            Pair("Pengembalian Dana / Perubahan Jadwal", "Pengembalian Dana / Perubahan Jadwal")
+            Triple(
+                "Jadwal Whoosh & KA Feeder", 
+                "Integrasi Kereta Cepat dengan KA Feeder",
+                "• KA Feeder tersedia secara GRATIS bagi penumpang Whoosh dengan rute Padalarang - Bandung (PP).\n• Pastikan Anda memiliki waktu transit minimal 15-20 menit antara jadwal Whoosh dan KA Feeder.\n• Penumpang diwajibkan menunjukkan tiket Whoosh yang valid saat menggunakan KA Feeder."
+            ),
+            Triple(
+                "Pengembalian Dana / Perubahan Jadwal", 
+                "Aturan Pembatalan dan Reschedule",
+                "• Pengembalian Dana (Refund): Dikenakan biaya admin sebesar 25% dari harga tiket. Dilakukan maksimal 2 jam sebelum keberangkatan.\n• Perubahan Jadwal (Reschedule): Dapat dilakukan satu kali selama ketersediaan kursi masih ada. Dilakukan maksimal 2 jam sebelum keberangkatan dengan biaya administrasi 25%."
+            )
         )
         
         ketentuanItems.forEach { item ->
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 6.dp),
+                    .padding(horizontal = 16.dp, vertical = 6.dp)
+                    .clickable { 
+                        showKetentuanDetail = Triple(
+                            item.first, 
+                            item.third,
+                            if (item.first.contains("Jadwal")) { { onNavigateToTab(2) } } else null
+                        ) 
+                    },
                 shape = RoundedCornerShape(12.dp),
                 colors = CardDefaults.cardColors(containerColor = WhooshWhite),
                 elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
@@ -556,9 +677,9 @@ private fun HomeContent(
                     }
                     Spacer(modifier = Modifier.width(14.dp))
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(item.first, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1A1A1A))
+                        Text(item.first.tr(), fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1A1A1A))
                         Spacer(modifier = Modifier.height(4.dp))
-                        Text(item.second, fontSize = 11.sp, color = Color(0xFF7A8D9C), lineHeight = 16.sp)
+                        Text(item.second.tr(), fontSize = 11.sp, color = Color(0xFF7A8D9C), lineHeight = 16.sp)
                     }
                 }
             }
@@ -592,8 +713,7 @@ private fun StationSelector(
         ) {
             Icon(icon, null, tint = WhooshRed, modifier = Modifier.size(14.dp))
             Spacer(modifier = Modifier.width(4.dp))
-            Text(
-                text = label,
+            Text(text = label.tr(),
                 fontSize = 11.sp, // Reduced to prevent clipping on long text
                 fontWeight = FontWeight.SemiBold,
                 color = if (label == "Pilih Stasiun") Color(0xFFBBBBBB) else Color(0xFF1A1A1A),
@@ -603,11 +723,46 @@ private fun StationSelector(
             )
             Icon(Icons.Filled.KeyboardArrowDown, null, tint = Color(0xFFAAAAAA), modifier = Modifier.size(16.dp))
         }
-        androidx.compose.material3.DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+        
+        // Clean dropdown menu with subtle rounded corners
+        androidx.compose.material3.DropdownMenu(
+            expanded = expanded, 
+            onDismissRequest = { expanded = false },
+            modifier = Modifier
+                .background(
+                    WhooshWhite,
+                    RoundedCornerShape(8.dp)
+                )
+                .border(
+                    1.dp,
+                    Color(0xFFE0E0E0),
+                    RoundedCornerShape(8.dp)
+                )
+        ) {
             options.forEach { option ->
                 androidx.compose.material3.DropdownMenuItem(
-                    text = { Text(option, fontSize = 13.sp) },
-                    onClick = { onSelect(option); expanded = false }
+                    text = { 
+                        Text(text = option.tr(),
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = Color(0xFF1F1F1F),
+                            letterSpacing = 0.2.sp,
+                            lineHeight = 20.sp
+                        )
+                    },
+                    onClick = { 
+                        onSelect(option)
+                        expanded = false 
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = androidx.compose.material3.MenuDefaults.itemColors(
+                        textColor = Color(0xFF1F1F1F),
+                        disabledTextColor = Color(0xFFBBBBBB)
+                    ),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                        horizontal = 16.dp,
+                        vertical = 12.dp
+                    )
                 )
             }
         }
@@ -630,10 +785,9 @@ private fun WhooshBottomBar(selectedIndex: Int, onItemSelected: (Int) -> Unit) {
                 NavigationBarItem(
                     selected = selectedIndex == index,
                     onClick = { onItemSelected(index) },
-                    icon = { Icon(icon, label, modifier = Modifier.size(22.dp)) },
+                    icon = { Icon(icon, label.tr(), modifier = Modifier.size(22.dp)) },
                     label = {
-                        Text(
-                            label,
+                        Text(label.tr(),
                             fontSize = 10.sp,
                             fontWeight = if (selectedIndex == index) FontWeight.Bold else FontWeight.Normal
                         )
@@ -673,14 +827,14 @@ private fun InformasiTambahanOverlay(onDismiss: () -> Unit) {
             ) {
                 Icon(
                     Icons.Filled.ArrowBackIosNew,
-                    "Kembali",
+                    "Kembali".tr(),
                     tint = WhooshWhite,
                     modifier = Modifier
                         .size(20.dp)
                         .clickable { onDismiss() }
                 )
                 Text(
-                    "Informasi Tambahan",
+                    "Informasi Tambahan".tr(),
                     color = WhooshWhite,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Medium,
@@ -707,9 +861,9 @@ private fun InformasiTambahanOverlay(onDismiss: () -> Unit) {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(item.first, fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Color(0xFF1A1A1A))
+                            Text(item.first.tr(), fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Color(0xFF1A1A1A))
                             Spacer(modifier = Modifier.height(6.dp))
-                            Text(item.second, fontSize = 13.sp, color = Color(0xFF7A8D9C), maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                            Text(item.second.tr(), fontSize = 13.sp, color = Color(0xFF7A8D9C), maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                         }
                         Icon(Icons.Filled.ChevronRight, null, tint = Color(0xFFBBBBBB), modifier = Modifier.size(20.dp))
                     }
@@ -720,5 +874,75 @@ private fun InformasiTambahanOverlay(onDismiss: () -> Unit) {
             }
         }
     }
+
 }
 
+// ── DIALOG DETAIL KETENTUAN ──────────────────────────────────────────────────
+@Composable
+private fun KetentuanDetailDialog(
+    title: String,
+    content: String,
+    actionLabel: String? = null,
+    onActionClick: (() -> Unit)? = null,
+    onDismiss: () -> Unit
+) {
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+        androidx.compose.material3.Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp),
+            shape = RoundedCornerShape(20.dp),
+            color = WhooshWhite
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp)
+            ) {
+                Text(text = title.tr(),
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF1A1A1A)
+                )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                Text(
+                    text = content.tr(),
+                    fontSize = 14.sp,
+                    color = Color(0xFF444444),
+                    lineHeight = 22.sp
+                )
+                
+                Spacer(modifier = Modifier.height(24.dp))
+
+                if (actionLabel != null && onActionClick != null) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(WhooshRed)
+                            .clickable { 
+                                onActionClick()
+                                onDismiss()
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(actionLabel.tr(), color = WhooshWhite, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                }
+                
+                androidx.compose.material3.OutlinedButton(
+                    onClick = onDismiss,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFDDDDDD))
+                ) {
+                    Text("Tutup".tr(), color = Color(0xFF666666), fontWeight = FontWeight.Medium)
+                }
+            }
+        }
+    }
+}

@@ -61,6 +61,7 @@ import com.example.whoossh.ui.theme.WhooshGradientStart
 import com.example.whoossh.ui.theme.WhooshRed
 import com.example.whoossh.ui.theme.WhooshRedLight
 import com.example.whoossh.ui.theme.WhooshWhite
+import com.example.whoossh.utils.tr
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -70,8 +71,7 @@ fun WhooshTopBar(
 ) {
     TopAppBar(
         title = {
-            Text(
-                text = title,
+            Text(text = title.tr(),
                 style = MaterialTheme.typography.titleLarge,
                 color = WhooshWhite
             )
@@ -244,7 +244,7 @@ fun WhooshDropdown(
             value = selectedValue,
             onValueChange = {},
             readOnly = true,
-            label = { Text(label) },
+            label = { Text(label.tr()) },
             leadingIcon = if (leadingIcon != null) {
                 { Icon(leadingIcon, contentDescription = null, tint = WhooshRed) }
             } else null,
@@ -265,7 +265,7 @@ fun WhooshDropdown(
         ) {
             options.forEach { option ->
                 DropdownMenuItem(
-                    text = { Text(option) },
+                    text = { Text(option.tr()) },
                     onClick = {
                         onValueChange(option)
                         expanded = false
@@ -305,7 +305,7 @@ fun TicketStepper(
         }
 
         Text(
-            text = "$count",
+            text = "$count".tr(),
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.width(60.dp),
@@ -335,8 +335,7 @@ fun SectionTitle(
     title: String,
     modifier: Modifier = Modifier
 ) {
-    Text(
-        text = title,
+    Text(text = title.tr(),
         style = MaterialTheme.typography.titleMedium,
         fontWeight = FontWeight.SemiBold,
         color = MaterialTheme.colorScheme.onBackground,
@@ -357,8 +356,7 @@ fun InfoRow(
             .padding(vertical = 6.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(
-            text = label,
+        Text(text = label.tr(),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

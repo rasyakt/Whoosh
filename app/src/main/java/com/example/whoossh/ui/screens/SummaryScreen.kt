@@ -16,9 +16,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowForward
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -26,13 +26,18 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import android.widget.Toast
+import kotlinx.coroutines.launch
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -48,6 +53,7 @@ import com.example.whoossh.ui.theme.WhooshTextSecondary
 import com.example.whoossh.ui.theme.WhooshWhite
 import com.example.whoossh.utils.TicketUtils
 import com.example.whoossh.viewmodel.BookingViewModel
+import com.example.whoossh.utils.tr
 
 @Composable
 fun SummaryScreen(
@@ -57,7 +63,7 @@ fun SummaryScreen(
 ) {
     val schedule = viewModel.selectedSchedule!!
     val coach = viewModel.selectedCoachClass!!
-    val pricePerTicket = TicketUtils.getTicketPrice(viewModel.ticketCount, coach)
+    val pricePerTicket = TicketUtils.getPricePerTicket(schedule.originStation, schedule.destinationStation, coach, schedule.departureTime)
     val totalPrice = pricePerTicket * viewModel.ticketCount
 
     var showDialog by remember { mutableStateOf(false) }
@@ -75,26 +81,66 @@ fun SummaryScreen(
             },
             title = {
                 Text(
-                    text = "Pembelian Berhasil!",
+                    text = "Pembelian Berhasil!".tr(),
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center
                 )
             },
             text = {
-                Text(
-                    text = "Tiket Anda telah berhasil dipesan. Silakan cek e-ticket Anda.",
-                    textAlign = TextAlign.Center
-                )
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "Tiket Anda telah berhasil dipesan.".tr(),
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "📧 E-ticket dikirim ke:".tr(),
+                        fontSize = 13.sp,
+                        textAlign = TextAlign.Center,
+                        color = WhooshTextSecondary
+                    )
+                    Text(
+                        text = viewModel.userEmail,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        textAlign = TextAlign.Center,
+                        color = WhooshRed
+                    )
+                }
             },
             confirmButton = {
+                val scope = rememberCoroutineScope()
+                val context = LocalContext.current
+                var isProcessing by remember { mutableStateOf(false) }
+
                 TextButton(
                     onClick = {
-                        showDialog = false
-                        viewModel.confirmBooking()
-                        onConfirm()
-                    }
+                        if (isProcessing) return@TextButton
+                        isProcessing = true
+                        
+                        scope.launch {
+                            val (success, message) = viewModel.confirmBooking()
+                            isProcessing = false
+                            
+                            if (success) {
+                                showDialog = false
+                                onConfirm()
+                            } else {
+                                Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    },
+                    enabled = !isProcessing
                 ) {
-                    Text("Lihat E-Ticket", color = WhooshRed, fontWeight = FontWeight.Bold)
+                    if (isProcessing) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            color = WhooshRed
+                        )
+                    } else {
+                        Text("Lihat E-Ticket".tr(), color = WhooshRed, fontWeight = FontWeight.Bold)
+                    }
                 }
             },
             shape = RoundedCornerShape(24.dp)
@@ -103,7 +149,7 @@ fun SummaryScreen(
 
     Scaffold(
         topBar = {
-            WhooshTopBar(title = "Ringkasan Pemesanan", onBack = onBack)
+            WhooshTopBar(title = "Ringkasan Pemesanan".tr(), onBack = onBack)
         }
     ) { paddingValues ->
         Column(
@@ -118,7 +164,7 @@ fun SummaryScreen(
             WhooshCard {
                 Column(modifier = Modifier.padding(20.dp)) {
                     Text(
-                        text = "Detail Perjalanan",
+                        text = "Detail Perjalanan".tr(),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -148,13 +194,13 @@ fun SummaryScreen(
                             modifier = Modifier.padding(horizontal = 20.dp)
                         ) {
                             Text(
-                                text = "${schedule.duration} min",
+                                text = "${schedule.duration} min".tr(),
                                 fontSize = 11.sp,
                                 color = WhooshRed,
                                 fontWeight = FontWeight.Medium
                             )
                             Icon(
-                                Icons.Filled.ArrowForward,
+                                Icons.AutoMirrored.Filled.ArrowForward,
                                 contentDescription = null,
                                 tint = WhooshRed,
                                 modifier = Modifier.size(20.dp)
@@ -177,9 +223,9 @@ fun SummaryScreen(
 
                     DashedDivider(modifier = Modifier.padding(vertical = 8.dp))
 
-                    InfoRow(label = "Penumpang", value = viewModel.userName)
-                    InfoRow(label = "Tanggal", value = viewModel.departureDate)
-                    InfoRow(label = "Durasi", value = "${schedule.duration} menit")
+                    InfoRow(label = "Penumpang".tr(), value = viewModel.userName)
+                    InfoRow(label = "Tanggal".tr(), value = viewModel.departureDate)
+                    InfoRow(label = "Durasi".tr(), value = "${schedule.duration} " + "menit".tr())
                 }
             }
 
@@ -189,18 +235,18 @@ fun SummaryScreen(
             WhooshCard {
                 Column(modifier = Modifier.padding(20.dp)) {
                     Text(
-                        text = "Rincian Pembayaran",
+                        text = "Rincian Pembayaran".tr(),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    InfoRow(label = "Jenis Gerbong", value = coach.displayName)
-                    InfoRow(label = "Nomor Gerbong", value = "Gerbong ${viewModel.selectedCarriage ?: 1}")
-                    InfoRow(label = "Nomor Kursi", value = viewModel.selectedSeats.sorted().joinToString(", ").ifEmpty { "-" })
-                    InfoRow(label = "Jumlah Tiket", value = "${viewModel.ticketCount} tiket")
+                    InfoRow(label = "Jenis Gerbong".tr(), value = coach.displayName.tr())
+                    InfoRow(label = "Nomor Gerbong".tr(), value = "Gerbong ".tr() + "${viewModel.selectedCarriage ?: 1}")
+                    InfoRow(label = "Nomor Kursi".tr(), value = viewModel.selectedSeats.sorted().joinToString(", ").ifEmpty { "-" })
+                    InfoRow(label = "Jumlah Tiket".tr(), value = "${viewModel.ticketCount} " + "tiket".tr())
                     InfoRow(
-                        label = "Harga per tiket",
+                        label = "Harga per tiket".tr(),
                         value = TicketUtils.formatRupiah(pricePerTicket)
                     )
 
@@ -214,7 +260,7 @@ fun SummaryScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "Total Pembayaran",
+                            text = "Total Pembayaran".tr(),
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.SemiBold
                         )
@@ -231,7 +277,7 @@ fun SummaryScreen(
             Spacer(modifier = Modifier.height(28.dp))
 
             WhooshButton(
-                text = "Konfirmasi Pembelian",
+                text = "Konfirmasi Pembelian".tr(),
                 onClick = { showDialog = true },
                 icon = Icons.Filled.ShoppingCart
             )

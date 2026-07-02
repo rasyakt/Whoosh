@@ -21,12 +21,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -43,6 +45,7 @@ import com.example.whoossh.ui.theme.WhooshRedLight
 import com.example.whoossh.ui.theme.WhooshTextSecondary
 import com.example.whoossh.ui.theme.WhooshWhite
 import com.example.whoossh.viewmodel.BookingViewModel
+import com.example.whoossh.utils.tr
 
 @Composable
 fun SelectSeatScreen(
@@ -53,10 +56,15 @@ fun SelectSeatScreen(
     val coachClass = viewModel.selectedCoachClass ?: return
     val availableCarriages = viewModel.getAvailableCarriages(coachClass)
     val selectedCarriage = viewModel.selectedCarriage ?: availableCarriages.firstOrNull() ?: 1
+    
+    // Load real occupied seats from server
+    LaunchedEffect(selectedCarriage) {
+        viewModel.loadOccupiedSeats()
+    }
 
     Scaffold(
         topBar = {
-            WhooshTopBar(title = "Pilih Gerbong & Kursi", onBack = onBack)
+            WhooshTopBar(title = "Pilih Gerbong & Kursi".tr(), onBack = onBack)
         },
         bottomBar = {
             Surface(
@@ -76,12 +84,12 @@ fun SelectSeatScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "Kursi Terpilih:",
+                            text = "Kursi Terpilih:".tr(),
                             color = WhooshTextSecondary,
                             fontSize = 14.sp
                         )
                         Text(
-                            text = "${viewModel.selectedSeats.size} / ${viewModel.ticketCount} Tiket",
+                            text = "${viewModel.selectedSeats.size} / ${viewModel.ticketCount} Tiket".tr(),
                             color = if (completed) WhooshRed else Color.Black,
                             fontWeight = FontWeight.Bold,
                             fontSize = 16.sp
@@ -91,7 +99,7 @@ fun SelectSeatScreen(
                     if (viewModel.selectedSeats.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Gerbong $selectedCarriage: ${viewModel.selectedSeats.sorted().joinToString(", ")}",
+                            text = "${"Gerbong".tr()} $selectedCarriage: ${viewModel.selectedSeats.sorted().joinToString(", ")}",
                             fontWeight = FontWeight.SemiBold,
                             fontSize = 14.sp,
                             color = WhooshRed
@@ -101,7 +109,7 @@ fun SelectSeatScreen(
                     Spacer(modifier = Modifier.height(16.dp))
 
                     WhooshButton(
-                        text = "Lanjutkan",
+                        text = "Lanjutkan".tr(),
                         onClick = onSeatSelected,
                         enabled = completed
                     )
@@ -115,6 +123,71 @@ fun SelectSeatScreen(
                 .padding(paddingValues)
                 .background(Color(0xFFFAFAFA))
         ) {
+            // Passenger Selection (Top)
+            val selectedPassengers = viewModel.selectedPassengers.collectAsState().value
+            if (selectedPassengers.isNotEmpty()) {
+                var isExpanded by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+                
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 12.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color.White)
+                        .border(1.dp, Color(0xFFEEEEEE), RoundedCornerShape(12.dp))
+                        .clickable { isExpanded = !isExpanded }
+                        .padding(16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Penumpang Terpilih".tr(),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color.Black
+                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "${selectedPassengers.size} Penumpang".tr(),
+                                fontSize = 12.sp,
+                                color = WhooshRed,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            androidx.compose.material3.Icon(
+                                imageVector = if (isExpanded) androidx.compose.material.icons.Icons.Default.KeyboardArrowUp 
+                                             else androidx.compose.material.icons.Icons.Default.KeyboardArrowDown,
+                                contentDescription = null,
+                                tint = WhooshRed,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                    
+                    Spacer(modifier = Modifier.height(12.dp))
+                    
+                    if (isExpanded) {
+                        // Show all selected passengers
+                        selectedPassengers.forEachIndexed { index, passenger ->
+                            PassengerItem(index + 1, passenger)
+                            if (index < selectedPassengers.lastIndex) {
+                                HorizontalDivider(
+                                    modifier = Modifier.padding(vertical = 10.dp),
+                                    thickness = 0.5.dp,
+                                    color = Color(0xFFF5F5F5)
+                                )
+                            }
+                        }
+                    } else {
+                        // Show only the first passenger
+                        PassengerItem(1, selectedPassengers.first())
+                    }
+                }
+            }
+
             // Carriage Selection
             Row(
                 modifier = Modifier
@@ -137,109 +210,126 @@ fun SelectSeatScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 16.dp),
+                    .padding(horizontal = 20.dp, vertical = 10.dp),
                 horizontalArrangement = Arrangement.Center
             ) {
-                LegendItem("Tersedia", Color.White, Color.LightGray)
+                LegendItem("Tersedia".tr(), Color.White, Color.LightGray)
                 Spacer(modifier = Modifier.width(16.dp))
-                LegendItem("Terpilih", WhooshRed, WhooshRed)
+                LegendItem("Terpilih".tr(), WhooshRed, WhooshRed)
                 Spacer(modifier = Modifier.width(16.dp))
-                LegendItem("Terisi", Color(0xFFEEEEEE), Color(0xFFDDDDDD))
+                LegendItem("Terisi".tr(), Color(0xFFEEEEEE), Color(0xFFDDDDDD))
             }
 
             // Seat Grid
-            Column(
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f)
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 20.dp, vertical = 10.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .weight(1f),
+                contentAlignment = Alignment.Center
             ) {
-                val rows = 15 // Assuming 15 rows per carriage for demo
-                val layout = when (coachClass) {
-                    CoachClass.EKONOMI -> listOf("A", "B", "C", "", "D", "F")
-                    CoachClass.BISNIS -> listOf("A", "C", "", "D", "F")
-                    CoachClass.VIP -> listOf("A", "", "C", "D")
-                }
-
-                // Row Headers
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    layout.forEach { letter ->
-                        if (letter.isEmpty()) {
-                            Spacer(modifier = Modifier.width(36.dp))
-                        } else {
-                            Box(
-                                modifier = Modifier
-                                    .width(46.dp)
-                                    .padding(horizontal = 4.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = letter,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 16.sp,
-                                    color = Color.Gray
-                                )
-                            }
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                for (row in 1..rows) {
-                    Row(
+                if (viewModel.isOccupiedSeatsLoading) {
+                    CircularProgressIndicator(color = WhooshRed)
+                } else {
+                    Column(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 6.dp),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
+                            .fillMaxSize()
+                            .verticalScroll(rememberScrollState())
+                            .padding(horizontal = 20.dp, vertical = 10.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        layout.forEach { letter ->
-                            if (letter.isEmpty()) {
-                                // Aisle with Row Number
-                                Box(
-                                    modifier = Modifier.width(36.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = row.toString(),
-                                        color = Color.LightGray,
-                                        fontSize = 14.sp,
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                }
-                            } else {
-                                val seatId = "${row}${letter}"
-                                // Dummy condition for occupied seats (e.g. random based on row/carriage to look realistic)
-                                val isOccupied = (row * 31 + letter.hashCode() + selectedCarriage * 17) % 7 == 0
-                                
-                                Box(
-                                    modifier = Modifier
-                                        .width(46.dp)
-                                        .padding(horizontal = 4.dp)
-                                ) {
-                                    SeatItem(
-                                        seatId = seatId,
-                                        isSelected = viewModel.selectedSeats.contains(seatId),
-                                        isOccupied = isOccupied,
-                                        onClick = {
-                                            if (!isOccupied) {
-                                                viewModel.toggleSeatSelection(seatId)
-                                            }
-                                        }
-                                    )
+                        val rows = 15 // Assuming 15 rows per carriage for demo
+                        val layout = when (coachClass) {
+                            CoachClass.EKONOMI -> listOf("A", "B", "C", "", "D", "F")
+                            CoachClass.BISNIS -> listOf("A", "C", "", "D", "F")
+                            CoachClass.VIP -> listOf("A", "", "C", "D")
+                        }
+
+                        // Row Headers
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            layout.forEach { letter ->
+                                if (letter.isEmpty()) {
+                                    Spacer(modifier = Modifier.width(36.dp))
+                                } else {
+                                    Box(
+                                        modifier = Modifier
+                                            .width(46.dp)
+                                            .padding(horizontal = 4.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = letter,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 16.sp,
+                                            color = Color.Gray
+                                        )
+                                    }
                                 }
                             }
                         }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        for (row in 1..rows) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 6.dp),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                layout.forEach { letter ->
+                                    if (letter.isEmpty()) {
+                                        // Aisle with Row Number
+                                        Box(
+                                            modifier = Modifier.width(36.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                text = row.toString(),
+                                                color = Color.LightGray,
+                                                fontSize = 14.sp,
+                                                fontWeight = FontWeight.Medium
+                                            )
+                                        }
+                                    } else {
+                                        val seatId = "${row}${letter}"
+                                        val isOccupied = viewModel.occupiedSeats.contains(seatId)
+                                        
+                                        val selectedSeats = viewModel.selectedSeats
+                                        val isSelected = selectedSeats.contains(seatId)
+                                        val seatIndex = if (isSelected) selectedSeats.indexOf(seatId) else -1
+                                        val passengerLabel = if (seatIndex != -1 && seatIndex < selectedPassengers.size) {
+                                            selectedPassengers[seatIndex].name.take(1).uppercase()
+                                        } else null
+
+                                        Box(
+                                            modifier = Modifier
+                                                .width(46.dp)
+                                                .padding(horizontal = 4.dp)
+                                        ) {
+                                            SeatItem(
+                                                seatId = seatId,
+                                                isSelected = isSelected,
+                                                isOccupied = isOccupied,
+                                                passengerLabel = passengerLabel,
+                                                onClick = {
+                                                    if (!isOccupied) {
+                                                        viewModel.toggleSeatSelection(seatId)
+                                                    }
+                                                }
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        
+                        Spacer(modifier = Modifier.height(20.dp))
                     }
                 }
-                
-                Spacer(modifier = Modifier.height(20.dp))
             }
         }
     }
@@ -264,7 +354,7 @@ private fun CarriageTab(
             .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
         Text(
-            text = "Gerbong $number",
+            text = "Gerbong $number".tr(),
             color = textColor,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
             fontSize = 14.sp
@@ -291,57 +381,154 @@ private fun SeatItem(
     seatId: String,
     isSelected: Boolean,
     isOccupied: Boolean,
+    passengerLabel: String?,
     onClick: () -> Unit
 ) {
-    val bgColor = when {
-        isOccupied -> Color(0xFFEEEEEE)
-        isSelected -> WhooshRed
-        else -> Color.White
+    val textColor = when {
+        isOccupied -> Color.Transparent 
+        isSelected -> Color.White
+        else -> WhooshRed
     }
+
     val borderColor = when {
         isOccupied -> Color(0xFFDDDDDD)
         isSelected -> WhooshRed
-        else -> Color.LightGray
+        else -> WhooshRed.copy(alpha = 0.3f)
     }
 
     Box(
         modifier = Modifier
-            .height(46.dp)
+            .height(52.dp)
             .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .background(bgColor)
-            .border(1.5.dp, borderColor, RoundedCornerShape(8.dp))
             .clickable(enabled = !isOccupied, onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        // We don't render seat ID text inside to keep it looking clean and realistic like an airplane/train seat block.
-        // It has a small armrest indicator for realism.
+        // Seat Base Shape (Backrest + Seat)
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
             modifier = Modifier.fillMaxSize()
         ) {
-             Box(
-                 modifier = Modifier
-                     .fillMaxWidth()
-                     .height(8.dp)
-                     .padding(horizontal = 4.dp, vertical = 1.dp)
-                     .background(
-                         if (isSelected) Color.White.copy(0.3f) else if (isOccupied) Color.White.copy(0.5f) else Color.LightGray.copy(0.3f),
-                         RoundedCornerShape(2.dp)
-                     )
-             )
-             Spacer(modifier = Modifier.height(2.dp))
-             Box(
-                 modifier = Modifier
-                     .fillMaxWidth()
-                     .weight(1f)
-                     .padding(start = 4.dp, end = 4.dp, bottom = 4.dp)
-                     .background(
-                         if (isSelected) Color.White.copy(0.3f) else if (isOccupied) Color.White.copy(0.5f) else Color.LightGray.copy(0.3f),
-                         RoundedCornerShape(2.dp)
-                     )
-             )
+            // Backrest
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(0.85f)
+                    .height(38.dp)
+                    .clip(RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp, bottomStart = 4.dp, bottomEnd = 4.dp))
+                    .background(
+                        if (isOccupied) Brush.verticalGradient(
+                            colors = listOf(Color(0xFFF5F5F5), Color(0xFFE0E0E0))
+                        ) else if (isSelected) Brush.verticalGradient(
+                            colors = listOf(WhooshRedLight, WhooshRed)
+                        ) else Brush.verticalGradient(
+                            colors = listOf(Color.White, Color.White)
+                        )
+                    )
+                    .border(
+                        1.dp, 
+                        borderColor, 
+                        RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp, bottomStart = 4.dp, bottomEnd = 4.dp)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                if (isOccupied) {
+                    Icon(
+                        imageVector = Icons.Default.Block,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = Color.LightGray.copy(alpha = 0.6f)
+                    )
+                } else {
+                    Text(
+                        text = seatId,
+                        color = textColor,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(2.dp))
+            
+            // Seat Cushion / Armrests Area
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(10.dp),
+                horizontalArrangement = Arrangement.Center
+            ) {
+                // Left Armrest
+                Box(
+                    modifier = Modifier
+                        .width(8.dp)
+                        .fillMaxHeight()
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(if (isSelected) WhooshRed else if (isOccupied) Color(0xFFDDDDDD) else Color.White)
+                        .border(1.dp, borderColor, RoundedCornerShape(2.dp))
+                )
+                Spacer(modifier = Modifier.width(26.dp))
+                // Right Armrest
+                Box(
+                    modifier = Modifier
+                        .width(8.dp)
+                        .fillMaxHeight()
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(if (isSelected) WhooshRed else if (isOccupied) Color(0xFFDDDDDD) else Color.White)
+                        .border(1.dp, borderColor, RoundedCornerShape(2.dp))
+                )
+            }
         }
+
+        // Passenger Badge
+        if (passengerLabel != null) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .offset(x = 4.dp, y = 4.dp)
+                    .size(20.dp)
+                    .clip(CircleShape)
+                    .background(Color.White)
+                    .border(1.5.dp, WhooshRed, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = passengerLabel,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = WhooshRed
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun PassengerItem(index: Int, passenger: com.example.whoossh.model.Passenger) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(24.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .background(WhooshRed.copy(alpha = 0.1f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "$index".tr(),
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                color = WhooshRed
+            )
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        Text(
+            text = passenger.name,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Medium,
+            color = Color.Black,
+            modifier = Modifier.weight(1f)
+        )
     }
 }

@@ -19,7 +19,15 @@ android {
     }
 
     buildTypes {
+        debug {
+            buildConfigField("boolean", "DEBUG", "true")
+            buildConfigField("String", "SMTP_SENDER_EMAIL", "\"alifslebew800@gmail.com\"")
+            buildConfigField("String", "SMTP_SENDER_PASSWORD", "\"moyc amjg xnlc jbfq\"")
+        }
         release {
+            buildConfigField("boolean", "DEBUG", "false")
+            buildConfigField("String", "SMTP_SENDER_EMAIL", "\"\"")
+            buildConfigField("String", "SMTP_SENDER_PASSWORD", "\"\"")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -36,6 +44,16 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
+    }
+
+    packaging {
+        resources {
+            excludes += "META-INF/{AL2.0,LGPL2.1}"
+            excludes += "META-INF/NOTICE.md"
+            excludes += "META-INF/LICENSE.md"
+            excludes += "META-INF/DEPENDENCIES"
+        }
     }
 }
 
@@ -52,6 +70,14 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.compose.animation)
+    implementation(libs.gson)
+    implementation(libs.android.mail)
+    implementation(libs.android.activation)
+    implementation(libs.zxing.core)
+    implementation(libs.retrofit.core)
+    implementation(libs.retrofit.converter.gson)
+    implementation(libs.okhttp.logging)
+    implementation(libs.androidx.biometric)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
