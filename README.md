@@ -167,10 +167,10 @@ app/src/main/java/com/example/whoossh/
 ### 1. Konfigurasi Endpoint Backend
 Endpoint dikonfigurasi secara dinamis di [ApiClient.kt](file:///c:/Users/HYPE%20AMD/AndroidStudioProjects/Whoossh/app/src/main/java/com/example/whoossh/api/ApiClient.kt) berdasarkan build varian aplikasi:
 ```kotlin
-private const val BASE_URL_DEV = "http://10.11.245.69/whoossh_api/"
+private const val BASE_URL_DEV = "http://your_computer_ip/whoossh_api/"
 private const val BASE_URL_PROD = "https://api.whoosh.id/v1/"
 ```
-*Ganti IP `10.11.245.69` dengan alamat IP server lokal/hosting Anda.*
+*Ganti IP `your_computer_ip` dengan alamat IP server lokal/hosting Anda.*
 
 ### 2. Deep Linking Integration
 Aplikasi menangkap URI deep link secara langsung untuk membuka halaman detail E-ticket dengan format link:
@@ -183,8 +183,8 @@ Konfigurasi intent filter telah terdaftar di [AndroidManifest.xml](file:///c:/Us
 Fitur pengiriman notifikasi email memanfaatkan kredensial SMTP yang terintegrasi di `build.gradle.kts`:
 ```kotlin
 debug {
-    buildConfigField("String", "SMTP_SENDER_EMAIL", "\"alifslebew800@gmail.com\"")
-    buildConfigField("String", "SMTP_SENDER_PASSWORD", "\"moyc amjg xnlc jbfq\"")
+    buildConfigField("String", "SMTP_SENDER_EMAIL", "\"emailanda@gmail.com\"")
+    buildConfigField("String", "SMTP_SENDER_PASSWORD", "\"abcd efgh ijkl mnop\"")
 }
 ```
 *Catatan: SMTP_SENDER_PASSWORD menggunakan Gmail App Password (16 digit kode autentikasi) untuk bypass keamanan Google OAuth.*
